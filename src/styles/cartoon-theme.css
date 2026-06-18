@@ -1,0 +1,1501 @@
+/* Global cartoon neubrutalism skin layered on top of the existing layouts. */
+
+.main-content,
+.templates-content,
+.template-detail-content,
+.vuln-page,
+.scans-content,
+.scan-create-page {
+  color: var(--ink);
+}
+
+.card,
+.templates-stat-card,
+.templates-table-card,
+.template-detail-card,
+.vuln-results-card,
+.scans-table-card,
+.scan-create-hero,
+.scan-create-checklist-card,
+.scan-create-steps,
+.scan-create-form-card,
+.scan-create-field,
+.scan-template-library-panel,
+.template-detail-alert,
+.severity-menu,
+.protocol-menu,
+.templates-tag-menu,
+.boolean-menu,
+.scans-actions-menu {
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-flat-lg);
+  backdrop-filter: none;
+}
+
+.discover-card,
+.stats-card > .card-header,
+.category-panel,
+.empty-panel,
+.panel-footer,
+.remediation-panel,
+.newest-header,
+.search-section,
+.templates-empty,
+.templates-pagination,
+.vuln-pagination,
+.scan-template-pagination {
+  border-color: var(--line-soft);
+}
+
+.topbar,
+.templates-topbar,
+.scans-topbar {
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 243, 0.98), rgba(255, 245, 209, 0.96));
+  box-shadow: var(--shadow-flat-lg);
+  backdrop-filter: none;
+}
+
+.topbar,
+.templates-topbar {
+  position: sticky;
+  top: 12px;
+}
+
+.scans-topbar {
+  top: 12px;
+}
+
+.hero-copy h1,
+.template-detail-hero-main h1,
+.scan-create-hero h1 {
+  letter-spacing: -0.02em;
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.8);
+}
+
+.plan-pill,
+.score-badge,
+.severity-pill,
+.detection-chip,
+.templates-severity-pill,
+.templates-selected-tag,
+.template-detail-ai-badge,
+.template-detail-tag-badge,
+.vuln-severity-pill,
+.vuln-meta-chip,
+.vuln-count-badge,
+.vuln-filter-badge,
+.scans-tab-badge,
+.scans-severity-badge,
+.nav-badge,
+.template-detail-alert,
+.scan-create-eyebrow,
+.scan-create-form-badge,
+.scan-create-ai-trigger-badge,
+.scan-create-panel-label,
+.scan-template-row-state,
+.scan-template-page-button,
+.scan-create-checklist-link,
+.templates-page-arrow,
+.vuln-page-nav,
+.scans-pagination-arrow {
+  border: 2px solid var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+  font-weight: 800;
+}
+
+.plan-pill,
+.score-badge,
+.templates-selected-tag,
+.template-detail-ai-badge,
+.scan-create-form-badge,
+.scan-create-eyebrow {
+  background: var(--paper-2);
+  color: var(--line);
+}
+
+.icon-button,
+.invite-button,
+.dark-button,
+.doc-button,
+.panel-footer-button,
+.templates-action-button,
+.template-detail-secondary-button,
+.template-detail-primary-button,
+.vuln-action,
+.vuln-icon-action,
+.vuln-filter-chip,
+.vuln-clear-chip,
+.vuln-per-page,
+.scans-filter-button,
+.scans-toolbar-icon,
+.scans-upgrade-button,
+.scans-connect-button,
+.scans-page-size,
+.scans-row-icon,
+.templates-filter-chip,
+.templates-back,
+.templates-nav-item,
+.template-detail-crumb-button,
+.scan-create-ghost-button,
+.scan-create-primary-button,
+.scan-create-secondary-button,
+.scan-template-library-filter-button,
+.scan-template-inline-actions .scan-create-secondary-button,
+.scan-template-page-button {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-flat);
+  font-weight: 800;
+  background: var(--surface);
+  color: var(--line);
+}
+
+.dark-button,
+.template-detail-primary-button,
+.scans-upgrade-button,
+.scan-create-primary-button,
+.scan-create-primary-button.is-launch {
+  background: var(--accent-yellow);
+  color: var(--line);
+  box-shadow: 5px 5px 0 var(--line);
+}
+
+.icon-button:hover,
+.invite-button:hover,
+.dark-button:hover,
+.doc-button:hover,
+.panel-footer-button:hover,
+.templates-action-button:hover,
+.template-detail-secondary-button:hover,
+.template-detail-primary-button:hover,
+.vuln-action:hover,
+.vuln-icon-action:hover,
+.vuln-filter-chip:hover,
+.vuln-clear-chip:hover,
+.vuln-per-page:hover,
+.scans-filter-button:hover,
+.scans-toolbar-icon:hover,
+.scans-upgrade-button:hover,
+.scans-page-size:hover,
+.scans-row-icon:hover,
+.templates-filter-chip:hover,
+.templates-back:hover,
+.templates-nav-item:hover,
+.template-detail-crumb-button:hover,
+.scan-create-ghost-button:hover,
+.scan-create-primary-button:hover,
+.scan-create-secondary-button:hover,
+.scan-template-library-filter-button:hover,
+.scan-template-inline-actions .scan-create-secondary-button:hover,
+.scan-template-page-button:hover {
+  transform: translate(-2px, -2px) rotate(-0.6deg);
+  box-shadow: 6px 6px 0 var(--line);
+}
+
+.nav-item:hover,
+.templates-row:hover,
+.scans-table-row:hover,
+.vuln-result-row:hover,
+.scan-template-library-row:hover,
+.scan-create-step:hover {
+  transform: translate(-2px, -2px) rotate(-0.35deg);
+}
+
+.templates-search,
+.vuln-search,
+.scans-search,
+.scan-template-library-search {
+  border-radius: var(--radius-lg);
+}
+
+.templates-search::before,
+.vuln-search::before,
+.scans-search::before,
+.scan-template-library-search::before {
+  padding: 0;
+  background: none;
+}
+
+.templates-search::after,
+.vuln-search::after,
+.scans-search::after,
+.scan-template-library-search::after {
+  display: none;
+}
+
+.templates-search input,
+.vuln-search input,
+.scans-search input,
+.scan-template-library-search input,
+.templates-menu-search input,
+.vulnerability-search,
+.scan-create-field input,
+.scan-create-field textarea,
+.scan-create-field select {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--line);
+  box-shadow: var(--shadow-flat);
+}
+
+.templates-search:hover input,
+.vuln-search:hover input,
+.scans-search:hover input,
+.scan-template-library-search:hover input,
+.templates-menu-search input:hover,
+.vulnerability-search:hover,
+.scan-create-field input:hover,
+.scan-create-field textarea:hover,
+.scan-create-field select:hover {
+  box-shadow: 6px 6px 0 var(--line);
+}
+
+.templates-search:focus-within input,
+.vuln-search:focus-within input,
+.scans-search:focus-within input,
+.scan-template-library-search:focus-within input,
+.templates-menu-search input:focus,
+.vulnerability-search:focus,
+.scan-create-field input:focus,
+.scan-create-field textarea:focus,
+.scan-create-field select:focus {
+  box-shadow: 6px 6px 0 var(--line);
+  border-color: var(--line);
+}
+
+.templates-search-icon,
+.vuln-search-icon,
+.scans-search-icon,
+.scan-template-library-search-icon {
+  color: var(--line);
+}
+
+.templates-table-head,
+.scans-table-head {
+  border-bottom: var(--border-strong);
+  background: var(--paper-2);
+  color: var(--line);
+  font-weight: 800;
+}
+
+.templates-row,
+.scans-table-row,
+.vuln-result-row,
+.detection-item,
+.scan-template-library-row {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.templates-row:nth-child(odd),
+.scans-table-row:nth-child(odd),
+.vuln-result-row:nth-child(odd),
+.detection-item:nth-child(odd),
+.scan-template-library-row:nth-child(odd) {
+  background: rgba(255, 244, 207, 0.45);
+}
+
+.templates-row::before,
+.templates-filter-chip::before,
+.template-detail-secondary-button.effect-button::before,
+.scan-template-library-filter-button::before,
+.scan-template-inline-actions .scan-create-secondary-button::before {
+  display: none;
+}
+
+.templates-row:hover,
+.scans-table-row:hover,
+.vuln-result-row:hover,
+.scan-template-library-row:hover {
+  box-shadow: inset 0 0 0 3px var(--line);
+  background: rgba(132, 215, 255, 0.26);
+}
+
+.stats-card,
+.info-card,
+.newest-card,
+.right-column > .card,
+.templates-table-card,
+.vuln-results-card,
+.scans-table-card,
+.template-detail-card,
+.scan-create-form-card,
+.scan-template-library-panel {
+  overflow: hidden;
+}
+
+.stat-box,
+.summary-box,
+.detection-box,
+.scan-create-hero-panel > div,
+.scan-create-step-index,
+.scan-create-field,
+.templates-stat-card {
+  border: 2px solid rgba(31, 26, 23, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 231, 0.88));
+}
+
+.tone-critical,
+.severity-critical,
+.template-severity-critical,
+.severity-menu-icon-critical,
+.scans-severity-badge.is-critical,
+.vuln-severity-pill {
+  color: #cb3452;
+}
+
+.tone-high,
+.severity-high,
+.template-severity-high,
+.severity-menu-icon-high,
+.scans-severity-badge.is-high {
+  color: #e47a1b;
+}
+
+.tone-medium,
+.severity-medium,
+.template-severity-medium,
+.severity-menu-icon-medium,
+.scans-severity-badge.is-medium {
+  color: #d99300;
+}
+
+.tone-low,
+.template-severity-low,
+.scans-severity-badge.is-low {
+  color: #2f79da;
+}
+
+.template-severity-info,
+.scans-severity-badge.is-info {
+  color: #1f945d;
+}
+
+.severity-pill,
+.templates-severity-pill,
+.vuln-severity-pill {
+  background: var(--surface);
+}
+
+.severity-critical,
+.template-severity-critical {
+  background: #ffd8df;
+}
+
+.severity-high,
+.template-severity-high,
+.vuln-severity-pill {
+  background: #ffe2c4;
+}
+
+.severity-medium,
+.template-severity-medium {
+  background: #fff1b9;
+}
+
+.template-severity-low,
+.template-severity-info {
+  background: #d9f0ff;
+}
+
+.template-severity-unknown,
+.scans-severity-badge.is-unknown {
+  background: #f1eadb;
+  color: #6f655b;
+}
+
+.scans-severity-group {
+  border: var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+  overflow: hidden;
+}
+
+.scans-severity-badge {
+  height: 32px;
+  background: transparent;
+  font-weight: 800;
+}
+
+.scans-severity-badge + .scans-severity-badge {
+  border-left: 2px solid rgba(31, 26, 23, 0.18);
+}
+
+.scans-severity-badge::after,
+.scans-severity-tooltip-glow,
+.template-detail-ai-badge::before,
+.templates-skeleton::after,
+.template-detail-skeleton-card::after,
+.template-detail-skeleton-chip::after {
+  display: none;
+}
+
+.scans-severity-tooltip {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--line);
+  box-shadow: 5px 5px 0 var(--accent-yellow);
+  color: #fff8eb;
+}
+
+.templates-filter-chip.active,
+.vuln-filter-chip.is-active,
+.scan-template-library-filter-button.is-active,
+.scan-create-step.is-active,
+.scan-template-row-state.is-selected,
+.scan-template-page-button.is-active {
+  background: var(--accent-blue);
+  color: var(--line);
+  box-shadow: 5px 5px 0 var(--line);
+}
+
+.nav-item.active,
+.scans-tab.active,
+.templates-nav-item.active {
+  background: var(--accent-pink);
+  color: var(--line);
+}
+
+.scans-tab,
+.templates-nav-item {
+  border: var(--border-strong);
+  border-radius: 16px 16px 0 0;
+  background: var(--surface);
+  border-bottom-width: 3px;
+}
+
+.scans-tab.active,
+.templates-nav-item.active {
+  border-bottom-color: var(--line);
+}
+
+.scan-status-dot,
+.template-detail-ai-badge-dot,
+.legend-dot {
+  border: 2px solid var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.score-track,
+.chart-line {
+  border-color: rgba(31, 26, 23, 0.32);
+}
+
+.api-key,
+.template-detail-markdown blockquote,
+.template-detail-markdown pre {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-flat);
+}
+
+.template-detail-markdown code {
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.globe-section {
+  border-bottom: var(--border-strong);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(132, 215, 255, 0.55), rgba(255, 252, 243, 0.88) 62%, rgba(255, 247, 213, 0.8) 100%);
+}
+
+.template-detail-empty-state,
+.vuln-empty-state,
+.detection-empty,
+.templates-empty,
+.scan-template-empty-state {
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.scan-create-hero,
+.scan-create-checklist-card,
+.scan-create-steps,
+.scan-create-form-card,
+.scan-template-library-panel {
+  background:
+    radial-gradient(circle at 100% 0, rgba(132, 215, 255, 0.22), transparent 26%),
+    radial-gradient(circle at 0 100%, rgba(255, 182, 185, 0.22), transparent 28%),
+    var(--surface);
+}
+
+.scan-create-hero::before,
+.scan-create-ai-trigger::before,
+.scan-create-ai-trigger::after,
+.scan-template-library-panel::before,
+.scan-template-library-panel::after {
+  display: none;
+}
+
+.scan-create-ai-trigger,
+.scan-create-checklist-link,
+.scan-create-switch,
+.scan-create-step,
+.scan-create-hero-panel > div,
+.scan-create-field,
+.scan-create-field-tooltip-icon {
+  border: var(--border-strong);
+  box-shadow: var(--shadow-flat);
+}
+
+.scan-create-ai-trigger,
+.scan-create-checklist-link,
+.scan-create-switch {
+  border-radius: var(--radius-md);
+  background: var(--surface-3);
+  color: var(--line);
+}
+
+.scan-create-step-index,
+.scan-create-field-tooltip-icon,
+.summary-info,
+.info-icon,
+.scan-info-icon,
+.severity-menu-check,
+.vuln-checkbox span {
+  border: 2px solid var(--line);
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.scan-create-step.is-active .scan-create-step-index {
+  background: var(--accent-orange);
+  color: var(--line);
+}
+
+.template-id-copy,
+.ghost-icon,
+.section-leading-icon,
+.templates-search-icon,
+.vuln-search-icon,
+.scans-search-icon,
+.scan-template-library-search-icon {
+  color: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button,
+  .invite-button,
+  .dark-button,
+  .doc-button,
+  .panel-footer-button,
+  .templates-action-button,
+  .template-detail-secondary-button,
+  .template-detail-primary-button,
+  .vuln-action,
+  .vuln-icon-action,
+  .vuln-filter-chip,
+  .vuln-clear-chip,
+  .vuln-per-page,
+  .scans-filter-button,
+  .scans-toolbar-icon,
+  .scans-upgrade-button,
+  .scans-page-size,
+  .scans-row-icon,
+  .templates-filter-chip,
+  .templates-row,
+  .scans-table-row,
+  .vuln-result-row,
+  .scan-template-library-row,
+  .scan-create-step,
+  .scan-create-ghost-button,
+  .scan-create-primary-button,
+  .scan-create-secondary-button {
+    transition: none;
+  }
+}
+
+/* Tone down outline density: keep bold frames for major surfaces only. */
+
+.main-content {
+  padding-top: 30px;
+}
+
+.topbar,
+.templates-topbar,
+.scans-topbar {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  border-width: 2px;
+  border-radius: 18px;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.topbar {
+  padding: 0 4px;
+}
+
+.card,
+.templates-stat-card,
+.templates-table-card,
+.template-detail-card,
+.vuln-results-card,
+.scans-table-card,
+.scan-create-hero,
+.scan-create-checklist-card,
+.scan-create-steps,
+.scan-create-form-card,
+.scan-template-library-panel {
+  border-width: 3px;
+  box-shadow: var(--shadow-flat-lg);
+}
+
+.scan-create-field,
+.severity-menu,
+.protocol-menu,
+.templates-tag-menu,
+.boolean-menu,
+.scans-actions-menu,
+.template-detail-alert {
+  border-width: 2px;
+  border-radius: 18px;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.icon-button,
+.invite-button,
+.doc-button,
+.panel-footer-button,
+.templates-action-button,
+.template-detail-secondary-button,
+.vuln-action,
+.vuln-icon-action,
+.vuln-filter-chip,
+.vuln-clear-chip,
+.vuln-per-page,
+.scans-filter-button,
+.scans-toolbar-icon,
+.scans-connect-button,
+.scans-page-size,
+.scans-row-icon,
+.templates-filter-chip,
+.templates-back,
+.templates-nav-item,
+.template-detail-crumb-button,
+.scan-create-ghost-button,
+.scan-create-secondary-button,
+.scan-template-library-filter-button,
+.scan-template-inline-actions .scan-create-secondary-button,
+.scan-template-page-button,
+.scans-tab,
+.nav-item,
+.team-switcher {
+  border-width: 1px;
+  border-radius: 14px;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.55);
+}
+
+.dark-button,
+.template-detail-primary-button,
+.scans-upgrade-button,
+.scan-create-primary-button,
+.scan-create-primary-button.is-launch,
+.create-button {
+  border-width: 2px;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.62);
+}
+
+.plan-pill,
+.score-badge,
+.severity-pill,
+.detection-chip,
+.templates-severity-pill,
+.templates-selected-tag,
+.template-detail-ai-badge,
+.template-detail-tag-badge,
+.vuln-severity-pill,
+.vuln-meta-chip,
+.vuln-count-badge,
+.vuln-filter-badge,
+.scans-tab-badge,
+.scans-severity-badge,
+.nav-badge,
+.scan-create-eyebrow,
+.scan-create-form-badge,
+.scan-create-ai-trigger-badge,
+.scan-create-panel-label,
+.scan-template-row-state,
+.scan-template-page-button,
+.scan-create-checklist-link,
+.templates-page-arrow,
+.vuln-page-nav,
+.scans-pagination-arrow {
+  border-width: 2px;
+  box-shadow: none;
+}
+
+.templates-nav-item,
+.scans-tab,
+.templates-back,
+.template-detail-crumb-button {
+  background: transparent;
+  box-shadow: none;
+}
+
+.templates-nav-item.active,
+.scans-tab.active {
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.nav-item,
+.team-switcher {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.create-button {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.62);
+}
+
+.nav-item:hover,
+.templates-row:hover,
+.scans-table-row:hover,
+.vuln-result-row:hover,
+.scan-template-library-row:hover,
+.scan-create-step:hover,
+.icon-button:hover,
+.invite-button:hover,
+.dark-button:hover,
+.doc-button:hover,
+.panel-footer-button:hover,
+.templates-action-button:hover,
+.template-detail-secondary-button:hover,
+.template-detail-primary-button:hover,
+.vuln-action:hover,
+.vuln-icon-action:hover,
+.vuln-filter-chip:hover,
+.vuln-clear-chip:hover,
+.vuln-per-page:hover,
+.scans-filter-button:hover,
+.scans-toolbar-icon:hover,
+.scans-upgrade-button:hover,
+.scans-page-size:hover,
+.scans-row-icon:hover,
+.templates-filter-chip:hover,
+.templates-back:hover,
+.templates-nav-item:hover,
+.template-detail-crumb-button:hover,
+.scan-create-ghost-button:hover,
+.scan-create-primary-button:hover,
+.scan-create-secondary-button:hover,
+.scan-template-library-filter-button:hover,
+.scan-template-inline-actions .scan-create-secondary-button:hover,
+.scan-template-page-button:hover {
+  transform: translate(-1px, -1px);
+}
+
+.discover-card,
+.stats-card,
+.info-card,
+.newest-card,
+.template-detail-card,
+.templates-table-card,
+.vuln-results-card,
+.scans-table-card,
+.scan-create-hero,
+.scan-create-form-card,
+.scan-create-steps,
+.scan-template-library-panel {
+  box-shadow: 8px 8px 0 var(--line);
+}
+
+.templates-search input,
+.vuln-search input,
+.scans-search input,
+.scan-template-library-search input,
+.templates-menu-search input,
+.vulnerability-search,
+.scan-create-field input,
+.scan-create-field textarea,
+.scan-create-field select {
+  border-width: 2px;
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.templates-search:hover input,
+.vuln-search:hover input,
+.scans-search:hover input,
+.scan-template-library-search:hover input,
+.templates-menu-search input:hover,
+.vulnerability-search:hover,
+.scan-create-field input:hover,
+.scan-create-field textarea:hover,
+.scan-create-field select:hover,
+.templates-search:focus-within input,
+.vuln-search:focus-within input,
+.scans-search:focus-within input,
+.scan-template-library-search:focus-within input,
+.templates-menu-search input:focus,
+.vulnerability-search:focus,
+.scan-create-field input:focus,
+.scan-create-field textarea:focus,
+.scan-create-field select:focus {
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.templates-nav,
+.scans-tabs {
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.templates-nav-item,
+.scans-tab {
+  min-height: 40px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+/* Soft minimal pass: reduce line density and keep shadows thin. */
+
+.dashboard-shell::before,
+.templates-page::before,
+.template-detail-page::before,
+.vuln-page::before,
+.scans-page::before,
+.scan-create-page::before {
+  display: none;
+}
+
+.card,
+.templates-stat-card,
+.templates-table-card,
+.template-detail-card,
+.vuln-results-card,
+.scans-table-card,
+.scan-create-hero,
+.scan-create-checklist-card,
+.scan-create-steps,
+.scan-create-form-card,
+.scan-template-library-panel,
+.discover-card,
+.stats-card,
+.info-card,
+.newest-card {
+  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.85);
+}
+
+.icon-button,
+.invite-button,
+.doc-button,
+.panel-footer-button,
+.templates-action-button,
+.template-detail-secondary-button,
+.vuln-action,
+.vuln-icon-action,
+.vuln-filter-chip,
+.vuln-clear-chip,
+.vuln-per-page,
+.scans-filter-button,
+.scans-toolbar-icon,
+.scans-connect-button,
+.scans-page-size,
+.scans-row-icon,
+.templates-filter-chip,
+.templates-back,
+.templates-nav-item,
+.template-detail-crumb-button,
+.scan-create-ghost-button,
+.scan-create-secondary-button,
+.scan-template-library-filter-button,
+.scan-template-inline-actions .scan-create-secondary-button,
+.scan-template-page-button,
+.scans-tab,
+.nav-item,
+.team-switcher,
+.create-button,
+.scan-create-ai-trigger,
+.scan-create-checklist-link,
+.scan-create-switch,
+.scan-create-step,
+.scan-create-hero-panel > div,
+.scan-create-field,
+.severity-menu,
+.protocol-menu,
+.templates-tag-menu,
+.boolean-menu,
+.scans-actions-menu,
+.template-detail-alert,
+.plan-pill,
+.score-badge,
+.severity-pill,
+.detection-chip,
+.templates-severity-pill,
+.templates-selected-tag,
+.template-detail-ai-badge,
+.template-detail-tag-badge,
+.vuln-severity-pill,
+.vuln-meta-chip,
+.vuln-count-badge,
+.vuln-filter-badge,
+.scans-tab-badge,
+.scans-severity-badge,
+.nav-badge,
+.scan-create-eyebrow,
+.scan-create-form-badge,
+.scan-create-ai-trigger-badge,
+.scan-create-panel-label,
+.scan-template-row-state,
+.scan-template-page-button,
+.scan-create-checklist-link,
+.templates-page-arrow,
+.vuln-page-nav,
+.scans-pagination-arrow {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.8);
+}
+
+.dark-button,
+.template-detail-primary-button,
+.scans-upgrade-button,
+.scan-create-primary-button,
+.scan-create-primary-button.is-launch {
+  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.85);
+}
+
+.card,
+.templates-stat-card,
+.templates-table-card,
+.template-detail-card,
+.vuln-results-card,
+.scans-table-card,
+.scan-create-hero,
+.scan-create-checklist-card,
+.scan-create-steps,
+.scan-create-form-card,
+.scan-template-library-panel {
+  border-width: 2px;
+}
+
+.discover-card,
+.stats-card > .card-header,
+.category-panel,
+.empty-panel,
+.panel-footer,
+.remediation-panel,
+.newest-header,
+.search-section,
+.templates-empty,
+.templates-pagination,
+.vuln-pagination,
+.scan-template-pagination,
+.templates-table-head,
+.scans-table-head,
+.templates-row,
+.scans-table-row,
+.vuln-result-row,
+.detection-item,
+.scan-template-library-row {
+  border-color: rgba(31, 26, 23, 0.18);
+}
+
+.templates-row:nth-child(odd),
+.scans-table-row:nth-child(odd),
+.vuln-result-row:nth-child(odd),
+.detection-item:nth-child(odd),
+.scan-template-library-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.templates-row:hover,
+.scans-table-row:hover,
+.vuln-result-row:hover,
+.scan-template-library-row:hover {
+  background: rgba(132, 215, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(31, 26, 23, 0.2);
+}
+
+.templates-search input,
+.vuln-search input,
+.scans-search input,
+.scan-template-library-search input,
+.templates-menu-search input,
+.vulnerability-search,
+.scan-create-field input,
+.scan-create-field textarea,
+.scan-create-field select {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.8);
+}
+
+.templates-search:hover input,
+.vuln-search:hover input,
+.scans-search:hover input,
+.scan-template-library-search:hover input,
+.templates-menu-search input:hover,
+.vulnerability-search:hover,
+.scan-create-field input:hover,
+.scan-create-field textarea:hover,
+.scan-create-field select:hover,
+.templates-search:focus-within input,
+.vuln-search:focus-within input,
+.scans-search:focus-within input,
+.scan-template-library-search:focus-within input,
+.templates-menu-search input:focus,
+.vulnerability-search:focus,
+.scan-create-field input:focus,
+.scan-create-field textarea:focus,
+.scan-create-field select:focus {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.8);
+}
+
+.templates-nav,
+.scans-tabs {
+  gap: 6px;
+}
+
+.templates-nav-item,
+.scans-tab {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.topbar,
+.templates-topbar,
+.scans-topbar {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.8);
+}
+
+/* Final harmony pass: keep decorative background, remove unnecessary informational frames. */
+
+.dashboard-shell::before,
+.templates-page::before,
+.template-detail-page::before,
+.vuln-page::before,
+.scans-page::before,
+.scan-create-page::before {
+  display: block;
+  opacity: 0.18;
+}
+
+.topbar,
+.templates-topbar,
+.scans-topbar {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.topbar {
+  padding: 0;
+}
+
+.hero-copy {
+  gap: 10px;
+}
+
+.plan-pill {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.plan-pill::before {
+  content: '/';
+  margin-right: 8px;
+  color: rgba(31, 26, 23, 0.42);
+}
+
+.templates-topbar,
+.scans-topbar {
+  padding-left: 14px;
+  padding-right: 14px;
+  border-bottom: 0;
+}
+
+.templates-nav,
+.scans-tabs {
+  gap: 8px;
+  padding: 0;
+}
+
+.templates-nav-item,
+.scans-tab {
+  border-color: rgba(31, 26, 23, 0.24);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.templates-nav-item.active,
+.scans-tab.active {
+  background: rgba(255, 182, 185, 0.7);
+}
+
+.template-detail-crumb-button,
+.template-detail-crumb-button:hover {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.scans-table-card,
+.scans-table-row,
+.scans-severity-cell,
+.scans-actions-cell,
+.scans-actions-menu-wrap {
+  overflow: visible;
+}
+
+.scans-severity-group,
+.scans-severity-badge,
+.scans-severity-tooltip {
+  overflow: visible;
+}
+
+.scans-table-head,
+.scans-table-row {
+  padding-left: 0;
+}
+
+.scans-table-head {
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+
+/* Dashboard metric units: softer hand-drawn pencil loops instead of rigid boxes. */
+
+.stats-row,
+.summary-row {
+  gap: 12px;
+}
+
+.stat-box,
+.summary-box {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  min-height: 108px;
+  padding: 16px 12px 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.stat-box::before,
+.summary-box::before,
+.stat-box::after,
+.summary-box::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.stat-box::before,
+.summary-box::before {
+  inset: 4px 2px 2px;
+  border: 2px solid rgba(31, 26, 23, 0.44);
+  border-radius: 43% 57% 49% 51% / 47% 53% 45% 55%;
+  background: rgba(255, 251, 239, 0.72);
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.12);
+  transform: rotate(-1.6deg);
+}
+
+.stat-box::after,
+.summary-box::after {
+  inset: 9px 6px 6px;
+  border: 1px solid rgba(31, 26, 23, 0.2);
+  border-radius: 51% 49% 55% 45% / 43% 57% 48% 52%;
+  transform: rotate(1.1deg);
+}
+
+.stat-value,
+.summary-value {
+  position: relative;
+  z-index: 1;
+}
+
+.stat-label,
+.summary-label {
+  position: relative;
+  z-index: 1;
+}
+
+.summary-info {
+  border-radius: 50% 45% 54% 47%;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.5);
+}
+
+.detection-grid {
+  gap: 16px;
+}
+
+.detection-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 150px;
+  padding: 18px 16px 16px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.detection-box::before,
+.detection-box::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.detection-box::before {
+  inset: 2px;
+  border: 2px solid rgba(31, 26, 23, 0.42);
+  border-radius: 46% 54% 49% 51% / 52% 48% 54% 46%;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(255, 214, 114, 0.12), transparent 54%),
+    rgba(255, 252, 242, 0.7);
+  transform: rotate(-1.2deg);
+}
+
+.detection-box::after {
+  inset: 8px 6px 6px;
+  border: 1px solid rgba(31, 26, 23, 0.18);
+  border-radius: 52% 48% 54% 46% / 45% 55% 48% 52%;
+  transform: rotate(0.9deg);
+}
+
+.detection-value,
+.detection-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Scan create page: thin borders, lighter density, and unclipped filter menus. */
+
+.scan-create-page .scan-create-hero,
+.scan-create-page .scan-create-checklist-card,
+.scan-create-page .scan-create-steps,
+.scan-create-page .scan-create-form-card,
+.scan-create-page .scan-template-library-panel,
+.scan-create-page .scan-create-field,
+.scan-create-page .scan-create-ghost-button,
+.scan-create-page .scan-create-primary-button,
+.scan-create-page .scan-create-secondary-button,
+.scan-create-page .scan-template-library-filter-button,
+.scan-create-page .scan-template-inline-actions .scan-create-secondary-button,
+.scan-create-page .scan-create-ai-trigger,
+.scan-create-page .scan-create-switch {
+  border-width: 1px;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-field input,
+.scan-create-page .scan-create-field textarea,
+.scan-create-page .scan-create-field select,
+.scan-create-page .scan-template-library-search input,
+.scan-create-page .scan-create-select-button {
+  border-width: 1px;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-field input:hover,
+.scan-create-page .scan-create-field textarea:hover,
+.scan-create-page .scan-create-field select:hover,
+.scan-create-page .scan-template-library-search input:hover,
+.scan-create-page .scan-create-select-button:hover,
+.scan-create-page .scan-create-field input:focus,
+.scan-create-page .scan-create-field textarea:focus,
+.scan-create-page .scan-create-field select:focus,
+.scan-create-page .scan-template-library-search:focus-within input,
+.scan-create-page .scan-create-select-button:focus-visible {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-field select {
+  cursor: pointer;
+  padding-right: 44px;
+  border-radius: 18px;
+  color: var(--line);
+  font-weight: 700;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 246, 227, 0.95)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 6.25 8 10.75l4.5-4.5' stroke='%23252221' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 15px center;
+  background-size: auto, 16px 16px;
+}
+
+.scan-create-page .scan-create-field select:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(255, 242, 205, 0.98)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 6.25 8 10.75l4.5-4.5' stroke='%23252221' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 15px center;
+  background-size: auto, 16px 16px;
+}
+
+.scan-create-page .scan-create-field select:focus {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(247, 239, 210, 0.98)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 6.25 8 10.75l4.5-4.5' stroke='%23252221' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, right 15px center;
+  background-size: auto, 16px 16px;
+}
+
+.scan-create-page .scan-create-select-button {
+  border-radius: 18px;
+  color: var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 246, 227, 0.95));
+}
+
+.scan-create-page .scan-create-select-button:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(255, 242, 205, 0.98));
+}
+
+.scan-create-page .scan-create-select-button:focus-visible,
+.scan-create-page .scan-create-select.is-open .scan-create-select-button {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(247, 239, 210, 0.98));
+}
+
+.scan-create-page .scan-create-select-menu {
+  border-width: 1px;
+  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.5);
+}
+
+.scan-create-page .scan-create-select-option.is-selected {
+  background: rgba(111, 132, 255, 0.1);
+}
+
+.scan-create-page .scan-create-hero-panel > div,
+.scan-create-page .scan-create-checklist-link {
+  border: 0;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: none;
+}
+
+.scan-create-page .scan-create-hero-panel {
+  gap: 14px;
+}
+
+.scan-create-page .scan-create-hero-panel > div {
+  padding: 10px 0 6px;
+  min-height: auto;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.scan-create-page .scan-create-panel-label {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #707b92;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.scan-create-page .scan-create-hero-panel strong {
+  margin-top: 6px;
+  font-size: 24px;
+  line-height: 1.12;
+}
+
+.scan-create-page .scan-create-hero-panel > div:last-child strong {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.scan-create-page .scan-create-steps,
+.scan-create-page .scan-create-step,
+.scan-create-page .scan-create-step-index {
+  border-width: 1px;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-step.is-active {
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-checklist-link:hover,
+.scan-create-page .scan-create-checklist-link:focus-visible {
+  border: 0;
+  box-shadow: none;
+}
+
+.scan-create-page .scan-create-panel-label,
+.scan-create-page .scan-create-form-badge,
+.scan-create-page .scan-create-eyebrow,
+.scan-create-page .scan-create-ai-trigger-badge {
+  border-width: 1px;
+  box-shadow: none;
+}
+
+.scan-create-page .scan-template-library-panel,
+.scan-create-page .scan-template-library-toolbar,
+.scan-create-page .scan-template-library-filters,
+.scan-create-page .scan-template-library-filter-wrap,
+.scan-create-page .scan-template-library-menu {
+  overflow: visible;
+}
+
+.scan-create-page .scan-create-shell,
+.scan-create-page .scan-create-form-card,
+.scan-create-page .scan-create-field,
+.scan-create-page .scan-create-field-head,
+.scan-create-page .scan-create-field-tooltip-anchor {
+  overflow: visible;
+}
+
+.scan-create-page .scan-create-steps,
+.scan-create-page .scan-create-form-card {
+  position: relative;
+}
+
+.scan-create-page .scan-create-steps {
+  z-index: 1;
+}
+
+.scan-create-page .scan-create-form-card {
+  z-index: 3;
+}
+
+.scan-create-page .scan-create-field-tooltip {
+  z-index: 30;
+}
+
+/* Align template/scans top nav sizing and add a little breathing room from the viewport top. */
+
+.templates-page .templates-topbar,
+.scans-page .scans-topbar {
+  margin: 16px 14px 0;
+}
+
+.templates-page .templates-topbar {
+  height: 46px;
+  gap: 14px;
+}
+
+.templates-page .templates-nav {
+  gap: 8px;
+  height: 100%;
+  padding: 0;
+}
+
+.templates-page .templates-nav-item {
+  height: 100%;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+}

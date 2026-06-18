@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --font-display: "Fredoka", "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-body: "Nunito", "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --ink-strong: #161616;
+  --ink: #252321;
+  --ink-soft: #5e5850;
+  --paper: #fffaf1;
+  --paper-2: #ffe8a3;
+  --paper-3: #fff4cf;
+  --surface: #fffdf7;
+  --surface-2: #fff3cf;
+  --surface-3: #d9f0ff;
+  --surface-4: #ffd6d6;
+  --surface-5: #d7ffd9;
+  --line: #1f1a17;
+  --line-soft: rgba(31, 26, 23, 0.28);
+  --accent-yellow: #ffd54f;
+  --accent-blue: #84d7ff;
+  --accent-pink: #ffb6b9;
+  --accent-green: #b9f19f;
+  --accent-orange: #ffb15e;
+  --shadow-flat: 2px 2px 0 rgba(31, 26, 23, 0.88);
+  --shadow-flat-lg: 3px 3px 0 rgba(31, 26, 23, 0.88);
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --border-strong: 3px solid var(--line);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: linear-gradient(180deg, #fffdf7 0%, #fff6de 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+*::selection {
+  background: var(--accent-yellow);
+  color: var(--line);
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+}
+
+html {
+  background: linear-gradient(180deg, #fffdf7 0%, #fff6de 100%);
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 700;
+  background:
+    linear-gradient(rgba(31, 26, 23, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 26, 23, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 16% 14%, rgba(255, 214, 114, 0.18), transparent 24%),
+    radial-gradient(circle at 84% 12%, rgba(132, 215, 255, 0.16), transparent 22%),
+    linear-gradient(180deg, #fffdf7 0%, #fff6de 100%);
+  background-size: 30px 30px, 30px 30px, auto, auto, auto;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-flat);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(94, 88, 80, 0.8);
+}
+
+button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.hero-copy h1,
+.template-detail-hero-main h1,
+.scan-create-hero h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--line);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-orange);
+  outline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-yellow);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+}
+
+.dashboard-shell {
+  display: flex;
+  height: 100vh;
+}
+
+.dashboard-shell,
+.templates-page,
+.template-detail-page,
+.vuln-page,
+.scans-page,
+.scan-create-page,
+.scan-task-detail-page {
+  position: relative;
+}
+
+.dashboard-shell::before,
+.templates-page::before,
+.template-detail-page::before,
+.vuln-page::before,
+.scans-page::before,
+.scan-create-page::before,
+.scan-task-detail-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background:
+    radial-gradient(circle at 8% 12%, var(--line) 0 1px, transparent 1.2px),
+    radial-gradient(circle at 88% 18%, var(--line) 0 1px, transparent 1.2px),
+    linear-gradient(120deg, transparent 0 49%, rgba(31, 26, 23, 0.03) 49% 50%, transparent 50% 100%);
+  background-size: 260px 260px, 320px 320px, 100% 100%;
+  z-index: 0;
+}
+
+.dashboard-shell > *,
+.templates-page > *,
+.template-detail-page > *,
+.vuln-page > *,
+.scans-page > *,
+.scan-create-page > *,
+.scan-task-detail-page > * {
+  position: relative;
+  z-index: 1;
+}
