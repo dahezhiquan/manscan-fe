@@ -5,15 +5,6 @@ export const templateSummaryItems = [
   { key: 'fingerprintTemplateCount', label: '指纹数量' }
 ]
 
-export const templateFilters = [
-  '风险等级',
-  '标签',
-  '协议',
-  '产品',
-  'KEV',
-  'CVE'
-]
-
 export const severityFilterOptions = [
   { value: 'critical', label: '严重', englishLabel: 'Critical', tone: 'critical', count: '1.8K' },
   { value: 'high', label: '高危', englishLabel: 'High', tone: 'high', count: '2.9K' },

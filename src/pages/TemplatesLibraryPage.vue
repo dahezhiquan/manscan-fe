@@ -6,7 +6,6 @@ import {
   booleanFilterOptions,
   protocolFilterOptions,
   severityFilterOptions,
-  templateFilters,
   templateNavTabs,
   templateSummaryItems
 } from '../data/templates'
@@ -586,13 +585,6 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
-
-        <button class="templates-filter-chip">
-          <span>{{ templateFilters.find((label) => label === '产品') }}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="m7 10 5 5 5-5" />
-          </svg>
-        </button>
 
         <div class="templates-filter-wrap">
           <button
