@@ -98,13 +98,13 @@ const taskTitle = computed(() => {
 })
 
 const taskSubtitle = computed(() => {
-  const description = String(task.value?.description ?? '').trim()
+  const description = resolveTaskDescription(task.value)
 
   if (description) {
     return description
   }
 
-  return '通过 SSE 实时订阅任务状态、进度和扫描日志。'
+  return '暂无扫描描述。'
 })
 
 const streamStatusMeta = computed(() => {
@@ -240,6 +240,21 @@ function pickFirstValue(record, keys) {
   }
 
   return null
+}
+
+function resolveTaskDescription(taskRecord) {
+  const description = pickFirstValue(taskRecord, [
+    'description',
+    'scan_description',
+    'task_description',
+    'desc',
+    'remark',
+    'memo',
+    'note',
+    'summary'
+  ])
+
+  return description === null ? '' : String(description).trim()
 }
 
 function formatCount(value) {
