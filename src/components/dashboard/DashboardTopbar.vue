@@ -2,7 +2,7 @@
   <header class="topbar">
     <div class="hero-copy">
       <h1>你好，zhiquan！</h1>
-      <span class="plan-pill">免费版</span>
+      <span class="plan-pill">系统管理员</span>
     </div>
 
     <div class="topbar-actions">

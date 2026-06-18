@@ -31,6 +31,13 @@ defineExpose({ getElement })
     </div>
 
     <div class="api-key">••••••••••••••••••••</div>
-    <button class="doc-button">查看文档</button>
+    <a
+      class="doc-button"
+      href="https://duxiaoman.feishu.cn/wiki/QMJJwhMHpibwjykVx0cc0uwBnmd?fromScene=spaceOverview"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      查看 ManScan 文档
+    </a>
   </article>
 </template>

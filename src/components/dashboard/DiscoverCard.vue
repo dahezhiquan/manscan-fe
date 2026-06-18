@@ -14,8 +14,8 @@ function handleStartScan() {
 <template>
   <section class="discover-card card">
     <div>
-      <h2>发现资产</h2>
-      <p>你的免费账户支持资产发现。使用工作邮箱注册后可进一步发现漏洞。</p>
+      <h2>漏洞扫描 / 资产探测</h2>
+      <p>依托深度 AI 集成能力，完成全网资产测绘与漏洞深度探测</p>
     </div>
     <button class="dark-button" @click="handleStartScan">开始扫描</button>
   </section>
