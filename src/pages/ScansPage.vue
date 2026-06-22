@@ -176,7 +176,7 @@ onBeforeUnmount(() => {
           </div>
           <div>任务名称</div>
           <div>风险分布</div>
-          <div>漏洞插件数量</div>
+          <div>实际漏洞插件数量</div>
           <div>服务数</div>
           <div>时长</div>
           <div class="is-active">创建时间</div>

@@ -18,6 +18,7 @@ const LIVE_LOG_PRELOAD_SIZE = 50
 const LOG_PAGE_SIZE = 50
 const LOG_SCROLL_PRELOAD_THRESHOLD = 96
 const STREAM_RETRY_DELAY = 2500
+const SUMMARY_POLL_INTERVAL = 5000
 const LOG_LEVEL_LABELS = {
   info: 'INFO',
   debug: 'DEBUG',
@@ -56,6 +57,7 @@ let fetchController = null
 let eventSource = null
 let reconnectTimer = null
 let durationTimer = null
+let summaryPollTimer = null
 
 const taskId = computed(() => {
   const match = props.currentPath.match(/^\/scans\/([^/]+)$/)
@@ -149,7 +151,7 @@ const progressCards = computed(() => [
     tone: 'green'
   },
   {
-    label: '漏洞插件数量',
+    label: '实际漏洞插件数量',
     value: formatCount(firstDefined(task.value?.template_count, task.value?.plugin_count, progress.value?.templates)),
     tone: 'paper'
   }
@@ -804,13 +806,15 @@ function applyPayload(payload, { replaceEvents = false, complete = false } = {})
   isLoading.value = false
 }
 
-async function fetchTaskSummary() {
+async function requestTaskSummary({ silent = false } = {}) {
   const currentRequestId = ++currentTaskRequestId
 
   fetchController?.abort()
   fetchController = new AbortController()
-  pageError.value = ''
-  isRefreshing.value = true
+  if (!silent) {
+    pageError.value = ''
+    isRefreshing.value = true
+  }
 
   try {
     const data = await getScanTask(taskId.value, fetchController.signal)
@@ -829,13 +833,19 @@ async function fetchTaskSummary() {
       return
     }
 
-    pageError.value = error instanceof Error ? error.message : '获取扫描任务详情失败。'
-    isLoading.value = false
+    if (!silent) {
+      pageError.value = error instanceof Error ? error.message : '获取扫描任务详情失败。'
+      isLoading.value = false
+    }
   } finally {
-    if (currentRequestId === currentTaskRequestId) {
+    if (!silent && currentRequestId === currentTaskRequestId) {
       isRefreshing.value = false
     }
   }
+}
+
+async function fetchTaskSummary() {
+  await requestTaskSummary()
 }
 
 function scheduleReconnect() {
@@ -863,11 +873,34 @@ function stopDurationTicker() {
   }
 }
 
+function stopSummaryPolling() {
+  if (summaryPollTimer) {
+    window.clearInterval(summaryPollTimer)
+    summaryPollTimer = null
+  }
+}
+
 function startDurationTicker() {
   stopDurationTicker()
   durationTimer = window.setInterval(() => {
     nowTick.value = Date.now()
   }, 1000)
+}
+
+function startSummaryPolling() {
+  stopSummaryPolling()
+
+  if (!taskId.value || isTaskFinished.value) {
+    return
+  }
+
+  summaryPollTimer = window.setInterval(() => {
+    if (isInitializing.value || isHydratingCompletedLogs.value) {
+      return
+    }
+
+    void requestTaskSummary({ silent: true })
+  }, SUMMARY_POLL_INTERVAL)
 }
 
 function parseStreamMessage(event) {
@@ -961,6 +994,7 @@ function resetState() {
   fetchController?.abort()
   fetchController = null
   closeStream()
+  stopSummaryPolling()
 
   if (reconnectTimer) {
     window.clearTimeout(reconnectTimer)
@@ -1040,6 +1074,7 @@ watch(
 watch(isTaskFinished, (finished) => {
   if (finished) {
     stopDurationTicker()
+    stopSummaryPolling()
 
     if (streamState.value !== 'complete') {
       streamState.value = 'complete'
@@ -1053,6 +1088,7 @@ watch(isTaskFinished, (finished) => {
   }
 
   startDurationTicker()
+  startSummaryPolling()
 }, { immediate: true })
 
 onBeforeUnmount(() => {
