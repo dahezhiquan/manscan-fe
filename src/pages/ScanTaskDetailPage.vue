@@ -178,7 +178,8 @@ const infoItems = computed(() => [
   },
   {
     label: '预估总请求数',
-    value: formatCount(progress.value?.total_requests)
+    value: formatCount(progress.value?.total_requests),
+    tooltip: '通过模版聚类分析技术和 project 缓存技术，实际请求数可能大大减少'
   },
   {
     label: '扫描目标数量',
@@ -212,7 +213,7 @@ const logPanelDescription = computed(() => {
     return `扫描结束后默认展示最后 ${LOG_PAGE_SIZE} 条，向上滚动自动补载更早日志。`
   }
 
-  return '先展示任务已有日志，再通过 SSE 持续追加实时输出。'
+  return '正在努力扫描中...'
 })
 const showReconnectButton = computed(() => streamState.value !== 'connected' && !isTaskFinished.value)
 const scanStrategyLabel = computed(() => formatScanStrategy(task.value?.scan_strategy))
@@ -1221,7 +1222,20 @@ onBeforeUnmount(() => {
             class="scan-task-detail-info-row"
             :class="[{ 'is-emphasis': item.emphasis }, item.tone ? `is-${item.tone}` : '']"
           >
-            <span>{{ item.label }}</span>
+            <span class="scan-task-detail-info-label">
+              <span>{{ item.label }}</span>
+              <span
+                v-if="item.tooltip"
+                class="scan-create-field-tooltip-anchor"
+                tabindex="0"
+                aria-label="查看字段说明"
+              >
+                <span class="scan-create-field-tooltip-icon">?</span>
+                <span class="scan-create-field-tooltip" role="tooltip">
+                  {{ item.tooltip }}
+                </span>
+              </span>
+            </span>
             <strong>{{ item.value }}</strong>
           </div>
         </div>
