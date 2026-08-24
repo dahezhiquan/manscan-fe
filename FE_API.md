@@ -114,6 +114,8 @@
   - 请求体为 JSON
   - 前端会按表单仅提交已填写字段
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
+- 联调注意事项：
+  - 当前后端不限制单次任务的目标数量上限
 - 返回结构：前端使用 `data.task.id`、`data.task.task_no`、`data.task.status`、`data.task_api`
 - 异常分支：
   - 非 2xx 或业务错误时，在页面顶部展示错误文案

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { createScanTaskStream, getScanTask, getScanTaskLogs } from '../api/scans'
+import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
   navigateTo: {
@@ -440,14 +441,50 @@ function normalizeLogEvent(eventRecord) {
     return null
   }
 
+  const data = eventRecord.data && typeof eventRecord.data === 'object' ? eventRecord.data : null
+
   return {
     seq: Number.isFinite(Number(eventRecord.seq)) ? Number(eventRecord.seq) : null,
     time: eventRecord.time || eventRecord.created_at || '',
     level: String(eventRecord.level || 'info').toLowerCase(),
     type: String(eventRecord.type || 'stdout').toLowerCase(),
     message: String(eventRecord.message || ''),
-    data: eventRecord.data && typeof eventRecord.data === 'object' ? eventRecord.data : null
+    data,
+    severityTone: resolveLogSeverityTone(eventRecord, data)
   }
+}
+
+function resolveLogSeverityTone(eventRecord, data) {
+  const directSeverity = firstDefined(
+    eventRecord?.severity,
+    data?.severity,
+    data?.info?.severity,
+    data?.template_info?.severity,
+    data?.template?.severity
+  )
+
+  if (directSeverity) {
+    return mapSeverityTone(directSeverity)
+  }
+
+  const message = String(eventRecord?.message || '')
+  const severityFromMessage = message.match(/\[(critical|high|medium|low|info|严重|高危|中危|低危|信息)\]/i)?.[1]
+
+  if (severityFromMessage) {
+    return mapSeverityTone(severityFromMessage)
+  }
+
+  return 'unknown'
+}
+
+function logRowClasses(item) {
+  const classes = [`is-${item.level}`, `type-${item.type}`]
+
+  if (item.level === 'match') {
+    classes.push(`severity-${item.severityTone || 'unknown'}`)
+  }
+
+  return classes
 }
 
 function eventKey(eventRecord) {
@@ -1196,7 +1233,7 @@ onBeforeUnmount(() => {
             v-else
             :key="eventKey(item)"
             class="scan-task-detail-log-row"
-            :class="[`is-${item.level}`, `type-${item.type}`]"
+            :class="logRowClasses(item)"
           >
             <div class="scan-task-detail-log-meta">
               <span class="scan-task-detail-log-seq">#{{ item.seq ?? '--' }}</span>
