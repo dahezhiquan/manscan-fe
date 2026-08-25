@@ -143,8 +143,13 @@ const progressCards = computed(() => [
   },
   {
     label: '漏洞命中',
-    value: formatCount(progress.value?.matched),
+    value: formatCount(resolveVulnerabilityMatchCount(task.value, progress.value)),
     tone: 'pink'
+  },
+  {
+    label: '指纹识别数量',
+    value: formatCount(task.value?.tech_count),
+    tone: 'orange'
   },
   {
     label: '扫描目标数量',
@@ -406,6 +411,22 @@ function resolveTargetCount(taskRecord, progressRecord) {
   }
 
   return progressRecord?.hosts ?? null
+}
+
+function resolveVulnerabilityMatchCount(taskRecord, progressRecord) {
+  const severityKeys = ['critical_count', 'high_count', 'medium_count', 'low_count', 'info_count']
+  const hasSeverityBreakdown = severityKeys.some((key) => taskRecord?.[key] !== null && taskRecord?.[key] !== undefined && taskRecord?.[key] !== '')
+
+  if (hasSeverityBreakdown) {
+    return severityKeys.reduce((total, key) => total + normalizeCountValue(taskRecord?.[key]), 0)
+  }
+
+  return progressRecord?.matched ?? null
+}
+
+function normalizeCountValue(value) {
+  const count = Number(value)
+  return Number.isFinite(count) ? count : 0
 }
 
 function getStatusMeta(status) {

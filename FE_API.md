@@ -132,10 +132,16 @@
 - 请求参数：
   - 路径参数 `id`
 - 返回结构：前端使用 `data.task` 与 `data.progress`
+  - `data.task` 当前直接使用 `id`、`task_no`、`name`、`description`、`status`、`started_at`、`target_count`、`plugin_count`、`tech_count`
+  - `data.task` 也会随详情接口返回 `critical_count`、`high_count`、`medium_count`、`low_count`、`info_count`，前端当前保留兼容
+  - `data.progress` 当前直接使用 `hosts`、`templates`、`total_requests`、`requests`、`matched`、`errors`、`percent`、`last_updated_at`、`last_message`、`last_event_seq`、`finished`、`finished_status`
 - 异常分支：
   - 失败时展示“任务详情加载失败”
   - 页面仍保留返回列表与刷新按钮
 - 联调注意事项：
+  - 详情页顶部“漏洞命中”卡片优先使用 `critical_count + high_count + medium_count + low_count + info_count`
+  - `progress.matched` 当前不再直接用于“漏洞命中”展示，避免把 `tech_count` 混入漏洞统计
+  - `data.task.tech_count` 用于“指纹识别数量”展示，空值前端回退为 `--`
   - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式
   - `progress.last_event_seq` 会影响日志续拉偏移量
 
@@ -148,10 +154,13 @@
   - `offset`
   - `limit`
 - 返回结构：前端使用 `data.task`、`data.progress`、`data.events`、`data.next_offset`、`data.has_more`
+  - `data.task` 与详情接口保持一致，前端会继续读取并覆盖 `target_count`、`plugin_count`、`tech_count` 等统计字段
 - 异常分支：
   - 首屏加载失败时展示“获取扫描日志失败。”
   - 向上补载失败时展示“加载更早日志失败。”
 - 联调注意事项：
+  - 日志接口返回的 `data.task.critical_count/high_count/medium_count/low_count/info_count` 会同步刷新顶部“漏洞命中”卡片
+  - 日志接口返回的 `data.task.tech_count` 会同步刷新详情页“指纹识别数量”
   - `events[].seq` 最好连续递增，前端依赖它做去重和排序
   - `next_offset` 与 `has_more` 会影响历史日志是否继续加载
 

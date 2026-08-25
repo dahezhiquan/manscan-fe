@@ -294,7 +294,15 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
       "description": "",
       "status": "running",
       "created_by": "anonymous",
-      "started_at": "2026-06-09T21:00:00+08:00"
+      "started_at": "2026-06-09T21:00:00+08:00",
+      "critical_count": 1,
+      "high_count": 2,
+      "medium_count": 3,
+      "low_count": 4,
+      "info_count": 5,
+      "tech_count": 6,
+      "plugin_count": 120,
+      "target_count": 12
     },
     "progress": {
       "hosts": 1,
@@ -313,6 +321,12 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
   }
 }
 ```
+
+- 字段说明补充：
+  - `data.task.critical_count`、`high_count`、`medium_count`、`low_count`、`info_count`：当前任务已命中的各风险等级数量
+  - `data.task.tech_count`：当前任务识别到的指纹数量
+  - `data.task.plugin_count`：当前任务实际参与执行的漏洞插件数量
+  - `data.task.target_count`：当前任务的扫描目标数量
 
 - 错误码说明：
   - `40001`：任务 ID 非法
@@ -350,7 +364,15 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
       "name": "demo-scan",
       "description": "",
       "status": "running",
-      "created_by": "anonymous"
+      "created_by": "anonymous",
+      "critical_count": 1,
+      "high_count": 2,
+      "medium_count": 3,
+      "low_count": 4,
+      "info_count": 5,
+      "tech_count": 6,
+      "plugin_count": 120,
+      "target_count": 12
     },
     "progress": {
       "requests": 10,
@@ -372,6 +394,10 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
   }
 }
 ```
+
+- 字段说明补充：
+  - `data.task` 会同步返回与详情接口一致的统计字段，便于前端在日志流刷新时更新信息区
+  - `data.task.tech_count` 表示当前任务识别到的指纹数量
 
 - 错误码说明：
   - `40001`：任务 ID、`offset` 或 `limit` 非法
