@@ -19,7 +19,9 @@ export const footerNav = [
   { label: '退出登录', icon: 'logout' }
 ]
 
-export function getNavigationState(path = '/') {
+export function getNavigationState(path = '/', options = {}) {
+  const { scanCount } = options
+
   const isRouteActive = (route) => {
     if (!route) {
       return false
@@ -43,6 +45,7 @@ export function getNavigationState(path = '/') {
   return {
     primaryNav: primaryNav.map((item) => ({
       ...item,
+      count: item.route === '/scans' && scanCount !== undefined ? scanCount : item.count,
       active: isRouteActive(item.route)
     })),
     secondaryNav: secondaryNav.map((item) => ({

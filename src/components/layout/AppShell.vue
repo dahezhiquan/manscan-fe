@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { toRef } from 'vue'
 import AppSidebar from './AppSidebar.vue'
-import { footerNav, getNavigationState } from '../../data/dashboard'
+import { footerNav } from '../../data/dashboard'
+import { useSidebarNavigation } from '../../composables/useSidebarNavigation'
 
 const props = defineProps({
   currentPath: {
@@ -20,7 +21,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-sidebar', 'navigate'])
 
-const navigationState = computed(() => getNavigationState(props.currentPath))
+const { navigationState } = useSidebarNavigation(toRef(props, 'currentPath'))
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import ApiKeyCard from '../components/dashboard/ApiKeyCard.vue'
 import AssetsCard from '../components/dashboard/AssetsCard.vue'
@@ -13,13 +13,13 @@ import VulnIntelCard from '../components/dashboard/VulnIntelCard.vue'
 import {
   assetStats,
   footerNav,
-  getNavigationState,
   latestDetections,
   remediationOverviewStats,
   remediationStats,
   vulnerabilityDetections,
   vulnerabilityStats
 } from '../data/dashboard'
+import { useSidebarNavigation } from '../composables/useSidebarNavigation'
 
 const props = defineProps({
   navigateTo: {
@@ -44,7 +44,7 @@ const emit = defineEmits(['toggle-sidebar'])
 
 let resizeObserver = null
 
-const navigationState = computed(() => getNavigationState(props.currentPath))
+const { navigationState } = useSidebarNavigation(toRef(props, 'currentPath'))
 
 function updateNewestCardHeight() {
   const leftColumn = leftColumnRef.value

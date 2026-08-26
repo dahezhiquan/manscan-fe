@@ -1,5 +1,17 @@
-import { SCAN_TASK_CREATE_API, buildScanTaskApi, buildScanTaskLogsApi, buildScanTaskStreamApi } from '../constants/api'
+import {
+  SCAN_TASK_CREATE_API,
+  SCAN_TASK_STATS_API,
+  buildScanTaskApi,
+  buildScanTaskLogsApi,
+  buildScanTaskStreamApi
+} from '../constants/api'
 import { requestJson } from '../utils/http'
+
+export async function getScanTaskStats(signal) {
+  return requestJson(SCAN_TASK_STATS_API, {
+    signal
+  })
+}
 
 export async function getScanTaskList(params = {}, signal) {
   const searchParams = new URLSearchParams()
@@ -10,6 +22,7 @@ export async function getScanTaskList(params = {}, signal) {
   appendMultiQueryParam(searchParams, 'status', params.status)
   appendMultiQueryParam(searchParams, 'scan_strategy', params.scan_strategy ?? params.scanStrategy)
   appendSingleQueryParam(searchParams, 'created_by', params.created_by ?? params.createdBy)
+  appendSingleQueryParam(searchParams, 'has_high_risk', params.has_high_risk ?? params.hasHighRisk)
 
   const query = searchParams.toString()
   const requestUrl = query ? `${SCAN_TASK_CREATE_API}?${query}` : SCAN_TASK_CREATE_API

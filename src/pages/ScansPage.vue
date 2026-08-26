@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getScanTaskList } from '../api/scans'
+import { getScanTaskList, getScanTaskStats } from '../api/scans'
 import {
   SCAN_LIST_PAGE_SIZE_OPTIONS,
   SCAN_LIST_POLL_INTERVAL,
@@ -28,6 +28,7 @@ const props = defineProps({
 const keywordInput = ref('')
 const appliedKeyword = ref('')
 const selectedStatus = ref('')
+const hasHighRiskOnly = ref(false)
 const activeFilterMenu = ref('')
 const filtersRef = ref(null)
 const tableRows = ref([])
@@ -39,6 +40,11 @@ const pageError = ref('')
 const isLoading = ref(true)
 const isRefreshing = ref(false)
 const lastUpdatedAt = ref(null)
+const summaryStats = ref({
+  total: null,
+  running: null,
+  savedRequests: null
+})
 const { setup: setupSearchMagnetism } = useSearchMagnetism('.scans-search')
 
 let fetchController = null
@@ -49,11 +55,26 @@ let isSyncingFilters = false
 
 const activeTaskCount = computed(() => tableRows.value.filter((item) => isActiveScanStatus(item.status)).length)
 const hasData = computed(() => tableRows.value.length > 0)
-const hasFilters = computed(() => Boolean(appliedKeyword.value || selectedStatus.value))
+const hasFilters = computed(() => Boolean(appliedKeyword.value || selectedStatus.value || hasHighRiskOnly.value))
 const showInitialLoading = computed(() => isLoading.value && !hasData.value)
 const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
 const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
 const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
+const totalTaskCount = computed(() => {
+  if (summaryStats.value.total !== null && summaryStats.value.total !== undefined) {
+    return summaryStats.value.total
+  }
+
+  return total.value
+})
+const runningTaskCount = computed(() => {
+  if (summaryStats.value.running !== null && summaryStats.value.running !== undefined) {
+    return summaryStats.value.running
+  }
+
+  return activeTaskCount.value
+})
+const savedRequestCount = computed(() => summaryStats.value.savedRequests)
 const pageStart = computed(() => {
   if (!total.value || !tableRows.value.length) {
     return 0
@@ -98,6 +119,23 @@ function scheduleInputCommit() {
 
 function severityValue(row, key) {
   return row.severity[key] ?? 0
+}
+
+function normalizeScanTaskStats(payload) {
+  return {
+    total: normalizeSummaryNumber(payload?.total),
+    running: normalizeSummaryNumber(payload?.running),
+    savedRequests: normalizeSummaryNumber(payload?.saved_requests ?? payload?.savedRequests)
+  }
+}
+
+function normalizeSummaryNumber(value) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
 }
 
 function formatFilterLabel(baseLabel, options, selectedValue) {
@@ -158,6 +196,12 @@ function handleStatusChange() {
   void loadScanTasks()
 }
 
+function toggleHighRiskFilter() {
+  hasHighRiskOnly.value = !hasHighRiskOnly.value
+  currentPage.value = 1
+  void loadScanTasks()
+}
+
 function goToPreviousPage() {
   if (currentPage.value <= 1 || isLoading.value || isRefreshing.value) {
     return
@@ -182,6 +226,7 @@ function clearFilters() {
   keywordInput.value = ''
   appliedKeyword.value = ''
   selectedStatus.value = ''
+  hasHighRiskOnly.value = false
   currentPage.value = 1
   void loadScanTasks()
   window.setTimeout(() => {
@@ -240,21 +285,33 @@ async function loadScanTasks(options = {}) {
   pageError.value = ''
 
   try {
-    const response = await getScanTaskList(
-      {
-        page: currentPage.value,
-        page_size: pageSize.value,
-        keyword: appliedKeyword.value,
-        status: selectedStatus.value
-      },
-      controller.signal
-    )
+    const [listResult, statsResult] = await Promise.allSettled([
+      getScanTaskList(
+        {
+          page: currentPage.value,
+          page_size: pageSize.value,
+          keyword: appliedKeyword.value,
+          status: selectedStatus.value,
+          has_high_risk: hasHighRiskOnly.value ? true : undefined
+        },
+        controller.signal
+      ),
+      getScanTaskStats(controller.signal)
+    ])
 
     if (requestId !== currentRequestId) {
       return
     }
 
-    const normalized = normalizeScanTaskListResponse(response, currentPage.value, pageSize.value)
+    if (listResult.status !== 'fulfilled') {
+      throw listResult.reason
+    }
+
+    if (statsResult.status === 'fulfilled') {
+      summaryStats.value = normalizeScanTaskStats(statsResult.value)
+    }
+
+    const normalized = normalizeScanTaskListResponse(listResult.value, currentPage.value, pageSize.value)
     tableRows.value = normalized.items
     total.value = normalized.total
     currentPage.value = normalized.page
@@ -307,8 +364,25 @@ onBeforeUnmount(() => {
         <h1>任务总览</h1>
 
         <div class="scans-hero-meta">
-          <span class="scans-hero-chip">总任务 {{ formatCount(total) }}</span>
-          <span class="scans-hero-chip is-running">运行中 {{ activeTaskCount }}</span>
+          <span class="scans-hero-chip">总任务 {{ formatCount(totalTaskCount) }}</span>
+          <span class="scans-hero-chip is-running">运行中 {{ formatCount(runningTaskCount) }}</span>
+          <span class="scans-hero-chip is-saved">
+            <span>模版聚类/缓存算法已为您节省请求数量：</span>
+            <strong>{{ formatCount(savedRequestCount) }}</strong>
+            <span class="scans-chip-tooltip-anchor" tabindex="0" aria-label="查看模版聚类与缓存算法说明">
+              <span class="scans-chip-tooltip-icon">?</span>
+              <span class="scans-chip-tooltip" role="tooltip">
+                <span>了解关于模版聚类/缓存算法的更多细节：</span>
+                <a
+                  href="https://duxiaoman.feishu.cn/wiki/X4gNwtseeiXV7Jkg8lHcapJ5nQd?fromScene=spaceOverview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  文档
+                </a>
+              </span>
+            </span>
+          </span>
         </div>
       </div>
 
@@ -412,6 +486,21 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+
+          <button
+            class="scans-filter-chip scans-risk-chip"
+            :class="{ active: hasHighRiskOnly }"
+            type="button"
+            :aria-pressed="hasHighRiskOnly ? 'true' : 'false'"
+            @click="toggleHighRiskFilter"
+          >
+            <span>严/高风险</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 4.8 19 18H5L12 4.8Z" />
+              <path d="M12 9.4v4.6" />
+              <path d="M12 16.8h.01" />
+            </svg>
+          </button>
 
           <button
             v-if="hasFilters"

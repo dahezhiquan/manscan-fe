@@ -214,13 +214,6 @@ const infoItems = computed(() => [
 ])
 
 const logCountLabel = computed(() => `${events.value.length} 条`)
-const logPanelDescription = computed(() => {
-  if (logMode.value === 'paged') {
-    return `扫描结束后默认展示最后 ${LOG_PAGE_SIZE} 条，向上滚动自动补载更早日志。`
-  }
-
-  return '正在努力扫描中...'
-})
 const showReconnectButton = computed(() => streamState.value !== 'connected' && !isTaskFinished.value)
 const scanStrategyLabel = computed(() => formatScanStrategy(task.value?.scan_strategy))
 const showLoadOlderHint = computed(() => logMode.value === 'paged' && (hasOlderLogs.value || isLoadingOlderLogs.value))
@@ -1206,7 +1199,6 @@ onBeforeUnmount(() => {
         <header class="scan-task-detail-panel-head">
           <div>
             <h2>扫描日志</h2>
-            <p>{{ logPanelDescription }}</p>
           </div>
 
           <div class="scan-task-detail-panel-actions">
@@ -1241,7 +1233,7 @@ onBeforeUnmount(() => {
 
           <div v-else-if="isHydratingCompletedLogs" class="scan-task-detail-empty-state is-compact">
             <strong>正在整理最终日志...</strong>
-            <span>扫描结束后会切换为按需加载模式，先展示最后 {{ LOG_PAGE_SIZE }} 条。</span>
+            <span>请稍候。</span>
           </div>
 
           <div v-else-if="events.length === 0" class="scan-task-detail-empty-state">
