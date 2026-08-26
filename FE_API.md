@@ -105,7 +105,43 @@
 
 ## 扫描相关接口
 
-### 6. 创建扫描任务
+### 6. 获取扫描任务列表
+
+- 用途：`/scans` 任务列表页首屏加载、分页、筛选、搜索和轮询刷新
+- 请求方式：`GET`
+- 路径：`/api/v1/scans`
+- 请求参数：
+  - `page`: 页码，默认 `1`
+  - `page_size`: 每页数量，默认 `10`
+  - `keyword`: 任务名称、任务号或创建人模糊搜索
+  - `status`: 任务状态，支持单值或多值
+  - `scan_strategy`: 扫描策略，支持单值或多值
+  - `created_by`: 创建人精确过滤
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].name`
+  - `items[].status`
+  - `items[].created_by`
+  - `items[].scan_strategy`
+  - `items[].started_at`
+  - `items[].finished_at`
+  - `items[].critical_count` / `high_count` / `medium_count` / `low_count` / `info_count`
+  - `items[].plugin_count`
+  - `items[].target_count`
+  - `items[].total_requests`
+  - `items[].real_requests`
+  - `items[].progress_percent`
+  - `items[].duration_seconds`
+  - `items[].last_message`
+- 异常分支：
+  - 首屏失败时展示错误态和重试按钮
+  - 有数据时失败会保留当前列表并在顶部提示
+  - 无数据时展示空态
+- 联调注意事项：
+  - 运行中和等待中任务会被前端自动轮询刷新，间隔约 7 秒
+  - 列表页默认展示 `started_at` 作为时间列
+  - 风险分布直接使用后端严重级别计数
+
+### 7. 创建扫描任务
 
 - 用途：扫描任务创建页提交任务
 - 请求方式：`POST`
@@ -124,7 +160,7 @@
   - `task.id` 缺失时，前端会尝试从 `task_api` 中解析详情 ID
   - `task_api` 建议返回 `/api/v1/scans/:id`
 
-### 7. 获取扫描任务详情
+### 8. 获取扫描任务详情
 
 - 用途：扫描任务详情页的基本信息、进度卡片和状态展示
 - 请求方式：`GET`
@@ -145,7 +181,7 @@
   - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式
   - `progress.last_event_seq` 会影响日志续拉偏移量
 
-### 8. 获取扫描任务日志
+### 9. 获取扫描任务日志
 
 - 用途：扫描任务详情页的初始日志加载、完成后分页补载历史日志
 - 请求方式：`GET`
@@ -164,7 +200,7 @@
   - `events[].seq` 最好连续递增，前端依赖它做去重和排序
   - `next_offset` 与 `has_more` 会影响历史日志是否继续加载
 
-### 9. 订阅扫描任务日志流
+### 10. 订阅扫描任务日志流
 
 - 用途：扫描任务详情页实时日志流
 - 请求方式：`GET`

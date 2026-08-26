@@ -1,6 +1,24 @@
 import { SCAN_TASK_CREATE_API, buildScanTaskApi, buildScanTaskLogsApi, buildScanTaskStreamApi } from '../constants/api'
 import { requestJson } from '../utils/http'
 
+export async function getScanTaskList(params = {}, signal) {
+  const searchParams = new URLSearchParams()
+
+  appendSingleQueryParam(searchParams, 'page', params.page)
+  appendSingleQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  appendSingleQueryParam(searchParams, 'keyword', params.keyword)
+  appendMultiQueryParam(searchParams, 'status', params.status)
+  appendMultiQueryParam(searchParams, 'scan_strategy', params.scan_strategy ?? params.scanStrategy)
+  appendSingleQueryParam(searchParams, 'created_by', params.created_by ?? params.createdBy)
+
+  const query = searchParams.toString()
+  const requestUrl = query ? `${SCAN_TASK_CREATE_API}?${query}` : SCAN_TASK_CREATE_API
+
+  return requestJson(requestUrl, {
+    signal
+  })
+}
+
 export async function createScanTask(payload) {
   return requestJson(SCAN_TASK_CREATE_API, {
     method: 'POST',
@@ -23,4 +41,26 @@ export async function getScanTaskLogs(taskId, offset, limit) {
 
 export function createScanTaskStream(taskId, offset) {
   return new EventSource(buildScanTaskStreamApi(taskId, offset))
+}
+
+function appendSingleQueryParam(searchParams, key, value) {
+  if (value === null || value === undefined || value === '') {
+    return
+  }
+
+  searchParams.set(key, String(value))
+}
+
+function appendMultiQueryParam(searchParams, key, value) {
+  if (Array.isArray(value)) {
+    value
+      .map((item) => String(item ?? '').trim())
+      .filter(Boolean)
+      .forEach((item) => {
+        searchParams.append(key, item)
+      })
+    return
+  }
+
+  appendSingleQueryParam(searchParams, key, value)
 }

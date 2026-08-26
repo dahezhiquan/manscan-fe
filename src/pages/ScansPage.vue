@@ -1,7 +1,22 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getScanTaskList } from '../api/scans'
+import {
+  SCAN_LIST_PAGE_SIZE_OPTIONS,
+  SCAN_LIST_POLL_INTERVAL,
+  SCAN_LIST_SEARCH_DEBOUNCE,
+  SCAN_SEVERITY_ORDER,
+  SCAN_STATUS_META,
+  SCAN_STATUS_OPTIONS
+} from '../constants/scanTasks'
 import { useSearchMagnetism } from '../composables/useSearchMagnetism'
-import { scanFilters, scanRows, scanSeverityOrder, scanTabs } from '../data/scans'
+import {
+  formatCount,
+  formatDateTime,
+  isActiveScanStatus,
+  normalizeScanTaskListResponse,
+  severityLabel
+} from '../utils/scanTask'
 
 const props = defineProps({
   navigateTo: {
@@ -10,117 +25,327 @@ const props = defineProps({
   }
 })
 
-const keyword = ref('')
-const selectedStatus = ref('全部状态')
-const selectedType = ref('全部类型')
-const openMenuId = ref(null)
+const keywordInput = ref('')
+const appliedKeyword = ref('')
+const selectedStatus = ref('')
+const activeFilterMenu = ref('')
+const filtersRef = ref(null)
+const tableRows = ref([])
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(SCAN_LIST_PAGE_SIZE_OPTIONS[0])
+const totalPages = ref(1)
+const pageError = ref('')
+const isLoading = ref(true)
+const isRefreshing = ref(false)
+const lastUpdatedAt = ref(null)
 const { setup: setupSearchMagnetism } = useSearchMagnetism('.scans-search')
 
-const rowActionItems = [
-  { key: 'rename', label: '重命名', tone: 'default' },
-  { key: 'rescan', label: '重新扫描', tone: 'muted' },
-  { key: 'delete', label: '删除', tone: 'danger' },
-  { key: 'stop', label: '停止', tone: 'danger' },
-]
+let fetchController = null
+let currentRequestId = 0
+let pollTimer = null
+let keywordTimer = null
+let isSyncingFilters = false
 
-const severityMeta = {
-  critical: { label: 'Critical', accent: '#e07b88' },
-  high: { label: 'High', accent: '#e28a3c' },
-  medium: { label: 'Medium', accent: '#d7a24a' },
-  low: { label: 'Low', accent: '#7e93ea' },
-  info: { label: 'Info', accent: '#36ad67' },
-  unknown: { label: 'Unknown', accent: '#9ca3af' },
-}
+const activeTaskCount = computed(() => tableRows.value.filter((item) => isActiveScanStatus(item.status)).length)
+const hasData = computed(() => tableRows.value.length > 0)
+const hasFilters = computed(() => Boolean(appliedKeyword.value || selectedStatus.value))
+const showInitialLoading = computed(() => isLoading.value && !hasData.value)
+const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
+const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
+const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
+const pageStart = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
 
-const tableRows = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLowerCase()
-
-  return scanRows.filter((item) => {
-    if (!normalizedKeyword) {
-      return true
-    }
-
-    return item.id.toLowerCase().includes(normalizedKeyword)
-  })
+  return (currentPage.value - 1) * pageSize.value + 1
 })
+const pageEnd = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return Math.min(total.value, pageStart.value + tableRows.value.length - 1)
+})
+const shouldPoll = computed(() => activeTaskCount.value > 0)
+const autoRefreshLabel = computed(() => (shouldPoll.value ? '运行中任务自动刷新中' : '当前页无运行中任务'))
+const lastUpdatedLabel = computed(() => (lastUpdatedAt.value ? formatDateTime(lastUpdatedAt.value) : '--'))
+const statusButtonLabel = computed(() => formatFilterLabel('状态', SCAN_STATUS_OPTIONS, selectedStatus.value))
+
+function scheduleInputCommit() {
+  if (isSyncingFilters) {
+    return
+  }
+
+  const nextValue = keywordInput.value.trim()
+  const currentValue = appliedKeyword.value
+
+  if (nextValue === currentValue) {
+    return
+  }
+
+  window.clearTimeout(keywordTimer)
+
+  const timerId = window.setTimeout(() => {
+    appliedKeyword.value = nextValue
+    currentPage.value = 1
+    void loadScanTasks()
+  }, SCAN_LIST_SEARCH_DEBOUNCE)
+
+  keywordTimer = timerId
+}
 
 function severityValue(row, key) {
   return row.severity[key] ?? 0
 }
 
-function pageSizeLabel(count) {
-  return `${count} 条/页`
+function formatFilterLabel(baseLabel, options, selectedValue) {
+  if (!selectedValue) {
+    return baseLabel
+  }
+
+  const selectedLabel = options.find((item) => item.value === selectedValue)?.label
+
+  return selectedLabel ? `${baseLabel} · ${selectedLabel}` : baseLabel
 }
 
-function severityLabel(key) {
-  return severityMeta[key]?.label ?? 'Unknown'
+function statusOptionTone(value) {
+  if (!value) {
+    return 'all'
+  }
+
+  return SCAN_STATUS_META[value]?.tone ?? 'all'
 }
 
-function severityAccent(key) {
-  return severityMeta[key]?.accent ?? '#9ca3af'
+function isMenuOpen(name) {
+  return activeFilterMenu.value === name
 }
 
-function toggleRowMenu(rowId) {
-  openMenuId.value = openMenuId.value === rowId ? null : rowId
+function toggleFilterMenu(name) {
+  activeFilterMenu.value = activeFilterMenu.value === name ? '' : name
 }
 
-function closeRowMenu() {
-  openMenuId.value = null
+function closeFilterMenus() {
+  activeFilterMenu.value = ''
 }
 
 function handleDocumentClick(event) {
-  if (!event.target.closest('.scans-actions-menu-wrap')) {
-    closeRowMenu()
+  if (!filtersRef.value?.contains(event.target)) {
+    closeFilterMenus()
   }
 }
 
+function goToScanDetail(taskId) {
+  if (!taskId) {
+    return
+  }
+
+  const detailPath = `/scans/${encodeURIComponent(taskId)}`
+  window.open(detailPath, '_blank', 'noopener,noreferrer')
+}
+
+function handleRowKeydown(event, taskId) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    goToScanDetail(taskId)
+  }
+}
+
+function handleStatusChange() {
+  currentPage.value = 1
+  closeFilterMenus()
+  void loadScanTasks()
+}
+
+function goToPreviousPage() {
+  if (currentPage.value <= 1 || isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  currentPage.value -= 1
+  void loadScanTasks()
+}
+
+function goToNextPage() {
+  if (currentPage.value >= totalPages.value || isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  currentPage.value += 1
+  void loadScanTasks()
+}
+
+function clearFilters() {
+  isSyncingFilters = true
+  window.clearTimeout(keywordTimer)
+  keywordInput.value = ''
+  appliedKeyword.value = ''
+  selectedStatus.value = ''
+  currentPage.value = 1
+  void loadScanTasks()
+  window.setTimeout(() => {
+    isSyncingFilters = false
+  }, 0)
+}
+
+function handleRefresh() {
+  void loadScanTasks({ forceLoading: !hasData.value })
+}
+
+function clearPolling() {
+  if (pollTimer) {
+    window.clearTimeout(pollTimer)
+    pollTimer = null
+  }
+}
+
+function stopRequest() {
+  if (fetchController) {
+    fetchController.abort()
+    fetchController = null
+  }
+}
+
+function schedulePolling() {
+  clearPolling()
+
+  if (!shouldPoll.value || pageError.value) {
+    return
+  }
+
+  pollTimer = window.setTimeout(() => {
+    void loadScanTasks({ silent: true })
+  }, SCAN_LIST_POLL_INTERVAL)
+}
+
+async function loadScanTasks(options = {}) {
+  const { silent = false, forceLoading = false } = options
+
+  clearPolling()
+  stopRequest()
+
+  const requestId = ++currentRequestId
+  const controller = new AbortController()
+  fetchController = controller
+
+  if (!silent) {
+    if (forceLoading || !tableRows.value.length) {
+      isLoading.value = true
+    } else {
+      isRefreshing.value = true
+    }
+  }
+
+  pageError.value = ''
+
+  try {
+    const response = await getScanTaskList(
+      {
+        page: currentPage.value,
+        page_size: pageSize.value,
+        keyword: appliedKeyword.value,
+        status: selectedStatus.value
+      },
+      controller.signal
+    )
+
+    if (requestId !== currentRequestId) {
+      return
+    }
+
+    const normalized = normalizeScanTaskListResponse(response, currentPage.value, pageSize.value)
+    tableRows.value = normalized.items
+    total.value = normalized.total
+    currentPage.value = normalized.page
+    pageSize.value = normalized.pageSize
+    totalPages.value = normalized.totalPages
+    lastUpdatedAt.value = Date.now()
+    schedulePolling()
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return
+    }
+
+    pageError.value = error instanceof Error ? error.message : '扫描任务列表加载失败，请稍后重试。'
+  } finally {
+    if (requestId === currentRequestId) {
+      isLoading.value = false
+      isRefreshing.value = false
+      fetchController = null
+    }
+  }
+}
+
+watch(keywordInput, () => {
+  scheduleInputCommit()
+})
+
+watch(shouldPoll, () => {
+  schedulePolling()
+})
+
 onMounted(() => {
-  document.addEventListener('click', handleDocumentClick)
   setupSearchMagnetism()
+  document.addEventListener('click', handleDocumentClick)
+  void loadScanTasks({ forceLoading: true })
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
+  clearPolling()
+  stopRequest()
+  window.clearTimeout(keywordTimer)
 })
 </script>
 
 <template>
   <main class="scans-page">
-    <header class="scans-topbar">
-      <nav class="scans-tabs" aria-label="扫描页面导航">
+    <section class="scans-hero">
+      <div class="scans-hero-copy">
+        <span class="scans-kicker">SCAN TASKS</span>
+        <h1>任务总览</h1>
+
+        <div class="scans-hero-meta">
+          <span class="scans-hero-chip">总任务 {{ formatCount(total) }}</span>
+          <span class="scans-hero-chip is-running">运行中 {{ activeTaskCount }}</span>
+        </div>
+      </div>
+
+      <div class="scans-hero-actions">
         <button
-          v-for="item in scanTabs"
-          :key="item.key"
-          class="scans-tab"
-          :class="{ active: item.key === 'overview' }"
+          class="scans-toolbar-icon"
+          type="button"
+          :disabled="isLoading || isRefreshing"
+          :aria-busy="isRefreshing ? 'true' : 'false'"
+          aria-label="刷新扫描任务列表"
+          @click="handleRefresh"
         >
-          <span class="scans-tab-icon" :class="`is-${item.key}`" aria-hidden="true">
-            <svg v-if="item.key === 'overview'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="12" cy="12" r="8" />
-              <circle cx="12" cy="12" r="2.8" />
-              <path d="M18 6 15.5 8.5" />
-            </svg>
-            <svg v-else-if="item.key === 'regressions'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <rect x="4" y="4" width="6" height="6" rx="1.5" />
-              <rect x="14" y="4" width="6" height="6" rx="1.5" />
-              <rect x="4" y="14" width="6" height="6" rx="1.5" />
-              <rect x="14" y="14" width="6" height="6" rx="1.5" />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 4.5v2.2M12 17.3v2.2M19.5 12h-2.2M6.7 12H4.5M17.3 6.7l-1.6 1.6M8.3 15.7l-1.6 1.6M17.3 17.3l-1.6-1.6M8.3 8.3 6.7 6.7" />
-            </svg>
-          </span>
-          <span>{{ item.label }}</span>
-          <span v-if="item.count !== null" class="scans-tab-badge">{{ item.count }}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+            <path d="M20 4v5h-5" />
+          </svg>
         </button>
-      </nav>
-    </header>
+
+        <button class="scans-upgrade-button" type="button" @click="props.navigateTo('/scans/create')">
+          <span>发起任务</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+        </button>
+      </div>
+    </section>
 
     <section class="scans-content">
-      <div class="scans-toolbar">
+      <div ref="filtersRef" class="scans-toolbar">
         <label class="scans-search">
-          <input v-model="keyword" type="text" :placeholder="scanFilters.searchPlaceholder" />
+          <input
+            v-model="keywordInput"
+            type="text"
+            placeholder="搜索任务名称"
+            autocomplete="off"
+          />
           <span class="scans-search-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <circle cx="11" cy="11" r="6.5" />
@@ -129,177 +354,208 @@ onBeforeUnmount(() => {
           </span>
         </label>
 
-        <button class="scans-filter-button">
-          <span>{{ selectedStatus }}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="m7 10 5 5 5-5" />
-          </svg>
-        </button>
+        <div class="scans-toolbar-actions">
+          <div class="scans-filter-wrap">
+            <button
+              class="scans-filter-chip"
+              :class="{ active: isMenuOpen('status') || selectedStatus }"
+              type="button"
+              @click.stop="toggleFilterMenu('status')"
+            >
+              <span>{{ statusButtonLabel }}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path :d="isMenuOpen('status') ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+              </svg>
+            </button>
 
-        <button class="scans-filter-button">
-          <span>{{ selectedType }}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="m7 10 5 5 5-5" />
-          </svg>
-        </button>
+            <div v-if="isMenuOpen('status')" class="scans-filter-menu">
+              <button
+                v-for="item in SCAN_STATUS_OPTIONS"
+                :key="item.value || 'all-status'"
+                class="scans-filter-menu-item"
+                :class="{ selected: selectedStatus === item.value }"
+                type="button"
+                @click.stop="selectedStatus = item.value; handleStatusChange()"
+              >
+                <span class="scans-filter-menu-check" :class="{ selected: selectedStatus === item.value }"></span>
+                <span class="scans-filter-menu-icon" :class="`is-${statusOptionTone(item.value)}`" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <template v-if="!item.value">
+                      <path d="M4 7.5h16" />
+                      <path d="M7 12h10" />
+                      <path d="M10 16.5h4" />
+                    </template>
+                    <template v-else-if="item.value === 'pending'">
+                      <circle cx="12" cy="12" r="7.2" />
+                      <path d="M12 8.4v4.2l2.6 1.7" />
+                    </template>
+                    <template v-else-if="item.value === 'running'">
+                      <path d="M12 4.8a7.2 7.2 0 1 1-5.1 2.1" />
+                      <path d="M12 7.5v4.8l3.2 1.8" />
+                    </template>
+                    <template v-else-if="item.value === 'success'">
+                      <circle cx="12" cy="12" r="7.2" />
+                      <path d="m8.8 12.3 2.2 2.2 4.4-4.7" />
+                    </template>
+                    <template v-else-if="item.value === 'failed'">
+                      <circle cx="12" cy="12" r="7.2" />
+                      <path d="m9.4 9.4 5.2 5.2" />
+                      <path d="m14.6 9.4-5.2 5.2" />
+                    </template>
+                    <template v-else>
+                      <circle cx="12" cy="12" r="7.2" />
+                      <path d="M8.8 8.8 15.2 15.2" />
+                    </template>
+                  </svg>
+                </span>
+                <span class="scans-filter-menu-label">{{ item.label }}</span>
+              </button>
+            </div>
+          </div>
 
-        <button class="scans-toolbar-icon is-disabled" aria-label="删除">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M8 7h8" />
-            <path d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" />
-            <path d="M6.5 7.5v9.2A2.3 2.3 0 0 0 8.8 19h6.4a2.3 2.3 0 0 0 2.3-2.3V7.5" />
-          </svg>
-        </button>
+          <button
+            v-if="hasFilters"
+            class="scans-clear-chip"
+            type="button"
+            aria-label="清空筛选"
+            @click="clearFilters"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M15.8 8.2 8.2 15.8" />
+              <path d="M8.2 8.2 15.8 15.8" />
+              <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
 
-        <button class="scans-toolbar-icon" aria-label="刷新">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-            <path d="M20 4v5h-5" />
-          </svg>
-        </button>
-
-        <div class="scans-toolbar-spacer"></div>
-
-        <button class="scans-upgrade-button" type="button" @click="props.navigateTo('/scans/create')">
-          <span>发起任务</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
-          </svg>
-        </button>
+      <div v-if="showInlineError" class="scans-status-row" aria-live="polite">
+        <p class="scans-page-notice is-error">
+          <span>{{ pageError }}</span>
+          <button type="button" @click="handleRefresh">重试</button>
+        </p>
       </div>
 
       <section class="scans-table-card">
-        <header class="scans-table-head">
-          <div class="scans-head-checkbox">
-            <input type="checkbox" aria-label="全选扫描记录" />
-          </div>
-          <div>任务名称</div>
-          <div>风险分布</div>
-          <div>实际漏洞插件数量</div>
-          <div>服务数</div>
-          <div>时长</div>
-          <div class="is-active">创建时间</div>
-          <div></div>
-        </header>
+        <div class="scans-table-scroll">
+          <div class="scans-table-inner">
+            <header class="scans-table-head">
+              <div>任务名称</div>
+              <div>状态</div>
+              <div>风险分布</div>
+              <div>目标数</div>
+              <div>进度</div>
+              <div>时长</div>
+              <div>启动时间</div>
+              <div>结束时间</div>
+              <div>创建人</div>
+            </header>
 
-        <article v-for="row in tableRows" :key="row.id" class="scans-table-row">
-          <div class="scans-row-checkbox">
-            <input type="checkbox" :aria-label="`选择 ${row.id}`" />
-          </div>
-
-          <div class="scans-name-cell">
-            <span class="scan-status-dot">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="m8.5 12.2 2.1 2.1 4.9-5.2" />
-              </svg>
-            </span>
-            <span class="scan-name-text">{{ row.id }}</span>
-            <span class="scan-info-icon">i</span>
-            <span class="scan-device-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M10 6v3" />
-                <path d="M14 6v3" />
-                <path d="M7.5 10.5A4.5 4.5 0 0 1 12 6h0a4.5 4.5 0 0 1 4.5 4.5v2.5A4.5 4.5 0 0 1 12 17.5h0A4.5 4.5 0 0 1 7.5 13z" />
-                <path d="M5 20h14" />
-              </svg>
-            </span>
-          </div>
-
-          <div class="scans-severity-cell">
-            <div class="scans-severity-group">
-              <span
-                v-for="severityKey in scanSeverityOrder"
-                :key="severityKey"
-                class="scans-severity-badge"
-                :class="`is-${severityKey}`"
-                :style="{ '--severity-accent': severityAccent(severityKey) }"
-              >
-                <span class="scans-severity-value">{{ severityValue(row, severityKey) }}</span>
-                <span class="scans-severity-tooltip" role="tooltip">
-                  <span class="scans-severity-tooltip-glow"></span>
-                  <span class="scans-severity-tooltip-label">{{ severityLabel(severityKey) }}</span>
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <div class="scans-muted-cell">{{ row.templates }}</div>
-          <div class="scans-muted-cell">{{ row.services }}</div>
-          <div class="scans-muted-cell">{{ row.duration }}</div>
-          <div class="scans-updated-cell">{{ row.updatedAt }}</div>
-
-          <div class="scans-actions-cell">
-            <div class="scans-actions-menu-wrap">
-              <button
-                class="scans-row-icon"
-                :class="{ 'is-active': openMenuId === row.id }"
-                aria-label="更多操作"
-                @click.stop="toggleRowMenu(row.id)"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="5.5" r="1.6" />
-                  <circle cx="12" cy="12" r="1.6" />
-                  <circle cx="12" cy="18.5" r="1.6" />
-                </svg>
-              </button>
-
-              <div v-if="openMenuId === row.id" class="scans-actions-menu">
-                <button
-                  v-for="action in rowActionItems"
-                  :key="action.key"
-                  class="scans-actions-menu-item"
-                  :class="`is-${action.tone}`"
-                  type="button"
-                  @click="closeRowMenu"
-                >
-                  <span class="scans-actions-menu-icon" aria-hidden="true">
-                    <svg v-if="action.key === 'rename'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M4 20h4.2l9.9-9.9a1.7 1.7 0 0 0 0-2.4l-1.8-1.8a1.7 1.7 0 0 0-2.4 0L4 15.8V20Z" />
-                      <path d="m12.5 7.5 4 4" />
-                    </svg>
-                    <svg v-else-if="action.key === 'rescan'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M4.5 11a7.5 7.5 0 0 1 12.7-4.9L20 9" />
-                      <path d="M20 4v5h-5" />
-                      <path d="M19.5 13a7.5 7.5 0 0 1-12.7 4.9L4 15" />
-                      <path d="M4 20v-5h5" />
-                    </svg>
-                    <svg v-else-if="action.key === 'delete'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M4.5 7h15" />
-                      <path d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" />
-                      <path d="M6.5 7.5v10A2.5 2.5 0 0 0 9 20h6a2.5 2.5 0 0 0 2.5-2.5v-10" />
-                      <path d="M10 11v5" />
-                      <path d="M14 11v5" />
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <circle cx="12" cy="12" r="8" />
-                      <path d="M10 9.5v5" />
-                      <path d="M14 9.5v5" />
-                    </svg>
-                  </span>
-                  <span>{{ action.label }}</span>
-                </button>
+            <div v-if="showInitialLoading" class="scans-loading-list" aria-hidden="true">
+              <div v-for="index in 6" :key="index" class="scans-loading-row">
+                <div class="scans-loading-task">
+                  <span class="scans-loading-pill"></span>
+                  <span class="scans-loading-line is-title"></span>
+                  <span class="scans-loading-line"></span>
+                  <span class="scans-loading-line is-short"></span>
+                </div>
+                <div class="scans-loading-status"></div>
+                <div class="scans-loading-severity">
+                  <span v-for="severityKey in SCAN_SEVERITY_ORDER" :key="severityKey" class="scans-loading-severity-dot"></span>
+                </div>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
+                <span class="scans-loading-box"></span>
               </div>
             </div>
+
+            <div v-else-if="showBlockingError" class="scans-state-panel is-error">
+              <h2>任务列表加载失败</h2>
+              <p>{{ pageError }}</p>
+              <button class="scans-state-button" type="button" @click="handleRefresh">重新加载</button>
+            </div>
+
+            <div v-else-if="showEmptyState" class="scans-state-panel">
+              <h2>{{ hasFilters ? '没有匹配的扫描任务' : '还没有扫描任务' }}</h2>
+              <p>
+                {{ hasFilters ? '可以调整关键字或筛选条件后重试。' : '现在可以直接发起一个新的扫描任务。' }}
+              </p>
+              <div class="scans-state-actions">
+                <button v-if="hasFilters" class="scans-state-button is-secondary" type="button" @click="clearFilters">清空筛选</button>
+                <button class="scans-state-button" type="button" @click="props.navigateTo('/scans/create')">发起任务</button>
+              </div>
+            </div>
+
+            <div v-else class="scans-table-body">
+              <article
+                v-for="row in tableRows"
+                :key="row.id"
+                v-memo="[row.memoKey]"
+                class="scans-table-row"
+                tabindex="0"
+                role="button"
+                @click="goToScanDetail(row.id)"
+                @keydown="handleRowKeydown($event, row.id)"
+              >
+                <div class="scans-name-cell">
+                  <strong class="scan-name-text">{{ row.name }}</strong>
+                </div>
+
+                <div class="scans-status-cell">
+                  <span class="scan-status-pill" :class="`is-${row.statusMeta.tone}`">{{ row.statusMeta.label }}</span>
+                </div>
+
+                <div class="scans-severity-cell">
+                  <div class="scans-severity-group">
+                    <span
+                      v-for="severityKey in SCAN_SEVERITY_ORDER"
+                      :key="severityKey"
+                      class="scans-severity-badge"
+                      :class="`is-${severityKey}`"
+                    >
+                      <span class="scans-severity-value">{{ severityValue(row, severityKey) }}</span>
+                      <span class="scans-severity-tooltip" role="tooltip">{{ severityLabel(severityKey) }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="scans-muted-cell">{{ row.targetCountDisplay }}</div>
+                <div class="scans-muted-cell">{{ row.progressPercentDisplay }}</div>
+                <div class="scans-muted-cell">{{ row.durationDisplay }}</div>
+                <div class="scans-updated-cell">{{ row.startedAtDisplay }}</div>
+                <div class="scans-updated-cell">{{ row.finishedAtDisplay }}</div>
+                <div class="scans-muted-cell">{{ row.createdBy }}</div>
+              </article>
+            </div>
           </div>
-        </article>
+        </div>
 
-        <footer class="scans-pagination">
-          <button class="scans-page-size">
-            <span>{{ pageSizeLabel(10) }}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="m7 10 5 5 5-5" />
-            </svg>
-          </button>
-
+        <footer v-if="!showInitialLoading && !showBlockingError" class="scans-pagination">
           <div class="scans-pagination-meta">
-            <button class="scans-pagination-arrow" aria-label="上一页">
+            <span>显示 {{ pageStart }} - {{ pageEnd }}，共 {{ formatCount(total) }} 条</span>
+            <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
+            <button
+              class="scans-pagination-arrow"
+              type="button"
+              :disabled="currentPage <= 1 || isLoading || isRefreshing"
+              aria-label="上一页"
+              @click="goToPreviousPage"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="m14.5 6.5-5 5 5 5" />
               </svg>
             </button>
-            <span>显示 1 - 1，共 1 条</span>
-            <button class="scans-pagination-arrow" aria-label="下一页">
+            <button
+              class="scans-pagination-arrow"
+              type="button"
+              :disabled="currentPage >= totalPages || isLoading || isRefreshing"
+              aria-label="下一页"
+              @click="goToNextPage"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="m9.5 6.5 5 5-5 5" />
               </svg>

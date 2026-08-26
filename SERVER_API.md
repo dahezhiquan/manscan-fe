@@ -203,7 +203,77 @@ curl "http://127.0.0.1:8686/api/v1/templates/options/protocols"
 curl "http://127.0.0.1:8686/api/v1/templates/stats"
 ```
 
-## 6. 创建扫描任务
+## 6. 获取扫描任务列表
+
+- 请求方法和路径：`GET /api/v1/scans`
+
+- 请求参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `page` | `int` | 否 | 页码，最小为 `1`，默认 `1` |
+| `page_size` | `int` | 否 | 每页数量，范围 `1-100`，默认 `10` |
+| `keyword` | `string` | 否 | 按任务名称、任务编号、创建人、描述模糊搜索 |
+| `status` | `string` / `string[]` | 否 | 按任务状态过滤，支持逗号分隔和多参数 |
+| `scan_strategy` | `string` / `string[]` | 否 | 按扫描策略过滤，支持逗号分隔和多参数 |
+| `created_by` | `string` | 否 | 按创建人精确过滤 |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 2,
+    "totalPages": 1,
+    "items": [
+      {
+        "id": 1,
+        "task_no": "d4l8h4crvimc0n1abcde",
+        "name": "demo-scan",
+        "description": "",
+        "status": "running",
+        "created_by": "anonymous",
+        "scan_strategy": "auto",
+        "started_at": "2026-06-09T21:00:00+08:00",
+        "finished_at": null,
+        "critical_count": 0,
+        "high_count": 1,
+        "medium_count": 2,
+        "low_count": 0,
+        "info_count": 3,
+        "tech_count": 4,
+        "plugin_count": 50,
+        "target_count": 1,
+        "total_requests": 100,
+        "real_requests": 10,
+        "progress_percent": 10,
+        "duration_seconds": 120,
+        "last_message": "扫描进度更新"
+      }
+    ]
+  }
+}
+```
+
+- 说明：
+  - 该接口以扫描任务表为主数据源，`manscan_task_results` 仅用于补充已完成任务的结果统计。
+  - 运行中任务会叠加当前运行时快照，因此也会出现在列表中。
+
+- 错误码说明：
+  - `40001`：分页或过滤参数非法
+  - `50001`：查询任务列表失败
+
+- 使用示例：
+
+```bash
+curl "http://127.0.0.1:8686/api/v1/scans?page=1&page_size=10&keyword=demo&status=running"
+```
+
+## 7. 创建扫描任务
 
 - 请求方法和路径：`POST /api/v1/scans`
 
@@ -270,7 +340,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
   }'
 ```
 
-## 7. 获取扫描任务详情
+## 8. 获取扫描任务详情
 
 - 请求方法和路径：`GET /api/v1/scans/:id`
 
@@ -295,14 +365,14 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
       "status": "running",
       "created_by": "anonymous",
       "started_at": "2026-06-09T21:00:00+08:00",
-      "critical_count": 1,
-      "high_count": 2,
-      "medium_count": 3,
-      "low_count": 4,
-      "info_count": 5,
-      "tech_count": 6,
-      "plugin_count": 120,
-      "target_count": 12
+      "critical_count": 0,
+      "high_count": 1,
+      "medium_count": 2,
+      "low_count": 0,
+      "info_count": 3,
+      "tech_count": 4,
+      "plugin_count": 50,
+      "target_count": 1
     },
     "progress": {
       "hosts": 1,
@@ -322,12 +392,6 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
 }
 ```
 
-- 字段说明补充：
-  - `data.task.critical_count`、`high_count`、`medium_count`、`low_count`、`info_count`：当前任务已命中的各风险等级数量
-  - `data.task.tech_count`：当前任务识别到的指纹数量
-  - `data.task.plugin_count`：当前任务实际参与执行的漏洞插件数量
-  - `data.task.target_count`：当前任务的扫描目标数量
-
 - 错误码说明：
   - `40001`：任务 ID 非法
   - `40401`：任务不存在
@@ -339,7 +403,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
 curl "http://127.0.0.1:8686/api/v1/scans/1"
 ```
 
-## 8. 获取扫描任务日志
+## 9. 获取扫描任务日志
 
 - 请求方法和路径：`GET /api/v1/scans/:id/logs`
 
@@ -365,14 +429,14 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
       "description": "",
       "status": "running",
       "created_by": "anonymous",
-      "critical_count": 1,
-      "high_count": 2,
-      "medium_count": 3,
-      "low_count": 4,
-      "info_count": 5,
-      "tech_count": 6,
-      "plugin_count": 120,
-      "target_count": 12
+      "critical_count": 0,
+      "high_count": 1,
+      "medium_count": 2,
+      "low_count": 0,
+      "info_count": 3,
+      "tech_count": 4,
+      "plugin_count": 50,
+      "target_count": 1
     },
     "progress": {
       "requests": 10,
@@ -395,10 +459,6 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
 }
 ```
 
-- 字段说明补充：
-  - `data.task` 会同步返回与详情接口一致的统计字段，便于前端在日志流刷新时更新信息区
-  - `data.task.tech_count` 表示当前任务识别到的指纹数量
-
 - 错误码说明：
   - `40001`：任务 ID、`offset` 或 `limit` 非法
   - `40401`：任务不存在
@@ -410,7 +470,7 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
 curl "http://127.0.0.1:8686/api/v1/scans/1/logs?offset=0&limit=100"
 ```
 
-## 9. 订阅扫描任务日志流
+## 10. 订阅扫描任务日志流
 
 - 请求方法和路径：`GET /api/v1/scans/:id/stream`
 
@@ -424,20 +484,28 @@ curl "http://127.0.0.1:8686/api/v1/scans/1/logs?offset=0&limit=100"
   - 使用 `SSE`（`text/event-stream`）返回
   - 首个事件为 `snapshot`
   - 后续事件为 `event`
+  - `progress` 与 `result` 类型事件会额外携带最新的 `task` 统计快照，便于前端实时刷新漏洞数、指纹数、目标数和插件数
   - 任务结束后发送 `complete`
 
 - `snapshot` 示例：
 
 ```text
 event: snapshot
-data: {"task":{"id":1,"status":"running"},"progress":{"percent":10},"events":[],"nextOffset":1}
+data: {"task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":3,"tech_count":4,"plugin_count":50,"target_count":1},"progress":{"percent":10},"events":[],"nextOffset":1}
 ```
 
 - `event` 示例：
 
 ```text
 event: event
-data: {"task_id":1,"seq":2,"level":"info","type":"progress","message":"扫描进度更新","progress":{"hosts":1,"templates":50,"total_requests":100,"requests":10,"matched":1,"errors":0,"percent":10,"last_updated_at":"2026-06-09T21:01:00+08:00","last_message":"扫描进度更新","last_event_seq":2,"finished":false,"finished_status":"running"},"nextOffset":3}
+data: {"task_id":1,"seq":2,"level":"info","type":"progress","message":"扫描进度更新","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":3,"tech_count":4,"plugin_count":50,"target_count":1},"progress":{"hosts":1,"templates":50,"total_requests":100,"requests":10,"matched":1,"errors":0,"percent":10,"last_updated_at":"2026-06-09T21:01:00+08:00","last_message":"扫描进度更新","last_event_seq":2,"finished":false,"finished_status":"running"},"nextOffset":3}
+```
+
+- `result` 事件示例：
+
+```text
+event: event
+data: {"task_id":1,"seq":3,"level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":4,"tech_count":4,"plugin_count":50,"target_count":1},"event":{"seq":3,"time":"2026-06-09T21:01:02+08:00","level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]"},"nextOffset":4}
 ```
 
 - 错误码说明：
