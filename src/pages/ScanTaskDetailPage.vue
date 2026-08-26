@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { createScanTaskStream, getScanTask, getScanTaskLogs } from '../api/scans'
+import { cancelScanTask, createScanTaskStream, getScanTask, getScanTaskLogs } from '../api/scans'
 import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
@@ -40,6 +40,7 @@ const pageError = ref('')
 const streamError = ref('')
 const isLoading = ref(true)
 const isRefreshing = ref(false)
+const isCancelling = ref(false)
 const streamOffset = ref(0)
 const olderLogsOffset = ref(null)
 const isInitializing = ref(false)
@@ -217,6 +218,7 @@ const logCountLabel = computed(() => `${events.value.length} 条`)
 const showReconnectButton = computed(() => streamState.value !== 'connected' && !isTaskFinished.value)
 const scanStrategyLabel = computed(() => formatScanStrategy(task.value?.scan_strategy))
 const showLoadOlderHint = computed(() => logMode.value === 'paged' && (hasOlderLogs.value || isLoadingOlderLogs.value))
+const canCancelTask = computed(() => ['pending', 'running'].includes(String(taskStatus.value || '').toLowerCase()))
 
 function firstDefined(...values) {
   for (const value of values) {
@@ -900,6 +902,32 @@ async function fetchTaskSummary() {
   await requestTaskSummary()
 }
 
+async function handleCancelTask() {
+  if (!taskId.value || isCancelling.value || !canCancelTask.value) {
+    return
+  }
+
+  isCancelling.value = true
+  pageError.value = ''
+
+  try {
+    const result = await cancelScanTask(taskId.value)
+
+    if (result?.status === 'cancelled') {
+      task.value = {
+        ...(task.value ?? {}),
+        status: 'cancelled'
+      }
+    }
+
+    await requestTaskSummary({ silent: true })
+  } catch (error) {
+    pageError.value = error instanceof Error ? error.message : '停止扫描任务失败，请稍后重试。'
+  } finally {
+    isCancelling.value = false
+  }
+}
+
 function scheduleReconnect() {
   if (reconnectTimer || isTaskFinished.value) {
     return
@@ -1173,6 +1201,18 @@ onBeforeUnmount(() => {
         </button>
         <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing" @click="fetchTaskSummary">
           {{ isRefreshing ? '刷新中...' : '刷新详情' }}
+        </button>
+        <button
+          v-if="canCancelTask"
+          class="scan-task-detail-danger-button"
+          type="button"
+          :disabled="isCancelling"
+          :aria-label="isCancelling ? '正在停止扫描任务' : '停止扫描任务'"
+          @click="handleCancelTask"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="7" y="7" width="10" height="10" rx="1.8" />
+          </svg>
         </button>
       </div>
     </section>

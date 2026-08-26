@@ -15,6 +15,10 @@ export function buildScanTaskApi(taskId) {
   return `${SCAN_TASK_CREATE_API}/${taskId}`
 }
 
+export function buildScanTaskCancelApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/cancel`
+}
+
 export function buildScanTaskLogsApi(taskId, offset = 0, limit = 200) {
   const searchParams = new URLSearchParams()
   searchParams.set('offset', String(offset))

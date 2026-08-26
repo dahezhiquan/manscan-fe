@@ -173,7 +173,21 @@
   - `task.id` 缺失时，前端会尝试从 `task_api` 中解析详情 ID
   - `task_api` 建议返回 `/api/v1/scans/:id`
 
-### 9. 获取扫描任务详情
+### 9. 取消扫描任务
+
+- 用途：扫描任务详情页停止仍处于 `pending` / `running` 状态的任务
+- 请求方式：`POST`
+- 路径：`/api/v1/scans/:id/cancel`
+- 请求参数：
+  - 路径参数 `id`
+- 返回结构：前端当前使用 `data.task_id`、`data.status`、`data.cancel_requested`
+- 异常分支：
+  - 请求失败时，在任务详情页顶部展示错误提示
+- 联调注意事项：
+  - 前端当前仅在任务状态为 `pending` 或 `running` 时展示停止按钮
+  - 当 `cancel_requested=true` 且返回状态仍为 `running` 时，表示后端已受理取消请求，最终状态会在后续详情轮询或日志流中收敛为 `cancelled`
+
+### 10. 获取扫描任务详情
 
 - 用途：扫描任务详情页的基本信息、进度卡片和状态展示
 - 请求方式：`GET`
@@ -194,7 +208,7 @@
   - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式
   - `progress.last_event_seq` 会影响日志续拉偏移量
 
-### 10. 获取扫描任务日志
+### 11. 获取扫描任务日志
 
 - 用途：扫描任务详情页的初始日志加载、完成后分页补载历史日志
 - 请求方式：`GET`
@@ -213,7 +227,7 @@
   - `events[].seq` 最好连续递增，前端依赖它做去重和排序
   - `next_offset` 与 `has_more` 会影响历史日志是否继续加载
 
-### 11. 订阅扫描任务日志流
+### 12. 订阅扫描任务日志流
 
 - 用途：扫描任务详情页实时日志流
 - 请求方式：`GET`

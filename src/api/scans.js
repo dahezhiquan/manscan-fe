@@ -2,6 +2,7 @@ import {
   SCAN_TASK_CREATE_API,
   SCAN_TASK_STATS_API,
   buildScanTaskApi,
+  buildScanTaskCancelApi,
   buildScanTaskLogsApi,
   buildScanTaskStreamApi
 } from '../constants/api'
@@ -45,6 +46,12 @@ export async function createScanTask(payload) {
 export async function getScanTask(taskId, signal) {
   return requestJson(buildScanTaskApi(taskId), {
     signal
+  })
+}
+
+export async function cancelScanTask(taskId) {
+  return requestJson(buildScanTaskCancelApi(taskId), {
+    method: 'POST'
   })
 }
 
