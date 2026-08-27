@@ -75,6 +75,13 @@ const runningTaskCount = computed(() => {
   return activeTaskCount.value
 })
 const savedRequestCount = computed(() => summaryStats.value.savedRequests)
+const hasGlobalRunningTasks = computed(() => {
+  if (summaryStats.value.running !== null && summaryStats.value.running !== undefined) {
+    return summaryStats.value.running > 0
+  }
+
+  return activeTaskCount.value > 0
+})
 const pageStart = computed(() => {
   if (!total.value || !tableRows.value.length) {
     return 0
@@ -89,8 +96,8 @@ const pageEnd = computed(() => {
 
   return Math.min(total.value, pageStart.value + tableRows.value.length - 1)
 })
-const shouldPoll = computed(() => activeTaskCount.value > 0)
-const autoRefreshLabel = computed(() => (shouldPoll.value ? '运行中任务自动刷新中' : '当前页无运行中任务'))
+const shouldPoll = computed(() => hasGlobalRunningTasks.value)
+const autoRefreshLabel = computed(() => (shouldPoll.value ? '运行中任务自动刷新中' : '当前无运行中任务'))
 const lastUpdatedLabel = computed(() => (lastUpdatedAt.value ? formatDateTime(lastUpdatedAt.value) : '--'))
 const statusButtonLabel = computed(() => formatFilterLabel('状态', SCAN_STATUS_OPTIONS, selectedStatus.value))
 
@@ -245,6 +252,15 @@ function clearPolling() {
   }
 }
 
+async function refreshSummaryStats() {
+  try {
+    const data = await getScanTaskStats()
+    summaryStats.value = normalizeScanTaskStats(data)
+  } catch {
+    // Keep the latest visible stats when a best-effort refresh fails.
+  }
+}
+
 function stopRequest() {
   if (fetchController) {
     fetchController.abort()
@@ -340,6 +356,12 @@ watch(keywordInput, () => {
 
 watch(shouldPoll, () => {
   schedulePolling()
+})
+
+watch(activeTaskCount, (nextValue, previousValue) => {
+  if (previousValue > 0 && nextValue === 0) {
+    void refreshSummaryStats()
+  }
 })
 
 onMounted(() => {
@@ -466,6 +488,10 @@ onBeforeUnmount(() => {
                     <template v-else-if="item.value === 'running'">
                       <path d="M12 4.8a7.2 7.2 0 1 1-5.1 2.1" />
                       <path d="M12 7.5v4.8l3.2 1.8" />
+                    </template>
+                    <template v-else-if="item.value === 'paused'">
+                      <circle cx="12" cy="12" r="7.2" />
+                      <path d="m10.3 9.4 4.6 2.6-4.6 2.6z" fill="currentColor" stroke="none" />
                     </template>
                     <template v-else-if="item.value === 'success'">
                       <circle cx="12" cy="12" r="7.2" />

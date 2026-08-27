@@ -1,6 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { cancelScanTask, createScanTaskStream, getScanTask, getScanTaskLogs } from '../api/scans'
+import {
+  cancelScanTask,
+  createScanTaskStream,
+  getScanTask,
+  getScanTaskLogs,
+  pauseScanTask,
+  resumeScanTask
+} from '../api/scans'
 import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
@@ -17,6 +24,7 @@ const props = defineProps({
 const TERMINAL_STATUSES = new Set(['success', 'failed', 'cancelled'])
 const LIVE_LOG_PRELOAD_SIZE = 50
 const LOG_PAGE_SIZE = 50
+const LIVE_LOG_RESTORE_PAGE_SIZE = 1000
 const LOG_SCROLL_PRELOAD_THRESHOLD = 96
 const STREAM_RETRY_DELAY = 2500
 const SUMMARY_POLL_INTERVAL = 5000
@@ -41,6 +49,7 @@ const streamError = ref('')
 const isLoading = ref(true)
 const isRefreshing = ref(false)
 const isCancelling = ref(false)
+const isPauseActionLoading = ref(false)
 const streamOffset = ref(0)
 const olderLogsOffset = ref(null)
 const isInitializing = ref(false)
@@ -50,9 +59,11 @@ const logViewport = ref(null)
 const logMode = ref('live')
 const isLoadingOlderLogs = ref(false)
 const isHydratingCompletedLogs = ref(false)
+const isRestoringLiveHistory = ref(false)
 const hasOlderLogs = ref(false)
 const earliestLoadedSeq = ref(null)
 const latestLoadedSeq = ref(null)
+const actionStatusOverride = ref('')
 
 let currentTaskRequestId = 0
 let fetchController = null
@@ -60,6 +71,7 @@ let eventSource = null
 let reconnectTimer = null
 let durationTimer = null
 let summaryPollTimer = null
+let liveHistoryRestoreId = 0
 
 const taskId = computed(() => {
   const match = props.currentPath.match(/^\/scans\/([^/]+)$/)
@@ -67,29 +79,30 @@ const taskId = computed(() => {
 })
 
 const taskStatus = computed(() => {
-  if (progress.value?.finished_status && isTerminalStatus(progress.value.finished_status)) {
-    return progress.value.finished_status
-  }
-
-  if (task.value?.status) {
-    return task.value.status
-  }
-
-  if (progress.value?.finished_status) {
-    return progress.value.finished_status
-  }
-
-  return ''
+  const overrideStatus = normalizeStatusValue(actionStatusOverride.value)
+  return overrideStatus || resolveServerTaskStatus()
 })
 
 const taskStatusMeta = computed(() => getStatusMeta(taskStatus.value))
+const isTaskPaused = computed(() => taskStatus.value === 'paused')
 const isTaskFinished = computed(() => {
-  if (progress.value?.finished) {
+  if (isTaskPaused.value) {
+    return false
+  }
+
+  if (TERMINAL_STATUSES.has(taskStatus.value)) {
     return true
   }
 
-  return TERMINAL_STATUSES.has(taskStatus.value)
+  const finishedStatus = normalizeStatusValue(progress.value?.finished_status)
+
+  if (TERMINAL_STATUSES.has(finishedStatus)) {
+    return true
+  }
+
+  return Boolean(progress.value?.finished)
 })
+const isTaskInactive = computed(() => isTaskFinished.value || isTaskPaused.value)
 
 const taskTitle = computed(() => {
   const name = String(task.value?.name ?? '').trim()
@@ -112,6 +125,10 @@ const taskSubtitle = computed(() => {
 })
 
 const streamStatusMeta = computed(() => {
+  if (isTaskPaused.value) {
+    return { label: '扫描已暂停', tone: 'paused' }
+  }
+
   if (streamState.value === 'connected') {
     return { label: 'SSE 已连接', tone: 'connected' }
   }
@@ -215,10 +232,20 @@ const infoItems = computed(() => [
 ])
 
 const logCountLabel = computed(() => `${events.value.length} 条`)
-const showReconnectButton = computed(() => streamState.value !== 'connected' && !isTaskFinished.value)
+const showReconnectButton = computed(() => streamState.value !== 'connected' && !isTaskInactive.value)
 const scanStrategyLabel = computed(() => formatScanStrategy(task.value?.scan_strategy))
 const showLoadOlderHint = computed(() => logMode.value === 'paged' && (hasOlderLogs.value || isLoadingOlderLogs.value))
-const canCancelTask = computed(() => ['pending', 'running'].includes(String(taskStatus.value || '').toLowerCase()))
+const canCancelTask = computed(() => ['pending', 'running', 'paused'].includes(taskStatus.value))
+const canPauseTask = computed(() => ['pending', 'running'].includes(taskStatus.value))
+const canResumeTask = computed(() => taskStatus.value === 'paused')
+const showPauseToggleButton = computed(() => canPauseTask.value || canResumeTask.value)
+const pauseToggleAriaLabel = computed(() => {
+  if (isPauseActionLoading.value) {
+    return canResumeTask.value ? '正在继续扫描任务' : '正在暂停扫描任务'
+  }
+
+  return canResumeTask.value ? '继续扫描任务' : '暂停扫描任务'
+})
 
 function firstDefined(...values) {
   for (const value of values) {
@@ -335,8 +362,50 @@ function formatScanStrategy(value) {
   return SCAN_STRATEGY_LABELS[value] ? `${SCAN_STRATEGY_LABELS[value]} · ${value}` : String(value)
 }
 
+function normalizeStatusValue(status) {
+  return String(status ?? '').trim().toLowerCase()
+}
+
+function resolveServerTaskStatus() {
+  const finishedStatus = normalizeStatusValue(progress.value?.finished_status)
+
+  if (finishedStatus === 'paused' || isTerminalStatus(finishedStatus)) {
+    return finishedStatus
+  }
+
+  const currentStatus = normalizeStatusValue(task.value?.status)
+  return currentStatus || finishedStatus
+}
+
+function syncActionStatusOverride() {
+  const overrideStatus = normalizeStatusValue(actionStatusOverride.value)
+
+  if (!overrideStatus) {
+    return
+  }
+
+  const serverStatus = resolveServerTaskStatus()
+
+  if (!serverStatus) {
+    return
+  }
+
+  if (overrideStatus === 'paused') {
+    if (serverStatus === 'paused' || isTerminalStatus(serverStatus)) {
+      actionStatusOverride.value = ''
+    }
+    return
+  }
+
+  if (overrideStatus === 'pending') {
+    if (serverStatus === 'pending' || serverStatus === 'running' || isTerminalStatus(serverStatus)) {
+      actionStatusOverride.value = ''
+    }
+  }
+}
+
 function resolveFinishedTime() {
-  if (!isTaskFinished.value) {
+  if (!isTaskInactive.value) {
     return null
   }
 
@@ -445,11 +514,15 @@ function getStatusMeta(status) {
     return { label: '等待执行', tone: 'pending' }
   }
 
+  if (status === 'paused') {
+    return { label: '已暂停', tone: 'paused' }
+  }
+
   return { label: status ? String(status) : '未知', tone: 'neutral' }
 }
 
 function isTerminalStatus(status) {
-  return TERMINAL_STATUSES.has(String(status || '').toLowerCase())
+  return TERMINAL_STATUSES.has(normalizeStatusValue(status))
 }
 
 function normalizeLogEvent(eventRecord) {
@@ -637,8 +710,13 @@ function updateStreamOffset(payload, incomingEvents) {
   const seqList = incomingEvents
     .map((item) => Number(item?.seq))
     .filter((item) => Number.isFinite(item))
+  const payloadNextOffset = Number(firstDefined(payload?.nextOffset, payload?.next_offset))
   const lastEventSeq = Number(payload?.progress?.last_event_seq)
   const latestSeq = Number(latestLoadedSeq.value)
+
+  if (Number.isFinite(payloadNextOffset)) {
+    seqList.push(payloadNextOffset)
+  }
 
   if (Number.isFinite(lastEventSeq)) {
     seqList.push(lastEventSeq)
@@ -649,11 +727,16 @@ function updateStreamOffset(payload, incomingEvents) {
   }
 
   if (seqList.length > 0) {
-    streamOffset.value = Math.max(streamOffset.value, Math.max(...seqList) + 1)
+    streamOffset.value = Math.max(streamOffset.value, Math.max(...seqList))
   }
 }
 
 function updateOlderLogsOffset(payload, normalizedEvents) {
+  if (payload?.has_more === false) {
+    olderLogsOffset.value = null
+    return
+  }
+
   const nextFromPayload = Number(payload?.next_offset)
 
   if (Number.isFinite(nextFromPayload) && nextFromPayload > 0) {
@@ -686,12 +769,14 @@ function updateTaskAndProgress(payload) {
       ...payload.progress
     }
   }
+
+  syncActionStatusOverride()
 }
 
-function resolveTailLogOffset() {
+function resolveStreamOffset() {
   const candidates = [
     Number(progress.value?.last_event_seq),
-    Number(streamOffset.value) - 1,
+    Number(streamOffset.value),
     Number(latestLoadedSeq.value)
   ].filter((item) => Number.isFinite(item))
 
@@ -699,8 +784,7 @@ function resolveTailLogOffset() {
     return 0
   }
 
-  const lastSeq = Math.max(...candidates)
-  return Math.max(0, lastSeq + 1)
+  return Math.max(0, Math.max(...candidates))
 }
 
 function resolveOlderLogOffset() {
@@ -731,8 +815,8 @@ function inferHasOlderLogs(payload, requestedOffset, normalizedEvents) {
   return Math.min(...seqList) > 1
 }
 
-async function fetchLogsChunk(offset, limit = LOG_PAGE_SIZE) {
-  const data = await getScanTaskLogs(taskId.value, offset, limit)
+async function fetchLogsChunk(offset, limit = LOG_PAGE_SIZE, direction = '') {
+  const data = await getScanTaskLogs(taskId.value, offset, limit, direction)
 
   updateTaskAndProgress(data)
 
@@ -750,7 +834,7 @@ async function hydrateLiveLogs() {
   streamError.value = ''
 
   try {
-    const { payload, events: chunkEvents } = await fetchLogsChunk(0, LIVE_LOG_PRELOAD_SIZE)
+    const { payload, events: chunkEvents } = await fetchLogsChunk(0, LIVE_LOG_PRELOAD_SIZE, 'before')
 
     replaceEvents(chunkEvents, { stickToBottom: true })
     updateOlderLogsOffset(payload, chunkEvents)
@@ -759,6 +843,52 @@ async function hydrateLiveLogs() {
     streamError.value = error instanceof Error ? error.message : '获取扫描日志失败。'
   } finally {
     isLoading.value = false
+  }
+}
+
+async function restoreLiveHistory() {
+  if (!taskId.value || isTaskInactive.value || isRestoringLiveHistory.value) {
+    return
+  }
+
+  if (!hasOlderLogs.value) {
+    return
+  }
+
+  const restoreId = ++liveHistoryRestoreId
+  let offset = resolveOlderLogOffset()
+
+  if (offset === null) {
+    return
+  }
+
+  isRestoringLiveHistory.value = true
+
+  try {
+    while (restoreId === liveHistoryRestoreId && taskId.value && !isTaskInactive.value && offset !== null) {
+      const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LIVE_LOG_RESTORE_PAGE_SIZE, 'before')
+
+      if (restoreId !== liveHistoryRestoreId) {
+        return
+      }
+
+      prependEvents(chunkEvents)
+      updateOlderLogsOffset(payload, chunkEvents)
+      updateStreamOffset(payload, chunkEvents)
+      hasOlderLogs.value = inferHasOlderLogs(payload, offset, chunkEvents)
+
+      const nextOlderOffset = resolveOlderLogOffset()
+
+      if (!hasOlderLogs.value || nextOlderOffset === null || nextOlderOffset === offset) {
+        break
+      }
+
+      offset = nextOlderOffset
+    }
+  } finally {
+    if (restoreId === liveHistoryRestoreId) {
+      isRestoringLiveHistory.value = false
+    }
   }
 }
 
@@ -772,13 +902,18 @@ async function hydrateCompletedLogs() {
   logMode.value = 'paged'
 
   try {
-    const offset = resolveTailLogOffset()
-    const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LOG_PAGE_SIZE)
+    const offset = 0
+    const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LOG_PAGE_SIZE, 'before')
+    const shouldKeepLiveEvents = chunkEvents.length === 0 && events.value.length > 0
+    const visibleEvents = shouldKeepLiveEvents ? events.value : chunkEvents
 
-    replaceEvents(chunkEvents, { stickToBottom: true })
-    updateOlderLogsOffset(payload, chunkEvents)
-    updateStreamOffset(payload, chunkEvents)
-    hasOlderLogs.value = inferHasOlderLogs(payload, offset, chunkEvents)
+    if (!shouldKeepLiveEvents) {
+      replaceEvents(chunkEvents, { stickToBottom: true })
+    }
+
+    updateOlderLogsOffset(payload, visibleEvents)
+    updateStreamOffset(payload, visibleEvents)
+    hasOlderLogs.value = inferHasOlderLogs(payload, offset, visibleEvents)
   } catch (error) {
     streamError.value = error instanceof Error ? error.message : '获取扫描日志失败。'
   } finally {
@@ -802,7 +937,7 @@ async function loadOlderLogs() {
   isLoadingOlderLogs.value = true
 
   try {
-    const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LOG_PAGE_SIZE)
+    const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LOG_PAGE_SIZE, 'before')
     prependEvents(chunkEvents)
     updateOlderLogsOffset(payload, chunkEvents)
     updateStreamOffset(payload, chunkEvents)
@@ -834,13 +969,15 @@ function applyPayload(payload, { replaceEvents = false, complete = false } = {})
   updateTaskAndProgress(payload)
 
   if (complete) {
-    const finalStatus = firstDefined(
-      payload?.task?.status,
-      payload?.progress?.finished_status,
-      progress.value?.finished_status,
-      isTerminalStatus(task.value?.status) ? task.value.status : null,
-      'success'
-    )
+    const finalStatus =
+      [
+        payload?.progress?.finished_status,
+        payload?.task?.status,
+        progress.value?.finished_status,
+        task.value?.status
+      ]
+        .map((status) => normalizeStatusValue(status))
+        .find((status) => status === 'paused' || isTerminalStatus(status)) ?? 'success'
 
     task.value = {
       ...(task.value ?? {}),
@@ -879,7 +1016,7 @@ async function requestTaskSummary({ silent = false } = {}) {
 
     applyPayload(data)
 
-    if (isTaskFinished.value && logMode.value === 'paged' && !isHydratingCompletedLogs.value) {
+    if (isTaskInactive.value && logMode.value === 'paged' && !isHydratingCompletedLogs.value) {
       void hydrateCompletedLogs()
     }
   } catch (error) {
@@ -928,8 +1065,46 @@ async function handleCancelTask() {
   }
 }
 
+async function handlePauseToggle() {
+  if (!taskId.value || isPauseActionLoading.value) {
+    return
+  }
+
+  const shouldResume = canResumeTask.value
+  const previousOverride = actionStatusOverride.value
+
+  actionStatusOverride.value = shouldResume ? 'pending' : 'paused'
+  isPauseActionLoading.value = true
+  pageError.value = ''
+
+  try {
+    if (shouldResume) {
+      await resumeScanTask(taskId.value)
+      actionStatusOverride.value = 'pending'
+      streamError.value = ''
+      streamState.value = 'idle'
+      logMode.value = 'live'
+      openStream(resolveStreamOffset())
+      void requestTaskSummary({ silent: true })
+      return
+    }
+
+    await pauseScanTask(taskId.value)
+    streamError.value = ''
+  } catch (error) {
+    actionStatusOverride.value = previousOverride
+    pageError.value = error instanceof Error ? error.message : shouldResume ? '继续扫描任务失败，请稍后重试。' : '暂停扫描任务失败，请稍后重试。'
+
+    if (!isTaskInactive.value && !eventSource) {
+      openStream(resolveStreamOffset())
+    }
+  } finally {
+    isPauseActionLoading.value = false
+  }
+}
+
 function scheduleReconnect() {
-  if (reconnectTimer || isTaskFinished.value) {
+  if (reconnectTimer || isTaskInactive.value) {
     return
   }
 
@@ -970,7 +1145,7 @@ function startDurationTicker() {
 function startSummaryPolling() {
   stopSummaryPolling()
 
-  if (!taskId.value || isTaskFinished.value) {
+  if (!taskId.value || isTaskInactive.value) {
     return
   }
 
@@ -1002,7 +1177,7 @@ function handleStreamEnvelope(event, options = {}) {
 }
 
 function openStream(initialOffset = streamOffset.value) {
-  if (!taskId.value) {
+  if (!taskId.value || isTaskInactive.value) {
     return
   }
 
@@ -1028,7 +1203,21 @@ function openStream(initialOffset = streamOffset.value) {
       return
     }
 
-    handleStreamEnvelope(event, { replaceEvents: events.value.length === 0 })
+    const payload = parseStreamMessage(event)
+
+    if (!payload) {
+      return
+    }
+
+    const hasHydratedLiveTail = logMode.value === 'live' && events.value.length > 0
+
+    if (hasHydratedLiveTail) {
+      updateTaskAndProgress(payload)
+      updateStreamOffset(payload, extractEvents(payload))
+      return
+    }
+
+    applyPayload(payload, { replaceEvents: true })
   })
 
   source.addEventListener('event', (event) => {
@@ -1058,7 +1247,7 @@ function openStream(initialOffset = streamOffset.value) {
 
     closeStream()
 
-    if (isTaskFinished.value) {
+    if (isTaskInactive.value) {
       streamState.value = 'complete'
       return
     }
@@ -1070,6 +1259,7 @@ function openStream(initialOffset = streamOffset.value) {
 }
 
 function resetState() {
+  liveHistoryRestoreId += 1
   currentTaskRequestId += 1
   fetchController?.abort()
   fetchController = null
@@ -1088,6 +1278,8 @@ function resetState() {
   streamError.value = ''
   isLoading.value = true
   isRefreshing.value = false
+  isCancelling.value = false
+  isPauseActionLoading.value = false
   streamOffset.value = 0
   olderLogsOffset.value = null
   isInitializing.value = false
@@ -1095,9 +1287,11 @@ function resetState() {
   logMode.value = 'live'
   isLoadingOlderLogs.value = false
   isHydratingCompletedLogs.value = false
+  isRestoringLiveHistory.value = false
   hasOlderLogs.value = false
   earliestLoadedSeq.value = null
   latestLoadedSeq.value = null
+  actionStatusOverride.value = ''
 }
 
 async function initializePage() {
@@ -1112,19 +1306,17 @@ async function initializePage() {
   isInitializing.value = true
 
   try {
-    await hydrateLiveLogs()
-
-    if (!task.value && !progress.value) {
-      await fetchTaskSummary()
-    }
+    await fetchTaskSummary()
 
     if (!pageError.value) {
-      if (isTaskFinished.value) {
+      if (isTaskInactive.value) {
         if (!isHydratingCompletedLogs.value) {
           await hydrateCompletedLogs()
         }
       } else {
-        openStream(0)
+        await hydrateLiveLogs()
+        openStream(resolveStreamOffset())
+        void restoreLiveHistory()
       }
     }
   } finally {
@@ -1151,7 +1343,7 @@ watch(
   { immediate: true }
 )
 
-watch(isTaskFinished, (finished) => {
+watch([isTaskFinished, isTaskPaused], ([finished, paused]) => {
   if (finished) {
     stopDurationTicker()
     stopSummaryPolling()
@@ -1167,8 +1359,24 @@ watch(isTaskFinished, (finished) => {
     return
   }
 
+  if (paused) {
+    stopDurationTicker()
+    stopSummaryPolling()
+    closeStream()
+    streamState.value = 'paused'
+
+    if (!isInitializing.value && logMode.value !== 'paged') {
+      void hydrateCompletedLogs()
+    }
+    return
+  }
+
   startDurationTicker()
   startSummaryPolling()
+
+  if (!isInitializing.value && !eventSource && !isPauseActionLoading.value) {
+    openStream(resolveStreamOffset())
+  }
 }, { immediate: true })
 
 onBeforeUnmount(() => {
@@ -1201,6 +1409,22 @@ onBeforeUnmount(() => {
         </button>
         <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing" @click="fetchTaskSummary">
           {{ isRefreshing ? '刷新中...' : '刷新详情' }}
+        </button>
+        <button
+          v-if="showPauseToggleButton"
+          class="scan-task-detail-toggle-button"
+          :class="{ 'is-paused': canResumeTask }"
+          type="button"
+          :disabled="isPauseActionLoading"
+          :aria-label="pauseToggleAriaLabel"
+          @click="handlePauseToggle"
+        >
+          <svg v-if="canResumeTask" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M9 7.2v9.6c0 .73.81 1.18 1.44.8l7.2-4.8a.94.94 0 0 0 0-1.6l-7.2-4.8A.94.94 0 0 0 9 7.2Z" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="6.8" />
+          </svg>
         </button>
         <button
           v-if="canCancelTask"

@@ -835,6 +835,11 @@
   background: var(--paper-3);
 }
 
+.scan-task-detail-status.is-paused,
+.scan-task-detail-info-row.is-paused strong {
+  background: #ffe7a8;
+}
+
 .scan-task-detail-status.is-error,
 .scan-task-detail-info-row.is-error strong {
   background: var(--surface-4);
@@ -853,6 +858,7 @@
 .scan-task-detail-ghost-button,
 .scan-task-detail-primary-button,
 .scan-task-detail-inline-button,
+.scan-task-detail-toggle-button,
 .scan-task-detail-danger-button {
   min-height: 42px;
   padding: 0 16px;
@@ -873,6 +879,23 @@
   background: var(--accent-blue);
 }
 
+.scan-task-detail-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  border-radius: 999px;
+  background: #f5fbf0;
+  color: #2f8f4e;
+}
+
+.scan-task-detail-toggle-button.is-paused {
+  background: #fff6db;
+  color: #d49a12;
+}
+
 .scan-task-detail-danger-button {
   display: inline-flex;
   align-items: center;
@@ -884,6 +907,7 @@
   color: #fffdf7;
 }
 
+.scan-task-detail-toggle-button svg,
 .scan-task-detail-danger-button svg {
   width: 16px;
   height: 16px;
@@ -892,12 +916,14 @@
 .scan-task-detail-ghost-button:hover,
 .scan-task-detail-primary-button:hover,
 .scan-task-detail-inline-button:hover,
+.scan-task-detail-toggle-button:hover,
 .scan-task-detail-danger-button:hover {
   transform: translate(-1px, -1px);
 }
 
 .scan-task-detail-primary-button:disabled,
 .scan-task-detail-inline-button:disabled,
+.scan-task-detail-toggle-button:disabled,
 .scan-task-detail-danger-button:disabled {
   cursor: wait;
   opacity: 0.72;
@@ -1037,6 +1063,10 @@
 
 .scan-task-detail-stream-badge.is-warning {
   background: var(--paper-2);
+}
+
+.scan-task-detail-stream-badge.is-paused {
+  background: #ffe7a8;
 }
 
 .scan-task-detail-stream-badge.is-complete {

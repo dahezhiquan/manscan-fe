@@ -19,10 +19,22 @@ export function buildScanTaskCancelApi(taskId) {
   return `${buildScanTaskApi(taskId)}/cancel`
 }
 
-export function buildScanTaskLogsApi(taskId, offset = 0, limit = 200) {
+export function buildScanTaskPauseApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/pause`
+}
+
+export function buildScanTaskResumeApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/resume`
+}
+
+export function buildScanTaskLogsApi(taskId, offset = 0, limit = 200, direction = '') {
   const searchParams = new URLSearchParams()
   searchParams.set('offset', String(offset))
   searchParams.set('limit', String(limit))
+
+  if (direction) {
+    searchParams.set('direction', String(direction))
+  }
 
   return `${buildScanTaskApi(taskId)}/logs?${searchParams.toString()}`
 }

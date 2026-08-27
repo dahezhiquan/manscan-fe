@@ -4,6 +4,8 @@ import {
   buildScanTaskApi,
   buildScanTaskCancelApi,
   buildScanTaskLogsApi,
+  buildScanTaskPauseApi,
+  buildScanTaskResumeApi,
   buildScanTaskStreamApi
 } from '../constants/api'
 import { requestJson } from '../utils/http'
@@ -55,8 +57,20 @@ export async function cancelScanTask(taskId) {
   })
 }
 
-export async function getScanTaskLogs(taskId, offset, limit) {
-  return requestJson(buildScanTaskLogsApi(taskId, offset, limit))
+export async function pauseScanTask(taskId) {
+  return requestJson(buildScanTaskPauseApi(taskId), {
+    method: 'POST'
+  })
+}
+
+export async function resumeScanTask(taskId) {
+  return requestJson(buildScanTaskResumeApi(taskId), {
+    method: 'POST'
+  })
+}
+
+export async function getScanTaskLogs(taskId, offset, limit, direction = '') {
+  return requestJson(buildScanTaskLogsApi(taskId, offset, limit, direction))
 }
 
 export function createScanTaskStream(taskId, offset) {

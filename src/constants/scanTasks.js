@@ -10,6 +10,7 @@ export const SCAN_STATUS_OPTIONS = [
   { value: '', label: '全部状态' },
   { value: 'pending', label: '等待中' },
   { value: 'running', label: '运行中' },
+  { value: 'paused', label: '已暂停' },
   { value: 'success', label: '成功' },
   { value: 'failed', label: '失败' },
   { value: 'cancelled', label: '已取消' }
@@ -18,6 +19,7 @@ export const SCAN_STATUS_OPTIONS = [
 export const SCAN_STATUS_META = {
   pending: { label: '等待中', tone: 'pending' },
   running: { label: '运行中', tone: 'running' },
+  paused: { label: '已暂停', tone: 'paused' },
   success: { label: '成功', tone: 'success' },
   failed: { label: '失败', tone: 'error' },
   cancelled: { label: '已取消', tone: 'warning' }

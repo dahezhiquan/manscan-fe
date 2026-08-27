@@ -116,8 +116,9 @@
   - 请求失败时不阻塞任务列表渲染
   - 页面会保留已有统计值；首次失败时回退到列表页本地可推导数据
 - 联调注意事项：
-  - `saved_requests` 的统计口径为 `SUM(total_requests - real_requests)`
-  - 运行中任务的节省请求数也会被统计在内
+  - `saved_requests` 仅统计 `success` 状态任务的累计节省请求数，统计口径为 `SUM(total_requests - real_requests)`
+  - 运行中、暂停、失败、取消中的任务不计入 `saved_requests`
+  - 扫描列表页会优先根据 `data.running` 判断是否继续轮询；当当前页最后一个运行中任务结束时，前端还会额外补一次统计请求，尽快刷新节省请求数
 
 ### 7. 获取扫描任务列表
 
@@ -175,7 +176,7 @@
 
 ### 9. 取消扫描任务
 
-- 用途：扫描任务详情页停止仍处于 `pending` / `running` 状态的任务
+- 用途：扫描任务详情页停止仍处于 `pending` / `running` / `paused` 状态的任务
 - 请求方式：`POST`
 - 路径：`/api/v1/scans/:id/cancel`
 - 请求参数：
@@ -184,10 +185,40 @@
 - 异常分支：
   - 请求失败时，在任务详情页顶部展示错误提示
 - 联调注意事项：
-  - 前端当前仅在任务状态为 `pending` 或 `running` 时展示停止按钮
+  - 前端当前会在任务状态为 `pending`、`running` 或 `paused` 时展示停止按钮
   - 当 `cancel_requested=true` 且返回状态仍为 `running` 时，表示后端已受理取消请求，最终状态会在后续详情轮询或日志流中收敛为 `cancelled`
 
-### 10. 获取扫描任务详情
+### 10. 暂停扫描任务
+
+- 用途：扫描任务详情页暂停仍处于 `pending` / `running` 状态的任务
+- 请求方式：`POST`
+- 路径：`/api/v1/scans/:id/pause`
+- 请求参数：
+  - 路径参数 `id`
+- 返回结构：前端当前使用 `data.task_id`、`data.status`、`data.pause_requested`
+- 异常分支：
+  - 请求失败时，在任务详情页顶部展示错误提示
+- 联调注意事项：
+  - 前端当前仅在任务状态为 `pending` 或 `running` 时展示暂停按钮
+  - 点击后前端会立即切换为“已暂停”交互态，并停止实时日志连接与详情轮询
+  - 当后端最终把任务状态收敛为 `paused` 后，前端会自动清除本地过渡状态
+
+### 11. 恢复扫描任务
+
+- 用途：扫描任务详情页恢复 `paused` 状态的任务
+- 请求方式：`POST`
+- 路径：`/api/v1/scans/:id/resume`
+- 请求参数：
+  - 路径参数 `id`
+- 返回结构：前端当前使用 `data.task_id`、`data.status`、`data.resume_requested`
+- 异常分支：
+  - 请求失败时，在任务详情页顶部展示错误提示
+- 联调注意事项：
+  - 前端当前仅在任务状态为 `paused` 时展示恢复按钮
+  - 点击后前端会立即切回“继续执行中”交互态，并恢复实时日志连接与详情轮询
+  - 后端受理恢复后，任务状态通常会先回到 `pending`，随后再进入 `running`
+
+### 12. 获取扫描任务详情
 
 - 用途：扫描任务详情页的基本信息、进度卡片和状态展示
 - 请求方式：`GET`
@@ -205,10 +236,10 @@
   - 详情页顶部“漏洞命中”卡片优先使用 `critical_count + high_count + medium_count + low_count + info_count`
   - `progress.matched` 当前不再直接用于“漏洞命中”展示，避免把 `tech_count` 混入漏洞统计
   - `data.task.tech_count` 用于“指纹识别数量”展示，空值前端回退为 `--`
-  - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式
+  - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式；当 `finished_status=paused` 时，前端会按“暂停态”而不是“已结束态”处理
   - `progress.last_event_seq` 会影响日志续拉偏移量
 
-### 11. 获取扫描任务日志
+### 13. 获取扫描任务日志
 
 - 用途：扫描任务详情页的初始日志加载、完成后分页补载历史日志
 - 请求方式：`GET`
@@ -216,6 +247,7 @@
 - 请求参数：
   - `offset`
   - `limit`
+  - `direction`
 - 返回结构：前端使用 `data.task`、`data.progress`、`data.events`、`data.next_offset`、`data.has_more`
   - `data.task` 与详情接口保持一致，前端会继续读取并覆盖 `target_count`、`plugin_count`、`tech_count` 等统计字段
 - 异常分支：
@@ -225,9 +257,12 @@
   - 日志接口返回的 `data.task.critical_count/high_count/medium_count/low_count/info_count` 会同步刷新顶部“漏洞命中”卡片
   - 日志接口返回的 `data.task.tech_count` 会同步刷新详情页“指纹识别数量”
   - `events[].seq` 最好连续递增，前端依赖它做去重和排序
-  - `next_offset` 与 `has_more` 会影响历史日志是否继续加载
+  - 前端当前会用 `direction=before` 拉取日志尾部最近一页，并基于 `next_offset`、`has_more` 向前补载更早日志
+  - 运行中任务页在浏览器刷新后，会先拉取尾部最近一页，再使用 `direction=before` 自动回补更早历史日志，避免只拿到最早一批或最后一批事件
+  - 对于 `direction=before`，前端会把 `next_offset` 当作“当前页最早一条日志的 seq”，下一次继续原样作为 `offset` 传回
+  - 对于 `direction=forward` 或日志流 `offset`，前端会把“最后已处理事件的 seq”作为续传偏移传回，而不是 `seq + 1`
 
-### 12. 订阅扫描任务日志流
+### 14. 订阅扫描任务日志流
 
 - 用途：扫描任务详情页实时日志流
 - 请求方式：`GET`
@@ -246,3 +281,4 @@
   - SSE 数据体应为 JSON
   - 事件体支持完整包裹结构，也兼容直接返回单条事件对象
   - 完成事件建议携带最终 `task/progress/events` 快照
+  - 前端会把“最后已处理日志的 `seq`”作为 `offset` 传给流接口，依赖后端补发 `seq > offset` 的快照和后续事件

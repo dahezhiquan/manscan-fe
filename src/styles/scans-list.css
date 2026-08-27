@@ -490,6 +490,10 @@
   color: #f59e0b;
 }
 
+.scans-filter-menu-icon.is-paused {
+  color: #d49a12;
+}
+
 .scans-filter-menu-icon.is-running {
   color: #2563eb;
 }
@@ -851,6 +855,10 @@
 
 .scan-status-pill.is-pending {
   background: var(--paper-3);
+}
+
+.scan-status-pill.is-paused {
+  background: #ffe7a8;
 }
 
 .scan-status-pill.is-error {
