@@ -6,6 +6,7 @@ import {
   buildScanTaskCancelApi,
   buildScanTaskLogsApi,
   buildScanTaskPauseApi,
+  buildScanTaskRescanApi,
   buildScanTaskResumeApi,
   buildScanTaskStreamApi
 } from '../constants/api'
@@ -82,6 +83,13 @@ export async function pauseScanTask(taskId) {
 export async function resumeScanTask(taskId) {
   return requestJson(buildScanTaskResumeApi(taskId), {
     method: 'POST'
+  })
+}
+
+export async function rescanScanTask(taskId, signal) {
+  return requestJson(buildScanTaskRescanApi(taskId), {
+    method: 'POST',
+    signal
   })
 }
 

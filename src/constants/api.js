@@ -33,6 +33,10 @@ export function buildScanTaskResumeApi(taskId) {
   return `${buildScanTaskApi(taskId)}/resume`
 }
 
+export function buildScanTaskRescanApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/rescan`
+}
+
 export function buildScanTaskLogsApi(taskId, offset = 0, limit = 200, direction = '') {
   const searchParams = new URLSearchParams()
   searchParams.set('offset', String(offset))

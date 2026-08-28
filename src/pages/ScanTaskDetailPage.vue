@@ -6,6 +6,7 @@ import {
   getScanTask,
   getScanTaskLogs,
   pauseScanTask,
+  rescanScanTask,
   resumeScanTask
 } from '../api/scans'
 import { mapSeverityTone } from '../utils/template'
@@ -50,6 +51,7 @@ const isLoading = ref(true)
 const isRefreshing = ref(false)
 const isCancelling = ref(false)
 const isPauseActionLoading = ref(false)
+const isRescanning = ref(false)
 const streamOffset = ref(0)
 const olderLogsOffset = ref(null)
 const isInitializing = ref(false)
@@ -67,6 +69,7 @@ const actionStatusOverride = ref('')
 
 let currentTaskRequestId = 0
 let fetchController = null
+let rescanController = null
 let eventSource = null
 let reconnectTimer = null
 let durationTimer = null
@@ -238,6 +241,7 @@ const showLoadOlderHint = computed(() => logMode.value === 'paged' && (hasOlderL
 const canCancelTask = computed(() => ['pending', 'running', 'paused'].includes(taskStatus.value))
 const canPauseTask = computed(() => ['pending', 'running'].includes(taskStatus.value))
 const canResumeTask = computed(() => taskStatus.value === 'paused')
+const canRescanTask = computed(() => Boolean(taskId.value) && !isLoading.value && taskStatus.value !== 'running')
 const showPauseToggleButton = computed(() => canPauseTask.value || canResumeTask.value)
 const pauseToggleAriaLabel = computed(() => {
   if (isPauseActionLoading.value) {
@@ -360,6 +364,23 @@ function formatScanStrategy(value) {
   }
 
   return SCAN_STRATEGY_LABELS[value] ? `${SCAN_STRATEGY_LABELS[value]} · ${value}` : String(value)
+}
+
+function resolveCreatedTaskDetailPath(payload) {
+  const nextTaskId = payload?.task?.id
+
+  if (nextTaskId !== null && nextTaskId !== undefined && nextTaskId !== '') {
+    return `/scans/${nextTaskId}`
+  }
+
+  const taskApi = String(payload?.task_api ?? '').trim()
+  const match = taskApi.match(/\/api\/(?:v1\/)?scans\/([^/?#]+)/)
+
+  if (match?.[1]) {
+    return `/scans/${match[1]}`
+  }
+
+  return ''
 }
 
 function normalizeStatusValue(status) {
@@ -1039,8 +1060,37 @@ async function fetchTaskSummary() {
   await requestTaskSummary()
 }
 
+async function handleRescanTask() {
+  if (!taskId.value || isRescanning.value) {
+    return
+  }
+
+  rescanController?.abort()
+  rescanController = new AbortController()
+  isRescanning.value = true
+  pageError.value = ''
+
+  try {
+    const data = await rescanScanTask(taskId.value, rescanController.signal)
+    const detailPath = resolveCreatedTaskDetailPath(data)
+
+    if (!detailPath) {
+      throw new Error('重新扫描已创建，但返回的新任务 ID 为空。')
+    }
+
+    props.navigateTo(detailPath)
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      pageError.value = error instanceof Error ? error.message : '重新扫描任务失败，请稍后重试。'
+    }
+  } finally {
+    isRescanning.value = false
+    rescanController = null
+  }
+}
+
 async function handleCancelTask() {
-  if (!taskId.value || isCancelling.value || !canCancelTask.value) {
+  if (!taskId.value || isCancelling.value || isRescanning.value || !canCancelTask.value) {
     return
   }
 
@@ -1066,7 +1116,7 @@ async function handleCancelTask() {
 }
 
 async function handlePauseToggle() {
-  if (!taskId.value || isPauseActionLoading.value) {
+  if (!taskId.value || isPauseActionLoading.value || isRescanning.value) {
     return
   }
 
@@ -1263,6 +1313,8 @@ function resetState() {
   currentTaskRequestId += 1
   fetchController?.abort()
   fetchController = null
+  rescanController?.abort()
+  rescanController = null
   closeStream()
   stopSummaryPolling()
 
@@ -1280,6 +1332,7 @@ function resetState() {
   isRefreshing.value = false
   isCancelling.value = false
   isPauseActionLoading.value = false
+  isRescanning.value = false
   streamOffset.value = 0
   olderLogsOffset.value = null
   isInitializing.value = false
@@ -1407,15 +1460,29 @@ onBeforeUnmount(() => {
         <button class="scan-task-detail-ghost-button" type="button" @click="props.navigateTo('/scans')">
           返回任务列表
         </button>
-        <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing" @click="fetchTaskSummary">
+        <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing || isRescanning" @click="fetchTaskSummary">
           {{ isRefreshing ? '刷新中...' : '刷新详情' }}
+        </button>
+        <button
+          v-if="canRescanTask"
+          class="scan-task-detail-rescan-button"
+          type="button"
+          :disabled="isLoading || isRefreshing || isRescanning"
+          :aria-busy="isRescanning ? 'true' : 'false'"
+          @click="handleRescanTask"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+            <path d="M20 4v5h-5" />
+          </svg>
+          <span>{{ isRescanning ? '重新扫描中...' : '重新扫描' }}</span>
         </button>
         <button
           v-if="showPauseToggleButton"
           class="scan-task-detail-toggle-button"
           :class="{ 'is-paused': canResumeTask }"
           type="button"
-          :disabled="isPauseActionLoading"
+          :disabled="isPauseActionLoading || isRescanning"
           :aria-label="pauseToggleAriaLabel"
           @click="handlePauseToggle"
         >
@@ -1430,7 +1497,7 @@ onBeforeUnmount(() => {
           v-if="canCancelTask"
           class="scan-task-detail-danger-button"
           type="button"
-          :disabled="isCancelling"
+          :disabled="isCancelling || isRescanning"
           :aria-label="isCancelling ? '正在停止扫描任务' : '停止扫描任务'"
           @click="handleCancelTask"
         >
