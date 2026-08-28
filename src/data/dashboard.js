@@ -68,12 +68,12 @@ function resolveNavCount(item, { scanCount, vulnerabilityCount }) {
 }
 
 export const vulnerabilityStats = [
-  { label: '总计', value: 0, tone: 'total' },
-  { label: '严重', value: 0, tone: 'critical' },
-  { label: '高危', value: 0, tone: 'high' },
-  { label: '中危', value: 0, tone: 'medium' },
-  { label: '未知', value: 0, tone: 'unknown' },
-  { label: '低危', value: 0, tone: 'low' }
+  { key: 'unreviewed', label: '总数', value: '--', tone: 'total' },
+  { key: 'critical', label: '严重', value: 0, tone: 'critical' },
+  { key: 'high', label: '高危', value: 0, tone: 'high' },
+  { key: 'medium', label: '中危', value: 0, tone: 'medium' },
+  { key: 'info', label: 'info', value: 0, tone: 'info' },
+  { key: 'low', label: '低危', value: 0, tone: 'low' }
 ]
 
 export const assetStats = [

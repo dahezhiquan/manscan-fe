@@ -23,8 +23,10 @@ defineProps({
     </div>
 
     <div class="stats-row">
-      <div v-for="item in stats" :key="item.label" class="stat-box">
-        <div class="stat-value" :class="`tone-${item.tone}`">{{ item.value }}</div>
+      <div v-for="item in stats" :key="item.key || item.label" class="stat-box">
+        <div class="stat-value" :class="`tone-${item.tone}`" :title="item.title || ''">
+          {{ item.value }}
+        </div>
         <div class="stat-label">{{ item.label }}</div>
       </div>
     </div>

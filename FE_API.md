@@ -328,13 +328,14 @@
 
 ### 17. 获取漏洞列表
 
-- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新；侧边栏“漏洞”导航徽标展示未审核漏洞数
+- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新；侧边栏“漏洞”导航徽标和首页仪表盘“待处理漏洞”卡片展示未审核漏洞数
 - 请求方式：`GET`
 - 路径：`/api/v1/vulnerabilities`
 - 请求参数：
   - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
   - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
-  - 侧边栏未审核数量当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`
+  - 侧边栏和首页仪表盘未审核总数当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`
+  - 首页仪表盘未审核分类数量当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`，并分别附加 `severity=critical|high|medium|info|low`
   - `keyword`: 统一搜索关键字，用于按 `vulnerability_name OR template_id` 模糊匹配
   - `asset_host`: 资产 Host 模糊筛选
   - `status`: 漏洞状态精确筛选，前端当前枚举为 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`，支持多选
@@ -365,6 +366,7 @@
   - 漏洞页标签筛选候选来自 `/api/v1/templates/options/tags`；接口失败时回退为前端内置标签选项
   - 漏洞页“扫描任务”筛选候选来自 `/api/v1/scans/options/names`；接口失败时会展示错误提示并允许重试
   - 侧边栏“漏洞”徽标会单独轮询本接口，间隔约 10 秒，并直接读取 `data.total` 作为未审核漏洞数
+  - 首页仪表盘“待处理漏洞”卡片会在页面挂载时请求未审核总数和 `critical`、`high`、`medium`、`info`、`low` 分类数量，均直接读取 `data.total`；加载中或失败时显示 `--`
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
   - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
