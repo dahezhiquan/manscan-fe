@@ -1,4 +1,9 @@
-import { buildVulnerabilityDetailApi, VULNERABILITY_LIST_API } from '../constants/api'
+import {
+  VULNERABILITY_BATCH_STATUS_API,
+  VULNERABILITY_LIST_API,
+  buildVulnerabilityDetailApi,
+  buildVulnerabilityStatusApi
+} from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getVulnerabilityList(params = {}, signal) {
@@ -36,6 +41,28 @@ export async function getVulnerabilityList(params = {}, signal) {
 export async function getVulnerabilityDetail(vulnerabilityId, signal) {
   return requestJson(buildVulnerabilityDetailApi(vulnerabilityId), {
     method: 'GET',
+    signal
+  })
+}
+
+export async function updateVulnerabilityStatus(vulnerabilityId, status, signal) {
+  return requestJson(buildVulnerabilityStatusApi(vulnerabilityId), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ status }),
+    signal
+  })
+}
+
+export async function updateVulnerabilityStatuses(ids, status, signal) {
+  return requestJson(VULNERABILITY_BATCH_STATUS_API, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids, status }),
     signal
   })
 }

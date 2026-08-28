@@ -365,6 +365,7 @@
   - `tags`、`status`、`severity` 和 `protocol` 均为下拉筛选，多选时前端会发送多个同名 query 参数
   - 漏洞页标签筛选候选来自 `/api/v1/templates/options/tags`；接口失败时回退为前端内置标签选项
   - 漏洞页“扫描任务”筛选候选来自 `/api/v1/scans/options/names`；接口失败时会展示错误提示并允许重试
+  - 漏洞页“全选”会按当前已应用筛选条件，以 `page_size=100` 分页拉取所有匹配漏洞的 `items[].id`，用于后续批量操作
   - 侧边栏“漏洞”徽标会单独轮询本接口，间隔约 10 秒，并直接读取 `data.total` 作为未审核漏洞数
   - 首页仪表盘“待处理漏洞”卡片会在页面挂载时请求未审核总数和 `critical`、`high`、`medium`、`info`、`low` 分类数量，均直接读取 `data.total`；加载中或失败时显示 `--`
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
@@ -372,7 +373,59 @@
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
   - `asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
 
-### 18. 获取漏洞详情
+### 18. 更新漏洞状态
+
+- 用途：`/vulnerabilities/:id` 漏洞详情页修改“漏洞状态”
+- 请求方式：`PATCH`
+- 路径：`/api/v1/vulnerabilities/:id/status`
+- 请求参数：
+  - 路径参数 `id`: 漏洞 ID，来自详情页路由 `/vulnerabilities/:id`
+  - 请求体 `status`: 目标漏洞状态，前端当前允许选择 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`
+- 请求体：
+  - `status`
+- 返回结构：前端使用以下字段做详情页局部更新
+  - `data.id`
+  - `data.status`
+  - `data.fixed_at`
+- 异常分支：
+  - 提交中禁用弹窗关闭和确认按钮，避免重复提交
+  - 请求失败时保留弹窗，并在弹窗内展示后端错误信息或“漏洞状态修改失败，请稍后重试。”
+  - 关闭详情页时会中止仍在进行的状态更新请求
+- 联调注意事项：
+  - 当 `status=fixed` 时，后端会写入 `fixed_at`；当 `status=unreviewed` 时，后端会清空 `fixed_at`
+  - 其它状态的 `fixed_at` 前端不自行推断，统一以接口返回值更新页面
+  - 状态修改成功后前端不重新拉取整页详情，会使用接口返回的 `status` 和 `fixed_at` 局部更新“漏洞状态”和“修复时间”
+
+### 19. 批量更新漏洞状态
+
+- 用途：`/vulnerabilities` 漏洞查询页选中多个漏洞后批量修改“漏洞状态”
+- 请求方式：`PATCH`
+- 路径：`/api/v1/vulnerabilities/status`
+- 请求参数：
+  - 请求体 `ids`: 漏洞 ID 数组，每次请求最多 `1000` 个，必须为大于 `0` 的整数
+  - 请求体 `status`: 目标漏洞状态，前端当前允许选择 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`
+- 请求体：
+  - `ids`
+  - `status`
+- 返回结构：前端当前以请求成功作为批量更新完成依据，接口返回字段可用于联调核对
+  - `data.ids`
+  - `data.status`
+  - `data.fixed_at`
+  - `data.updated_count`
+- 异常分支：
+  - 选中数量大于 `0` 时展示“批量操作”入口
+  - 提交中禁用弹窗关闭和确认按钮，并在弹窗内展示已提交数量
+  - 请求失败时保留弹窗，并在弹窗内展示后端错误信息或“批量修改漏洞状态失败，请稍后重试。”
+  - 关闭漏洞列表页时会中止仍在进行的全选拉取或批量状态更新请求
+- 联调注意事项：
+  - “选中当前页”只合并当前页漏洞 ID；“全选”表示当前筛选条件下所有匹配漏洞，不限当前页
+  - 前端提交前会将选中的 `items[].id` 转为正整数并去重；存在无法转换的 ID 时会阻止提交并提示刷新列表
+  - 当选中漏洞超过 `1000` 个时，前端会按 `1000` 个 ID 一批顺序发送多个 `PATCH /api/v1/vulnerabilities/status` 请求
+  - 任一批次失败时，前端停止发送后续批次；已成功批次以后端实际更新结果为准，弹窗保留错误提示
+  - 全部批次成功后，前端会清空已选 ID 并重新加载当前漏洞列表
+  - 批量删除入口仅预留展示，当前不调用删除接口
+
+### 20. 获取漏洞详情
 
 - 用途：`/vulnerabilities/:id` 漏洞详情页展示漏洞完整业务字段、资产信息、时间线、参考链接和请求响应证据
 - 请求方式：`GET`
