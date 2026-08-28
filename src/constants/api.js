@@ -10,6 +10,7 @@ export const TEMPLATE_TAGS_API = `${API_PREFIX}/templates/options/tags`
 export const TEMPLATE_PROTOCOLS_API = `${API_PREFIX}/templates/options/protocols`
 export const SCAN_TASK_CREATE_API = `${API_PREFIX}/scans`
 export const SCAN_TASK_STATS_API = `${API_PREFIX}/scans/stats`
+export const VULNERABILITY_LIST_API = `${API_PREFIX}/vulnerabilities`
 
 export function buildScanTaskApi(taskId) {
   return `${SCAN_TASK_CREATE_API}/${taskId}`

@@ -20,6 +20,10 @@
 
 服务默认监听地址为 `:8686`，接口统一挂载在 `/api/v1` 下。
 
+统计口径说明：
+
+- 扫描任务响应中的 `tech_count` 表示命中结果中 `info.tags` 包含 `tech` 标签的数量，不再根据模板名称或结果名称是否包含“指纹识别”判断。
+
 ## 1. 获取模板列表
 
 - 请求方法和路径：`GET /api/v1/templates`
@@ -32,7 +36,7 @@
 | `name`     | `string` / `string[]` | 否  | 按模板名称或模板 ID 模糊过滤，支持逗号分隔和多参数 |
 | `tag`      | `string` / `string[]` | 否  | 按标签过滤，支持逗号分隔和多参数            |
 | `severity` | `string` / `string[]` | 否  | 按严重级别过滤                     |
-| `protocol` | `string` / `string[]` | 否  | 按协议类型过滤                     |
+| `protocol` | `string` / `string[]` | 否  | 按模板 YAML 顶层执行块识别出的协议类型过滤 |
 | `iskev`    | `bool`                | 否  | 是否仅保留包含 `kev` 标签的模板         |
 | `iscve`    | `bool`                | 否  | 是否仅保留包含 `cve` 标签的模板         |
 
@@ -159,10 +163,14 @@ curl "http://127.0.0.1:8686/api/v1/templates/options/tags"
   "code": 0,
   "message": "success",
   "data": {
-    "items": ["dns", "http", "javascript"]
+    "items": ["code", "dns", "file", "headless", "http", "javascript", "ssl", "tcp", "workflows"]
   }
 }
 ```
+
+- 说明：
+  - 协议选项来自模板 YAML 顶层执行块识别，只读取顶层 key，不扫描全文字符串。
+  - 当前执行块白名单包括 `http`、`tcp`、`dns`、`ssl`、`file`、`headless`、`javascript`、`code`、`workflows`、`websocket`、`whois`、`offlinehttp`，并兼容历史顶层 key：`requests` 归一为 `http`，`network` 归一为 `tcp`。
 
 - 错误码说明：
   - `50001`：模板目录读取或解析失败
@@ -193,6 +201,9 @@ curl "http://127.0.0.1:8686/api/v1/templates/options/protocols"
   }
 }
 ```
+
+- 说明：
+  - `fingerprintTemplateCount` 表示 `info.tags` 中包含 `tech` 标签的模板数量，其他标签不计入该字段。
 
 - 错误码说明：
   - `50001`：模板目录读取或解析失败
@@ -330,7 +341,7 @@ curl "http://127.0.0.1:8686/api/v1/scans?page=1&page_size=10&keyword=demo&status
 | `tags`                | `string[]` | 否  | 模板标签过滤             |
 | `include_ids`         | `string[]` | 否  | 模板 ID 过滤           |
 | `severities`          | `string[]` | 否  | 严重级别过滤             |
-| `protocols`           | `string[]` | 否  | 协议类型过滤             |
+| `protocols`           | `string[]` | 否  | 协议类型过滤，口径与模板协议选项一致 |
 | `rate_limit`          | `int`      | 否  | 速率限制               |
 | `template_threads`    | `int`      | 否  | 模板并发数              |
 | `timeout`             | `int`      | 否  | 请求超时，单位秒           |
@@ -630,6 +641,8 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
   - `direction=forward` 用于按序向后读取增量日志，返回 `seq > offset` 的事件；`next_offset` 表示本次已处理的最大 `seq`，下一次请求可直接作为 `offset` 传回。
   - `direction=before` 用于向前翻旧日志，返回 `seq < offset` 的最近一页可见事件；当 `offset=0` 时返回当前尾部最近一页；`next_offset` 表示本页最早可见事件的 `seq`，下一次请求可直接作为 `offset` 继续翻更早日志。
   - 运行中任务也支持 `direction=before`，可用于浏览器刷新后从尾部向前回补历史日志。
+  - `result` 类型事件可能包含 `tags` 字段，用于记录该命中结果的模板标签。
+  - 当任务开启 `matcher_status` 时，模板匹配失败会以 `level=info`、`type=match_failure` 输出为调试日志；这类事件不计入 `progress.matched`，不写入漏洞结果。
 
 - 错误码说明：
   - `40001`：任务 ID、`offset`、`limit` 或 `direction` 非法
@@ -659,6 +672,8 @@ curl "http://127.0.0.1:8686/api/v1/scans/1/logs?direction=before&offset=0&limit=
   - 首个事件为 `snapshot`
   - 后续事件为 `event`
   - `progress` 与 `result` 类型事件会额外携带最新的 `task` 统计快照，便于前端实时刷新漏洞数、指纹数、目标数和插件数
+  - `result` 类型事件中的 `event.tags` 为该命中结果的模板标签，包含 `tech` 时计入 `tech_count`
+  - 开启 `matcher_status` 后产生的 `match_failure` 事件只用于展示匹配失败调试信息，不会触发漏洞命中统计刷新
   - 任务结束后发送 `complete`
 
 - `snapshot` 示例：
@@ -679,7 +694,14 @@ data: {"task_id":1,"seq":2,"level":"info","type":"progress","message":"扫描进
 
 ```text
 event: event
-data: {"task_id":1,"seq":3,"level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":4,"tech_count":4,"plugin_count":50,"target_count":1},"event":{"seq":3,"time":"2026-06-09T21:01:02+08:00","level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]"},"nextOffset":3}
+data: {"task_id":1,"seq":3,"level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":4,"tech_count":4,"plugin_count":50,"target_count":1},"event":{"seq":3,"time":"2026-06-09T21:01:02+08:00","level":"match","type":"result","message":"[HTTP 安全响应头缺失][strict-transport-security] 命中 [http://example.com/]","tags":["cve"]},"nextOffset":3}
+```
+
+- `match_failure` 事件示例：
+
+```text
+event: event
+data: {"task_id":1,"seq":4,"level":"info","type":"match_failure","message":"[HTTP 安全响应头缺失][info][strict-transport-security] 匹配失败 http://example.com/","nextOffset":4}
 ```
 
 - 错误码说明：
@@ -692,3 +714,77 @@ data: {"task_id":1,"seq":3,"level":"match","type":"result","message":"[HTTP 安�
 ```bash
 curl -N "http://127.0.0.1:8686/api/v1/scans/1/stream?offset=1"
 ```
+
+## 15. 获取漏洞列表
+
+- 请求方法和路径：`GET /api/v1/vulnerabilities`
+
+- 请求参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `page` | `int` | 否 | 页码，最小为 `1`，默认 `1` |
+| `page_size` | `int` | 否 | 每页数量，范围 `1-100`，默认 `10` |
+| `keyword` | `string` | 否 | 按漏洞名称或模板 ID 统一模糊搜索 |
+| `asset_host` | `string` / `string[]` | 否 | 按资产 Host 模糊过滤，支持逗号分隔和多参数 |
+| `status` | `string` / `string[]` | 否 | 按漏洞状态精确过滤，支持逗号分隔和多参数 |
+| `tag` / `tags` | `string` / `string[]` | 否 | 按漏洞标签过滤，支持逗号分隔和多参数 |
+| `severity` / `level` | `string` / `string[]` | 否 | 按严重级别精确过滤，支持逗号分隔和多参数 |
+| `template_id` | `string` / `string[]` | 否 | 按模板 ID 模糊过滤，支持逗号分隔和多参数 |
+| `vulnerability_name` | `string` / `string[]` | 否 | 按漏洞名称模糊过滤，支持逗号分隔和多参数 |
+| `latest_scan_task_name` | `string` / `string[]` | 否 | 按最近扫描任务名称模糊过滤，支持逗号分隔和多参数 |
+| `protocol` | `string` / `string[]` | 否 | 按协议类型精确过滤，支持逗号分隔和多参数 |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 2,
+    "totalPages": 1,
+    "items": [
+      {
+        "id": 1,
+        "name": "HTTP 安全响应头缺失",
+        "severity": "high",
+        "template_id": "http-missing-security-headers",
+        "asset_host": "192.0.2.10",
+        "status": "unreviewed",
+        "tags": ["cve", "kev"],
+        "latest_scan_task_name": "demo-scan",
+        "protocol": "http",
+        "last_found_at": "2026-08-27T12:30:00+08:00"
+      }
+    ]
+  }
+}
+```
+
+- 说明：
+  - 列表默认按 `last_found_at DESC, id DESC` 排序。
+  - `keyword` 匹配逻辑为 `vulnerability_name OR template_id` 模糊匹配，该 OR 条件与其他筛选条件整体做 AND 组合。
+  - `severity`、`status`、`protocol` 为精确匹配；协议值按模板顶层执行块白名单归一化，例如 `network` 会按 `tcp` 处理。
+  - `asset_host`、`template_id`、`vulnerability_name`、`latest_scan_task_name` 为模糊匹配。
+  - `tag` 和 `tags` 含义一致；`severity` 和 `level` 含义一致，前端任选一种命名即可。
+
+- 错误码说明：
+  - `40001`：分页参数非法，例如 `page` 非整数或 `page_size` 超过 `100`
+  - `50001`：查询漏洞列表失败
+
+- 使用示例：
+
+```bash
+curl "http://127.0.0.1:8686/api/v1/vulnerabilities?page=1&page_size=20&keyword=security-header&asset_host=192.0.2.10&status=unreviewed&severity=high&tag=cve&protocol=http"
+```
+
+- 前端实现需求：
+  - 新增“漏洞查询”列表页，进入页面默认请求 `GET /api/v1/vulnerabilities?page=1&page_size=10`。
+  - 表格列至少展示 `name`、`severity`、`template_id`、`asset_host`、`status`；建议同时展示 `latest_scan_task_name`、`protocol`、`last_found_at` 便于溯源。
+  - “搜索漏洞名称或 Template ID”输入框统一传 `keyword=<输入值>`，前端不再自行判断传 `vulnerability_name` 还是 `template_id`。
+  - 筛选区提供 `asset_host`、`status`、`tags`、`severity`、`latest_scan_task_name`、`protocol`。多选值用重复 query 参数或逗号分隔传给后端。
+  - 翻页、修改每页数量、修改筛选条件时重新请求列表；筛选条件变化后将 `page` 重置为 `1`。
+  - 严重级别建议按 `critical`、`high`、`medium`、`low`、`info`、`unknown` 做固定选项；状态至少兼容当前后端写入的 `unreviewed`。

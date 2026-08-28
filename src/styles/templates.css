@@ -490,6 +490,14 @@
   line-height: 1.7;
 }
 
+.templates-tag-load-status {
+  padding: 9px 2px 2px;
+  color: #8b93a2;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .boolean-menu {
   width: 156px;
 }

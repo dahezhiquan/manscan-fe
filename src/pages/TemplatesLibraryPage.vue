@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getTemplateList, getTemplateStats, getTemplateTags } from '../api/templates'
+import { getTemplateList, getTemplateProtocols, getTemplateStats, getTemplateTags } from '../api/templates'
 import { useSearchMagnetism } from '../composables/useSearchMagnetism'
 import {
   booleanFilterOptions,
@@ -10,7 +10,7 @@ import {
   templateSummaryItems
 } from '../data/templates'
 import { iconPath } from '../utils/icons'
-import { mapSeverityTone, normalizeTagOptions, readMultiValueParam } from '../utils/template'
+import { mapSeverityTone, normalizeProtocolOptions, normalizeTagOptions, readMultiValueParam } from '../utils/template'
 
 const props = defineProps({
   navigateTo: {
@@ -29,6 +29,9 @@ const selectedKev = ref('')
 const selectedCve = ref('')
 const currentPage = ref(1)
 const pageSize = 20
+const tagOptionDefaultLimit = 12
+const tagOptionSearchLimit = 18
+const tagOptionBatchSize = 18
 const filtersRef = ref(null)
 const statsData = ref({
   templateCount: null,
@@ -47,10 +50,19 @@ const statsLoading = ref(true)
 const listLoading = ref(false)
 const copiedTemplateId = ref('')
 const tagOptions = ref([])
+const tagOptionVisibleCount = ref(tagOptionDefaultLimit)
+const protocolOptions = ref(
+  protocolFilterOptions.map((item) => ({
+    value: item.value,
+    label: item.label,
+    count: item.count ?? ''
+  }))
+)
 
 let statsAbortController = null
 let listAbortController = null
 let tagAbortController = null
+let protocolAbortController = null
 let searchTimer = null
 let copyFeedbackTimer = null
 const filterMagnetCleanup = []
@@ -101,9 +113,9 @@ const selectedSeverityOptions = computed(() =>
   severityFilterOptions.filter((item) => selectedSeverity.value.includes(item.value))
 )
 const selectedProtocolOptions = computed(() =>
-  protocolFilterOptions.filter((item) => selectedProtocol.value.includes(item.value))
+  protocolOptions.value.filter((item) => selectedProtocol.value.includes(item.value))
 )
-const filteredTagOptions = computed(() => {
+const matchedTagOptions = computed(() => {
   const keyword = tagKeyword.value.trim().toLowerCase()
   const selectedSet = new Set(selectedTags.value)
   const matched = tagOptions.value.filter((item) => {
@@ -125,8 +137,14 @@ const filteredTagOptions = computed(() => {
     return left.label.localeCompare(right.label)
   })
 
-  return matched.slice(0, keyword ? 18 : 12)
+  return matched
 })
+const filteredTagOptions = computed(() =>
+  matchedTagOptions.value.slice(0, tagOptionVisibleCount.value)
+)
+const hasMoreFilteredTagOptions = computed(
+  () => filteredTagOptions.value.length < matchedTagOptions.value.length
+)
 const selectedKevOption = computed(
   () => booleanFilterOptions.find((item) => item.value === selectedKev.value) ?? null
 )
@@ -213,6 +231,34 @@ function toggleMultiValue(currentValues, targetValue) {
   return currentValues.includes(targetValue)
     ? currentValues.filter((item) => item !== targetValue)
     : [...currentValues, targetValue]
+}
+
+function getTagOptionInitialLimit() {
+  return tagKeyword.value.trim() ? tagOptionSearchLimit : tagOptionDefaultLimit
+}
+
+function resetTagOptionVisibleCount() {
+  tagOptionVisibleCount.value = getTagOptionInitialLimit()
+}
+
+function loadMoreTagOptions() {
+  if (!hasMoreFilteredTagOptions.value) {
+    return
+  }
+
+  tagOptionVisibleCount.value = Math.min(
+    tagOptionVisibleCount.value + tagOptionBatchSize,
+    matchedTagOptions.value.length
+  )
+}
+
+function handleTagMenuScroll(event) {
+  const target = event.currentTarget
+  const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight
+
+  if (distanceToBottom <= 24) {
+    loadMoreTagOptions()
+  }
 }
 
 function hydrateFiltersFromQuery() {
@@ -376,10 +422,33 @@ async function fetchTemplateTags() {
   }
 }
 
+async function fetchTemplateProtocols() {
+  protocolAbortController?.abort()
+  protocolAbortController = new AbortController()
+
+  try {
+    const data = await getTemplateProtocols(protocolAbortController.signal)
+    const normalized = normalizeProtocolOptions(data)
+
+    if (normalized.length) {
+      protocolOptions.value = normalized
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      protocolOptions.value = protocolFilterOptions.map((item) => ({
+        value: item.value,
+        label: item.label,
+        count: item.count ?? ''
+      }))
+    }
+  }
+}
+
 onMounted(() => {
   hydrateFiltersFromQuery()
   fetchTemplateStats()
   fetchTemplateTags()
+  fetchTemplateProtocols()
   fetchTemplateList(currentPage.value)
   document.addEventListener('click', handleDocumentClick)
   setupFilterMagnetism()
@@ -392,10 +461,15 @@ watch([keyword, selectedTags, selectedSeverity, selectedProtocol, selectedKev, s
   }, 250)
 })
 
+watch([tagKeyword, tagOptions], () => {
+  resetTagOptionVisibleCount()
+})
+
 onBeforeUnmount(() => {
   statsAbortController?.abort()
   listAbortController?.abort()
   tagAbortController?.abort()
+  protocolAbortController?.abort()
   window.clearTimeout(searchTimer)
   window.clearTimeout(copyFeedbackTimer)
   document.removeEventListener('click', handleDocumentClick)
@@ -528,7 +602,7 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
-            <div class="templates-tag-menu-list">
+            <div class="templates-tag-menu-list" @scroll="handleTagMenuScroll">
               <button
                 v-for="item in filteredTagOptions"
                 :key="item.value"
@@ -550,6 +624,14 @@ onBeforeUnmount(() => {
               <p v-if="filteredTagOptions.length === 0" class="templates-tag-empty">
                 没有匹配到标签，请换个关键词试试。
               </p>
+
+              <div
+                v-else-if="hasMoreFilteredTagOptions"
+                class="templates-tag-load-status"
+                aria-live="polite"
+              >
+                已显示 {{ filteredTagOptions.length }} / {{ matchedTagOptions.length }}
+              </div>
             </div>
           </div>
         </div>
@@ -568,7 +650,7 @@ onBeforeUnmount(() => {
 
           <div v-if="isMenuOpen('protocol')" class="severity-menu protocol-menu">
             <button
-              v-for="item in protocolFilterOptions"
+              v-for="item in protocolOptions"
               :key="item.value"
               class="severity-menu-item"
               @click.stop="selectFilterValue('protocol', item.value)"

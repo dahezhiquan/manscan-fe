@@ -49,7 +49,7 @@
   - `name`: 模板名称或模板 ID 模糊搜索
   - `tag`: 多选标签
   - `severity`: 多选风险等级
-  - `protocol`: 多选协议
+  - `protocol`: 多选协议，筛选选项来自 `/api/v1/templates/options/protocols`
   - `iskev`: `true` / `false`
   - `iscve`: `true` / `false`
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
@@ -92,13 +92,13 @@
 
 ### 5. 获取模板协议选项
 
-- 用途：创建扫描任务页的协议筛选
+- 用途：模板库页、创建扫描任务页、漏洞查询页的协议筛选
 - 请求方式：`GET`
 - 路径：`/api/v1/templates/options/protocols`
 - 请求参数：无
 - 返回结构：前端优先读取 `data.items`
 - 异常分支：
-  - 失败时回退为前端内置协议选项
+  - 失败时回退为前端内置协议选项，不阻塞列表主流程
 - 联调注意事项：
   - 支持纯字符串数组
   - 也兼容对象数组，常用字段可为 `value`、`label`、`protocol`、`name`、`count`
@@ -282,3 +282,45 @@
   - 事件体支持完整包裹结构，也兼容直接返回单条事件对象
   - 完成事件建议携带最终 `task/progress/events` 快照
   - 前端会把“最后已处理日志的 `seq`”作为 `offset` 传给流接口，依赖后端补发 `seq > offset` 的快照和后续事件
+
+## 漏洞相关接口
+
+### 15. 获取漏洞列表
+
+- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新
+- 请求方式：`GET`
+- 路径：`/api/v1/vulnerabilities`
+- 请求参数：
+  - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
+  - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
+  - `keyword`: 后端待支持的统一搜索关键字，用于按 `vulnerability_name OR template_id` 模糊匹配
+  - `asset_host`: 资产 Host 模糊筛选
+  - `status`: 漏洞状态精确筛选，前端当前枚举为 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`，支持多选
+  - `tags`: 标签枚举筛选，前端当前枚举为 `cve`、`kev`、`tech`、`vuln`、`cnvd`，支持多选并以重复 query 参数提交
+  - `severity`: 严重级别精确筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`、`unknown`，支持多选
+  - `latest_scan_task_name`: 最近扫描任务名称筛选，前端下拉选项来自当前已加载漏洞行中的任务名
+  - `protocol`: 协议枚举筛选，选项来自 `/api/v1/templates/options/protocols`，支持多选并以重复 query 参数提交
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].id`
+  - `items[].name`
+  - `items[].severity`
+  - `items[].template_id`
+  - `items[].asset_host`
+  - `items[].status`
+  - `items[].tags`
+  - `items[].latest_scan_task_name`
+  - `items[].protocol`
+  - `items[].last_found_at`
+- 异常分支：
+  - 首屏失败时展示错误态和重新加载按钮
+  - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
+  - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
+- 联调注意事项：
+  - 进入页面默认请求 `page=1&page_size=10`
+  - 后端需新增 `keyword` 参数支持，匹配逻辑为 `LOWER(vulnerability_name) LIKE %keyword% OR LOWER(template_id) LIKE %keyword%`；该条件应与其他筛选条件做 `AND` 组合
+  - 前端“搜索漏洞名称或 Template ID”输入框只会提交 `keyword`，不再自行判断应该传 `vulnerability_name` 还是 `template_id`
+  - `tags`、`status`、`severity` 和 `protocol` 均为枚举下拉，多选时前端会发送多个同名 query 参数
+  - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
+  - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
+  - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
+  - `asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`

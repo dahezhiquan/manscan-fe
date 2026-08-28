@@ -756,7 +756,7 @@
 
 .scans-table-inner {
   width: max-content;
-  min-width: 1080px;
+  min-width: max(100%, 1080px);
 }
 
 .scans-table-head,
@@ -1108,7 +1108,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: 1040px;
+    min-width: max(100%, 1040px);
   }
 
   .scans-table-head,
@@ -1162,7 +1162,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: 1040px;
+    min-width: max(100%, 1040px);
   }
 }
 
@@ -1189,7 +1189,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: 1040px;
+    min-width: max(100%, 1040px);
   }
 }
 
