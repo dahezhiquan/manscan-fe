@@ -1,20 +1,29 @@
 import { computed, onBeforeUnmount, onMounted, ref, unref } from 'vue'
 import { getScanTaskList } from '../api/scans'
+import { getVulnerabilityList } from '../api/vulnerabilities'
+import { VULNERABILITY_STATUS_UNREVIEWED } from '../constants/vulnerabilities'
 import { getNavigationState } from '../data/dashboard'
 
-const RUNNING_SCAN_COUNT_POLL_INTERVAL = 10000
+const SIDEBAR_BADGE_POLL_INTERVAL = 10000
+const sidebarBadgeCache = {
+  runningScanCount: 0,
+  unreviewedVulnerabilityCount: 0
+}
 
 export function useSidebarNavigation(currentPath) {
-  const runningScanCount = ref(0)
+  const runningScanCount = ref(sidebarBadgeCache.runningScanCount)
+  const unreviewedVulnerabilityCount = ref(sidebarBadgeCache.unreviewedVulnerabilityCount)
 
   let pollTimer = null
-  let fetchController = null
+  let scanCountController = null
+  let vulnerabilityCountController = null
   let currentRequestId = 0
   let isDisposed = false
 
   const navigationState = computed(() =>
     getNavigationState(unref(currentPath), {
-      scanCount: runningScanCount.value
+      scanCount: runningScanCount.value,
+      vulnerabilityCount: unreviewedVulnerabilityCount.value
     })
   )
 
@@ -26,8 +35,10 @@ export function useSidebarNavigation(currentPath) {
   }
 
   function stopRequest() {
-    fetchController?.abort()
-    fetchController = null
+    scanCountController?.abort()
+    vulnerabilityCountController?.abort()
+    scanCountController = null
+    vulnerabilityCountController = null
   }
 
   function schedulePolling() {
@@ -37,49 +48,71 @@ export function useSidebarNavigation(currentPath) {
 
     clearPolling()
     pollTimer = window.setTimeout(() => {
-      void loadRunningScanCount()
-    }, RUNNING_SCAN_COUNT_POLL_INTERVAL)
+      void loadSidebarBadgeCounts()
+    }, SIDEBAR_BADGE_POLL_INTERVAL)
   }
 
-  async function loadRunningScanCount() {
+  async function loadSidebarBadgeCounts() {
     clearPolling()
     stopRequest()
 
     const requestId = ++currentRequestId
-    const controller = new AbortController()
-    fetchController = controller
+    scanCountController = new AbortController()
+    vulnerabilityCountController = new AbortController()
 
     try {
-      const response = await getScanTaskList(
-        {
-          page: 1,
-          page_size: 1,
-          status: 'running'
-        },
-        controller.signal
-      )
+      const [scanResult, vulnerabilityResult] = await Promise.allSettled([
+        getScanTaskList(
+          {
+            page: 1,
+            page_size: 1,
+            status: 'running'
+          },
+          scanCountController.signal
+        ),
+        getVulnerabilityList(
+          {
+            page: 1,
+            page_size: 1,
+            status: VULNERABILITY_STATUS_UNREVIEWED
+          },
+          vulnerabilityCountController.signal
+        )
+      ])
 
       if (requestId !== currentRequestId || isDisposed) {
         return
       }
 
-      const nextCount = Number.parseInt(String(response?.total ?? 0), 10)
-      runningScanCount.value = Number.isFinite(nextCount) ? nextCount : 0
+      if (scanResult.status === 'fulfilled') {
+        runningScanCount.value = normalizeCount(scanResult.value?.total)
+        sidebarBadgeCache.runningScanCount = runningScanCount.value
+      }
+      if (vulnerabilityResult.status === 'fulfilled') {
+        unreviewedVulnerabilityCount.value = normalizeCount(vulnerabilityResult.value?.total)
+        sidebarBadgeCache.unreviewedVulnerabilityCount = unreviewedVulnerabilityCount.value
+      }
     } catch (error) {
       if (error?.name === 'AbortError') {
         return
       }
     } finally {
       if (requestId === currentRequestId) {
-        fetchController = null
+        scanCountController = null
+        vulnerabilityCountController = null
         schedulePolling()
       }
     }
   }
 
+  function normalizeCount(value) {
+    const nextCount = Number.parseInt(String(value ?? 0), 10)
+    return Number.isFinite(nextCount) ? nextCount : 0
+  }
+
   onMounted(() => {
     isDisposed = false
-    void loadRunningScanCount()
+    void loadSidebarBadgeCounts()
   })
 
   onBeforeUnmount(() => {
@@ -90,6 +123,7 @@ export function useSidebarNavigation(currentPath) {
 
   return {
     navigationState,
-    runningScanCount
+    runningScanCount,
+    unreviewedVulnerabilityCount
   }
 }

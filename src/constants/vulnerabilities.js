@@ -1,5 +1,6 @@
 export const VULNERABILITY_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export const VULNERABILITY_LIST_SEARCH_DEBOUNCE = 320
+export const VULNERABILITY_STATUS_UNREVIEWED = 'unreviewed'
 
 export const VULNERABILITY_SEVERITY_OPTIONS = [
   { value: '', label: '全部等级' },
@@ -13,7 +14,7 @@ export const VULNERABILITY_SEVERITY_OPTIONS = [
 
 export const VULNERABILITY_STATUS_OPTIONS = [
   { value: '', label: '全部状态' },
-  { value: 'unreviewed', label: '未审核' },
+  { value: VULNERABILITY_STATUS_UNREVIEWED, label: '未审核' },
   { value: 'confirmed', label: '已确认' },
   { value: 'ticketed', label: '已发单' },
   { value: 'fixed', label: '已修复' },

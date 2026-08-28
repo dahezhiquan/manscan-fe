@@ -20,7 +20,7 @@ export const footerNav = [
 ]
 
 export function getNavigationState(path = '/', options = {}) {
-  const { scanCount } = options
+  const { scanCount, vulnerabilityCount } = options
 
   const isRouteActive = (route) => {
     if (!route) {
@@ -45,7 +45,7 @@ export function getNavigationState(path = '/', options = {}) {
   return {
     primaryNav: primaryNav.map((item) => ({
       ...item,
-      count: item.route === '/scans' && scanCount !== undefined ? scanCount : item.count,
+      count: resolveNavCount(item, { scanCount, vulnerabilityCount }),
       active: isRouteActive(item.route)
     })),
     secondaryNav: secondaryNav.map((item) => ({
@@ -53,6 +53,18 @@ export function getNavigationState(path = '/', options = {}) {
       active: isRouteActive(item.route)
     }))
   }
+}
+
+function resolveNavCount(item, { scanCount, vulnerabilityCount }) {
+  if (item.route === '/scans' && scanCount !== undefined) {
+    return scanCount
+  }
+
+  if (item.route === '/vulnerabilities' && vulnerabilityCount !== undefined) {
+    return vulnerabilityCount
+  }
+
+  return item.count
 }
 
 export const vulnerabilityStats = [

@@ -1,4 +1,4 @@
-import { VULNERABILITY_LIST_API } from '../constants/api'
+import { buildVulnerabilityDetailApi, VULNERABILITY_LIST_API } from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getVulnerabilityList(params = {}, signal) {
@@ -28,6 +28,13 @@ export async function getVulnerabilityList(params = {}, signal) {
   const requestUrl = query ? `${VULNERABILITY_LIST_API}?${query}` : VULNERABILITY_LIST_API
 
   return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function getVulnerabilityDetail(vulnerabilityId, signal) {
+  return requestJson(buildVulnerabilityDetailApi(vulnerabilityId), {
     method: 'GET',
     signal
   })

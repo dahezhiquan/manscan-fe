@@ -27,12 +27,21 @@ export function normalizePath(path) {
     return ROUTE_PATHS.VULNERABILITIES
   }
 
+  if (/^\/vulnerabilities\/[^/]+$/.test(path)) {
+    return path
+  }
+
   if (path === ROUTE_PATHS.SCANS) {
     return ROUTE_PATHS.SCANS
   }
 
   if (path === ROUTE_PATHS.SCAN_CREATE) {
     return ROUTE_PATHS.SCAN_CREATE
+  }
+
+  if (/^\/scan\/[^/]+$/.test(path)) {
+    const scanId = path.split('/').filter(Boolean).pop()
+    return `${ROUTE_PATHS.SCANS}/${scanId}`
   }
 
   if (/^\/scans\/[^/]+$/.test(path)) {
@@ -47,6 +56,10 @@ export function normalizePath(path) {
 }
 
 export function resolveDocumentTitle(path) {
+  if (path.startsWith('/vulnerabilities/')) {
+    return 'ManScan - 漏洞详情'
+  }
+
   if (path.startsWith('/scans/')) {
     return 'ManScan - 扫描任务详情'
   }

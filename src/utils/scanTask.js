@@ -142,6 +142,44 @@ export function normalizeScanTaskListPayload(payload) {
   return items.map(normalizeScanTask)
 }
 
+export function normalizeScanTaskNameOptionsResponse(payload, fallbackPage = 1, fallbackPageSize = 20) {
+  const normalizedPageSize = normalizePositiveInteger(
+    firstDefined(payload?.pageSize, payload?.page_size),
+    fallbackPageSize
+  )
+  const total = normalizeNonNegativeInteger(payload?.total, 0)
+  const totalPagesFallback = total > 0 ? Math.ceil(total / normalizedPageSize) : 1
+
+  return {
+    items: normalizeScanTaskNameOptions(payload),
+    total,
+    page: normalizePositiveInteger(payload?.page, fallbackPage),
+    pageSize: normalizedPageSize,
+    totalPages: normalizePositiveInteger(firstDefined(payload?.totalPages, payload?.total_pages), totalPagesFallback)
+  }
+}
+
+export function normalizeScanTaskNameOptions(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload) ? payload : []
+  const seen = new Set()
+
+  return items
+    .map((item) => {
+      const name = String(firstDefined(item?.name, item?.value, item?.label, item) ?? '').trim()
+
+      if (!name || seen.has(name)) {
+        return null
+      }
+
+      seen.add(name)
+      return {
+        value: name,
+        label: name
+      }
+    })
+    .filter(Boolean)
+}
+
 export function normalizeScanTask(record) {
   const taskId = String(firstDefined(record?.id, record?.task_no, '') ?? '').trim()
   const taskNo = String(record?.task_no ?? '').trim()

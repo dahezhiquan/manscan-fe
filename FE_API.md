@@ -79,16 +79,18 @@
 
 ### 4. 获取模板标签选项
 
-- 用途：模板库页和创建扫描任务页的标签筛选
+- 用途：模板库页、创建扫描任务页和漏洞查询页的标签筛选
 - 请求方式：`GET`
 - 路径：`/api/v1/templates/options/tags`
 - 请求参数：无
 - 返回结构：前端优先读取 `data.items`
 - 异常分支：
-  - 失败时筛选项为空，不阻塞主流程
+  - 模板库页和创建扫描任务页失败时筛选项为空，不阻塞主流程
+  - 漏洞查询页失败时回退为前端内置标签选项
 - 联调注意事项：
   - 支持纯字符串数组
   - 也兼容对象数组，常用字段可为 `value`、`label`、`tag`、`name`、`count`
+  - 漏洞查询页标签菜单会在前端按批次渲染候选项，滚动到底部后继续展示后续标签
 
 ### 5. 获取模板协议选项
 
@@ -120,7 +122,26 @@
   - 运行中、暂停、失败、取消中的任务不计入 `saved_requests`
   - 扫描列表页会优先根据 `data.running` 判断是否继续轮询；当当前页最后一个运行中任务结束时，前端还会额外补一次统计请求，尽快刷新节省请求数
 
-### 7. 获取扫描任务列表
+### 7. 获取扫描任务名称选项
+
+- 用途：漏洞查询页“扫描任务”筛选项，支持模糊查询和滚动分页加载
+- 请求方式：`GET`
+- 路径：`/api/v1/scans/options/names`
+- 请求参数：
+  - `page`: 页码
+  - `page_size`: 每页数量，前端当前使用 `20`
+  - `keyword`: 扫描任务名称模糊搜索
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].name`
+- 异常分支：
+  - 首次打开筛选项失败时，菜单显示错误提示和重试按钮
+  - 滚动加载失败时保留已加载选项，可重试继续拉取
+- 联调注意事项：
+  - 该接口只返回去重后的任务名称，不返回任务详情
+  - 前端会在菜单打开时加载第一页，输入关键词后防抖重新拉取第一页
+  - 滚动到底部后会继续请求下一页并追加显示
+
+### 8. 获取扫描任务列表
 
 - 用途：`/scans` 任务列表页首屏加载、分页、筛选、搜索和轮询刷新；侧边栏“扫描”导航徽标展示运行中任务数
 - 请求方式：`GET`
@@ -155,7 +176,7 @@
   - 风险分布直接使用后端严重级别计数
   - `has_high_risk=true` 时，前端将其解释为 `critical_count > 0 OR high_count > 0`
 
-### 8. 创建扫描任务
+### 9. 创建扫描任务
 
 - 用途：扫描任务创建页提交任务
 - 请求方式：`POST`
@@ -174,7 +195,7 @@
   - `task.id` 缺失时，前端会尝试从 `task_api` 中解析详情 ID
   - `task_api` 建议返回 `/api/v1/scans/:id`
 
-### 9. 取消扫描任务
+### 10. 取消扫描任务
 
 - 用途：扫描任务详情页停止仍处于 `pending` / `running` / `paused` 状态的任务
 - 请求方式：`POST`
@@ -188,7 +209,7 @@
   - 前端当前会在任务状态为 `pending`、`running` 或 `paused` 时展示停止按钮
   - 当 `cancel_requested=true` 且返回状态仍为 `running` 时，表示后端已受理取消请求，最终状态会在后续详情轮询或日志流中收敛为 `cancelled`
 
-### 10. 暂停扫描任务
+### 11. 暂停扫描任务
 
 - 用途：扫描任务详情页暂停仍处于 `pending` / `running` 状态的任务
 - 请求方式：`POST`
@@ -203,7 +224,7 @@
   - 点击后前端会立即切换为“已暂停”交互态，并停止实时日志连接与详情轮询
   - 当后端最终把任务状态收敛为 `paused` 后，前端会自动清除本地过渡状态
 
-### 11. 恢复扫描任务
+### 12. 恢复扫描任务
 
 - 用途：扫描任务详情页恢复 `paused` 状态的任务
 - 请求方式：`POST`
@@ -218,7 +239,7 @@
   - 点击后前端会立即切回“继续执行中”交互态，并恢复实时日志连接与详情轮询
   - 后端受理恢复后，任务状态通常会先回到 `pending`，随后再进入 `running`
 
-### 12. 获取扫描任务详情
+### 13. 获取扫描任务详情
 
 - 用途：扫描任务详情页的基本信息、进度卡片和状态展示
 - 请求方式：`GET`
@@ -239,7 +260,7 @@
   - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式；当 `finished_status=paused` 时，前端会按“暂停态”而不是“已结束态”处理
   - `progress.last_event_seq` 会影响日志续拉偏移量
 
-### 13. 获取扫描任务日志
+### 14. 获取扫描任务日志
 
 - 用途：扫描任务详情页的初始日志加载、完成后分页补载历史日志
 - 请求方式：`GET`
@@ -262,7 +283,7 @@
   - 对于 `direction=before`，前端会把 `next_offset` 当作“当前页最早一条日志的 seq”，下一次继续原样作为 `offset` 传回
   - 对于 `direction=forward` 或日志流 `offset`，前端会把“最后已处理事件的 seq”作为续传偏移传回，而不是 `seq + 1`
 
-### 14. 订阅扫描任务日志流
+### 15. 订阅扫描任务日志流
 
 - 用途：扫描任务详情页实时日志流
 - 请求方式：`GET`
@@ -285,20 +306,21 @@
 
 ## 漏洞相关接口
 
-### 15. 获取漏洞列表
+### 16. 获取漏洞列表
 
-- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新
+- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新；侧边栏“漏洞”导航徽标展示未审核漏洞数
 - 请求方式：`GET`
 - 路径：`/api/v1/vulnerabilities`
 - 请求参数：
   - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
   - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
-  - `keyword`: 后端待支持的统一搜索关键字，用于按 `vulnerability_name OR template_id` 模糊匹配
+  - 侧边栏未审核数量当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`
+  - `keyword`: 统一搜索关键字，用于按 `vulnerability_name OR template_id` 模糊匹配
   - `asset_host`: 资产 Host 模糊筛选
   - `status`: 漏洞状态精确筛选，前端当前枚举为 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`，支持多选
-  - `tags`: 标签枚举筛选，前端当前枚举为 `cve`、`kev`、`tech`、`vuln`、`cnvd`，支持多选并以重复 query 参数提交
+  - `tags`: 标签筛选，选项来自 `/api/v1/templates/options/tags`，支持下拉内模糊查询、多选并以重复 query 参数提交
   - `severity`: 严重级别精确筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`、`unknown`，支持多选
-  - `latest_scan_task_name`: 最近扫描任务名称筛选，前端下拉选项来自当前已加载漏洞行中的任务名
+  - `latest_scan_task_name`: 最近扫描任务名称筛选，前端下拉选项来自 `/api/v1/scans/options/names`
   - `protocol`: 协议枚举筛选，选项来自 `/api/v1/templates/options/protocols`，支持多选并以重复 query 参数提交
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
   - `items[].id`
@@ -317,10 +339,55 @@
   - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
 - 联调注意事项：
   - 进入页面默认请求 `page=1&page_size=10`
-  - 后端需新增 `keyword` 参数支持，匹配逻辑为 `LOWER(vulnerability_name) LIKE %keyword% OR LOWER(template_id) LIKE %keyword%`；该条件应与其他筛选条件做 `AND` 组合
+  - 后端已支持 `keyword` 参数，匹配逻辑为 `LOWER(vulnerability_name) LIKE %keyword% OR LOWER(template_id) LIKE %keyword%`；该条件应与其他筛选条件做 `AND` 组合
   - 前端“搜索漏洞名称或 Template ID”输入框只会提交 `keyword`，不再自行判断应该传 `vulnerability_name` 还是 `template_id`
-  - `tags`、`status`、`severity` 和 `protocol` 均为枚举下拉，多选时前端会发送多个同名 query 参数
+  - `tags`、`status`、`severity` 和 `protocol` 均为下拉筛选，多选时前端会发送多个同名 query 参数
+  - 漏洞页标签筛选候选来自 `/api/v1/templates/options/tags`；接口失败时回退为前端内置标签选项
+  - 漏洞页“扫描任务”筛选候选来自 `/api/v1/scans/options/names`；接口失败时会展示错误提示并允许重试
+  - 侧边栏“漏洞”徽标会单独轮询本接口，间隔约 10 秒，并直接读取 `data.total` 作为未审核漏洞数
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
   - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
   - `asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
+
+### 17. 获取漏洞详情
+
+- 用途：`/vulnerabilities/:id` 漏洞详情页展示漏洞完整业务字段、资产信息、时间线、参考链接和请求响应证据
+- 请求方式：`GET`
+- 路径：`/api/v1/vulnerabilities/:id`
+- 请求参数：
+  - 路径参数 `id`: 漏洞 ID，来自漏洞列表 `items[].id`
+- 返回结构：前端使用以下字段
+  - `data.id`
+  - `data.template_id`
+  - `data.vulnerability_name`
+  - `data.latest_scan_task_id`
+  - `data.first_found_at`
+  - `data.last_found_at`
+  - `data.fixed_at`
+  - `data.status`
+  - `data.asset_domain`
+  - `data.asset_host`
+  - `data.asset_port`
+  - `data.tags`
+  - `data.severity`
+  - `data.description`
+  - `data.impact`
+  - `data.cvss_score`
+  - `data.protocol`
+  - `data.vendor`
+  - `data.product`
+  - `data.remediation`
+  - `data.reference_links`
+  - `data.detail`
+  - `data.vuln_fingerprint`
+- 异常分支：
+  - 请求失败时展示后端错误信息或“漏洞详情加载失败，请稍后重试。”
+  - 详情为空时展示空状态和重新加载按钮
+  - 字段缺失时前端以 `--`、`未提供` 或空数组兜底，不阻塞页面渲染
+- 联调注意事项：
+  - 列表行点击后跳转到 `/vulnerabilities/:id`，详情页请求 `GET /api/v1/vulnerabilities/:id`
+  - `tags` 和 `reference_links` 推荐返回字符串数组；前端也兼容 JSON 字符串或分隔文本
+  - `latest_scan_task_id` 会在右侧以 URL 跳转标记展示，点击后在新标签页打开 `/scan/:id`，前端会兼容映射到现有扫描任务详情页
+  - `detail` 如果是对象，前端会读取 `request`、`response`、`curl-command` 并拆成三个代码面板展示，三个面板均支持一键复制
+  - `detail` 如果是合法 JSON 字符串，前端会先解析再读取以上字段；无法解析时会按原始文本兜底展示

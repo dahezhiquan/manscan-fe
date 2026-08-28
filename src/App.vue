@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage.vue'
 import ScansDashboardPage from './pages/ScansDashboardPage.vue'
 import TemplateDetailPage from './pages/TemplateDetailPage.vue'
 import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
+import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
 import { useAppRouter } from './composables/useAppRouter'
 
@@ -17,6 +18,10 @@ const currentView = computed(() => {
 
   if (currentPath.value === '/vulnerabilities') {
     return VulnerabilitiesDashboardPage
+  }
+
+  if (currentPath.value.startsWith('/vulnerabilities/')) {
+    return VulnerabilityDetailPage
   }
 
   if (currentPath.value === '/scans' || currentPath.value === '/scans/create' || currentPath.value.startsWith('/scans/')) {

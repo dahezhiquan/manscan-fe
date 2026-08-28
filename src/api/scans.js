@@ -1,5 +1,6 @@
 import {
   SCAN_TASK_CREATE_API,
+  SCAN_TASK_NAME_OPTIONS_API,
   SCAN_TASK_STATS_API,
   buildScanTaskApi,
   buildScanTaskCancelApi,
@@ -29,6 +30,21 @@ export async function getScanTaskList(params = {}, signal) {
 
   const query = searchParams.toString()
   const requestUrl = query ? `${SCAN_TASK_CREATE_API}?${query}` : SCAN_TASK_CREATE_API
+
+  return requestJson(requestUrl, {
+    signal
+  })
+}
+
+export async function getScanTaskNameOptions(params = {}, signal) {
+  const searchParams = new URLSearchParams()
+
+  appendSingleQueryParam(searchParams, 'page', params.page)
+  appendSingleQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  appendSingleQueryParam(searchParams, 'keyword', params.keyword)
+
+  const query = searchParams.toString()
+  const requestUrl = query ? `${SCAN_TASK_NAME_OPTIONS_API}?${query}` : SCAN_TASK_NAME_OPTIONS_API
 
   return requestJson(requestUrl, {
     signal

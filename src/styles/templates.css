@@ -376,6 +376,26 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
+.templates-clear-chip {
+  width: 46px;
+  min-width: 46px;
+  padding: 0;
+  justify-content: center;
+}
+
+.templates-clear-chip:hover {
+  border-color: rgba(236, 126, 151, 0.72);
+  background: #fff1f3;
+  color: #9f2744;
+}
+
+.templates-clear-chip svg {
+  width: 18px;
+  height: 18px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .templates-filter-wrap {
   position: relative;
 }
