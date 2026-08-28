@@ -768,12 +768,13 @@
 }
 
 .templates-id-cell,
-.templates-author-cell {
+.templates-protocol-cell {
   color: #4a5060;
   font-size: 12px;
 }
 
-.templates-id-cell {
+.templates-id-cell,
+.templates-protocol-cell {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -783,6 +784,24 @@
 .templates-id-cell > span {
   min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templates-protocol-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(62, 115, 255, 0.24);
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(62, 115, 255, 0.08);
+  color: #315fd8;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 24px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

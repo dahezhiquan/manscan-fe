@@ -10,7 +10,13 @@ import {
   templateSummaryItems
 } from '../data/templates'
 import { iconPath } from '../utils/icons'
-import { mapSeverityTone, normalizeProtocolOptions, normalizeTagOptions, readMultiValueParam } from '../utils/template'
+import {
+  mapSeverityTone,
+  normalizeArray,
+  normalizeProtocolOptions,
+  normalizeTagOptions,
+  readMultiValueParam
+} from '../utils/template'
 
 const props = defineProps({
   navigateTo: {
@@ -76,15 +82,20 @@ const templateSummaryStats = computed(() =>
 )
 
 const normalizedRows = computed(() =>
-  listState.value.items.map((item) => ({
-    id: item.id,
-    name: item.name,
-    description: item.description,
-    severity: item.severity?.trim() || '未定义',
-    severityTone: mapSeverityTone(item.severity),
-    author: item.author,
-    actions: ['普通', '扫描']
-  }))
+  listState.value.items.map((item) => {
+    const protocols = normalizeArray(item.protocols ?? item.protocol)
+
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      severity: item.severity?.trim() || '未定义',
+      severityTone: mapSeverityTone(item.severity),
+      protocols,
+      protocolsLabel: protocols.length ? protocols.map(formatProtocolLabel).join(' / ') : '--',
+      actions: ['普通', '扫描']
+    }
+  })
 )
 
 const filteredRows = computed(() => normalizedRows.value)
@@ -205,6 +216,10 @@ function formatMultiSelectLabel(baseLabel, selectedItems, labelKey) {
   }
 
   return `${baseLabel} · 已选 ${selectedItems.length} 项`
+}
+
+function formatProtocolLabel(protocol) {
+  return String(protocol ?? '').trim().toUpperCase()
 }
 
 function isMenuOpen(name) {
@@ -777,7 +792,7 @@ onBeforeUnmount(() => {
           <div>模板名称</div>
           <div>风险等级</div>
           <div>模板 ID</div>
-          <div>模板作者</div>
+          <div>模板协议</div>
           <div></div>
         </div>
 
@@ -801,7 +816,7 @@ onBeforeUnmount(() => {
               <div class="templates-skeleton templates-skeleton-inline"></div>
             </div>
 
-            <div class="templates-author-cell">
+            <div class="templates-protocol-cell">
               <div class="templates-skeleton templates-skeleton-inline compact"></div>
             </div>
 
@@ -845,7 +860,9 @@ onBeforeUnmount(() => {
                 </svg>
               </button>
             </div>
-            <div class="templates-author-cell">{{ item.author }}</div>
+            <div class="templates-protocol-cell">
+              <span class="templates-protocol-pill">{{ item.protocolsLabel }}</span>
+            </div>
 
             <div class="templates-actions-cell">
               <button class="templates-action-button">

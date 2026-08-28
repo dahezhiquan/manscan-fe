@@ -53,6 +53,8 @@
   - `iskev`: `true` / `false`
   - `iscve`: `true` / `false`
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - 模板库列表页使用 `items[].id`、`items[].name`、`items[].description`、`items[].severity`、`items[].protocols`
+  - 创建扫描任务页使用 `items[].id`、`items[].name`、`items[].description`、`items[].severity`、`items[].author`、`items[].protocols`、`items[].tags`
 - 异常分支：
   - 模板库页失败时展示空列表
   - 创建任务页失败时展示错误提示“模板列表加载失败，请稍后重试。”
@@ -60,6 +62,7 @@
   - `items` 必须为数组
   - `totalPages` 若后端未返回，前端会基于 `total/pageSize` 兜底计算
   - `severity` 支持英文和中文，前端会做映射展示
+  - `protocols` 推荐返回字符串数组；模板库列表页会按大写协议标签展示，缺失时显示 `--`
 
 ### 3. 获取模板详情
 
