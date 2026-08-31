@@ -67,6 +67,17 @@ export async function updateVulnerabilityStatuses(ids, status, signal) {
   })
 }
 
+export async function deleteVulnerabilities(ids, signal) {
+  return requestJson(VULNERABILITY_LIST_API, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids }),
+    signal
+  })
+}
+
 function appendSingleQueryParam(searchParams, key, value) {
   if (value === null || value === undefined || value === '') {
     return

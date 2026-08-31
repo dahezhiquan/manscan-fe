@@ -921,6 +921,15 @@
   transform: translateY(-1px);
 }
 
+.vulnerabilities-bulk-action-option.is-danger {
+  color: #8f1738;
+}
+
+.vulnerabilities-bulk-action-option.is-danger:hover:not(:disabled),
+.vulnerabilities-bulk-action-option.is-danger:focus-visible {
+  background: rgba(255, 228, 233, 0.88);
+}
+
 .vulnerabilities-bulk-action-option:disabled {
   cursor: not-allowed;
   opacity: 0.46;
@@ -940,6 +949,10 @@
   height: 18px;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.vulnerabilities-bulk-action-option.is-danger .vulnerabilities-bulk-action-icon {
+  color: #c0264e;
 }
 
 .vulnerabilities-selection-tools {
@@ -1980,6 +1993,173 @@
   opacity: 0.58;
   transform: none;
   box-shadow: none;
+}
+
+.vulnerability-delete-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(22, 18, 15, 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.vulnerability-delete-dialog {
+  width: min(440px, 100%);
+  padding: 22px;
+  border: 2px solid #2f2925;
+  border-radius: 18px;
+  background: #fffdf4;
+  box-shadow: 0 22px 0 rgba(47, 41, 37, 0.18), 0 24px 48px rgba(47, 41, 37, 0.24);
+}
+
+.vulnerability-delete-dialog--danger {
+  border-color: #8f1738;
+  box-shadow: 0 22px 0 rgba(143, 23, 56, 0.16), 0 24px 48px rgba(47, 41, 37, 0.24);
+}
+
+.vulnerability-delete-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vulnerability-delete-dialog-header h2 {
+  margin: 0;
+  color: #211d19;
+  font-size: 18px;
+}
+
+.vulnerability-delete-dialog-header p {
+  margin: 8px 0 0;
+  color: #756d63;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vulnerability-delete-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1.5px solid rgba(47, 41, 37, 0.72);
+  border-radius: 50%;
+  background: #fff;
+  color: #332d28;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.vulnerability-delete-dialog-close svg {
+  width: 17px;
+  height: 17px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vulnerability-delete-dialog-close:hover,
+.vulnerability-delete-dialog-close:focus-visible {
+  background: #ffe4e9;
+  transform: translateY(-1px);
+}
+
+.vulnerability-delete-dialog-close:focus-visible {
+  outline: 3px solid rgba(143, 23, 56, 0.24);
+  outline-offset: 3px;
+}
+
+.vulnerability-delete-dialog-warning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1.5px solid rgba(143, 23, 56, 0.22);
+  border-radius: 14px;
+  background: #fff0f3;
+  color: #8f1738;
+}
+
+.vulnerability-delete-dialog-warning strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.vulnerability-delete-dialog-warning p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.vulnerability-delete-dialog-warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.vulnerability-delete-dialog-warning-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vulnerability-delete-dialog-progress {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1.5px solid rgba(23, 65, 114, 0.22);
+  border-radius: 12px;
+  background: #eef8ff;
+  color: #174172;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vulnerability-delete-dialog-error {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1.5px solid rgba(143, 23, 56, 0.3);
+  border-radius: 12px;
+  background: #fff0f3;
+  color: #8f1738;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vulnerability-delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.vulnerability-delete-dialog button:disabled,
+.vulnerability-delete-dialog .template-detail-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+  box-shadow: none;
+}
+
+.vulnerability-delete-dialog .template-detail-primary-button.is-danger {
+  background: #b42318;
+  box-shadow: 0 12px 20px rgba(180, 35, 24, 0.18);
+}
+
+.vulnerability-delete-dialog .template-detail-primary-button.is-danger:hover:not(:disabled) {
+  background: #991b1b;
 }
 
 .vulnerabilities-loading-list {

@@ -364,20 +364,20 @@
               <span>批量修改漏洞状态</span>
             </button>
             <button
-              class="vulnerabilities-bulk-action-option"
+              class="vulnerabilities-bulk-action-option is-danger"
               type="button"
-              disabled
+              @click.stop="openBatchDeleteDialog"
             >
               <span class="vulnerabilities-bulk-action-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M4 7h16" />
-                  <path d="M10 11v6" />
-                  <path d="M14 11v6" />
-                  <path d="M6 7l1 13h10l1-13" />
+                  <path d="M4.5 7h15" />
                   <path d="M9 7V4.8h6V7" />
+                  <path d="M6.5 7.2 7.4 19a2 2 0 0 0 2 1.8h5.2a2 2 0 0 0 2-1.8l.9-11.8" />
+                  <path d="M10 11v5.5" />
+                  <path d="M14 11v5.5" />
                 </svg>
               </span>
-              <span>批量删除（预留）</span>
+              <span>批量删除</span>
             </button>
           </div>
         </div>
@@ -386,7 +386,7 @@
           <button
             class="vulnerabilities-selection-tool"
             type="button"
-            :disabled="isLoading || isRefreshing || isCurrentPageFullySelected"
+            :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isCurrentPageFullySelected"
             @click="selectCurrentPageVulnerabilities"
           >
             选中当前页
@@ -394,7 +394,7 @@
           <button
             class="vulnerabilities-selection-tool"
             type="button"
-            :disabled="isLoading || isRefreshing || isSelectingAll || total === selectedVulnerabilityCount"
+            :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isSelectingAll || total === selectedVulnerabilityCount"
             :aria-busy="isSelectingAll ? 'true' : 'false'"
             @click="selectAllMatchingVulnerabilities"
           >
@@ -404,7 +404,7 @@
             v-if="selectedVulnerabilityCount"
             class="vulnerabilities-clear-button"
             type="button"
-            :disabled="batchStatusSubmitting"
+            :disabled="isBatchOperationSubmitting"
             aria-label="清除选择"
             title="清除选择"
             @click="clearVulnerabilitySelection"
@@ -492,6 +492,7 @@
                 class="vulnerabilities-row-select"
                 :class="{ selected: isVulnerabilitySelected(row.id) }"
                 type="button"
+                :disabled="isBatchOperationSubmitting"
                 role="checkbox"
                 :aria-checked="isVulnerabilitySelected(row.id)"
                 :aria-label="`${isVulnerabilitySelected(row.id) ? '取消选择' : '选择'}漏洞：${row.name}`"
@@ -683,6 +684,83 @@
         </footer>
       </section>
     </div>
+
+    <div
+      v-if="isBatchDeleteDialogOpen"
+      class="vulnerability-delete-dialog-overlay"
+      role="presentation"
+      @click.self="closeBatchDeleteDialog"
+    >
+      <section
+        ref="batchDeleteDialogRef"
+        class="vulnerability-delete-dialog vulnerability-delete-dialog--danger"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-vulnerability-delete-dialog-title"
+        tabindex="-1"
+        @keydown.esc="closeBatchDeleteDialog"
+      >
+        <header class="vulnerability-delete-dialog-header">
+          <div>
+            <h2 id="batch-vulnerability-delete-dialog-title">批量删除漏洞</h2>
+            <p>已选择 {{ selectedVulnerabilityCount }} 个漏洞</p>
+          </div>
+          <button
+            class="vulnerability-delete-dialog-close"
+            type="button"
+            :disabled="batchDeleteSubmitting"
+            aria-label="关闭批量删除弹窗"
+            @click="closeBatchDeleteDialog"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+              <path d="M6 6l12 12" />
+              <path d="M18 6 6 18" />
+            </svg>
+          </button>
+        </header>
+
+        <div class="vulnerability-delete-dialog-warning">
+          <span class="vulnerability-delete-dialog-warning-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+              <path d="M12 8.2v5" />
+              <path d="M12 17h.01" />
+              <path d="M10.3 4.8h3.4L21 18.2a1.8 1.8 0 0 1-1.6 2.7H4.6A1.8 1.8 0 0 1 3 18.2L10.3 4.8Z" />
+            </svg>
+          </span>
+          <div>
+            <strong>删除后无法恢复。</strong>
+            <p>确认要删除选中的漏洞记录吗？</p>
+          </div>
+        </div>
+
+        <p v-if="batchDeleteProgressText" class="vulnerability-delete-dialog-progress">
+          {{ batchDeleteProgressText }}
+        </p>
+
+        <p v-if="batchDeleteError" class="vulnerability-delete-dialog-error">
+          {{ batchDeleteError }}
+        </p>
+
+        <footer class="vulnerability-delete-dialog-actions">
+          <button
+            class="template-detail-secondary-button"
+            type="button"
+            :disabled="batchDeleteSubmitting"
+            @click="closeBatchDeleteDialog"
+          >
+            取消
+          </button>
+          <button
+            class="template-detail-primary-button is-danger"
+            type="button"
+            :disabled="!canSubmitBatchDelete"
+            @click="submitBatchDelete"
+          >
+            {{ batchDeleteSubmitting ? '删除中...' : '确认删除' }}
+          </button>
+        </footer>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -690,7 +768,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getScanTaskNameOptions } from '../api/scans'
 import { getTemplateProtocols, getTemplateTags } from '../api/templates'
-import { getVulnerabilityList, updateVulnerabilityStatuses } from '../api/vulnerabilities'
+import {
+  deleteVulnerabilities,
+  getVulnerabilityList,
+  updateVulnerabilityStatuses
+} from '../api/vulnerabilities'
 import {
   VULNERABILITY_LIST_PAGE_SIZE_OPTIONS,
   VULNERABILITY_LIST_SEARCH_DEBOUNCE,
@@ -747,6 +829,12 @@ const batchStatusSubmitting = ref(false)
 const batchStatusError = ref('')
 const batchStatusCompleted = ref(0)
 const batchStatusTotal = ref(0)
+const isBatchDeleteDialogOpen = ref(false)
+const batchDeleteDialogRef = ref(null)
+const batchDeleteSubmitting = ref(false)
+const batchDeleteError = ref('')
+const batchDeleteCompleted = ref(0)
+const batchDeleteTotal = ref(0)
 
 const vulnerabilityBulkStatusBatchSize = 1000
 const vulnerabilitySelectAllPageSize = 100
@@ -757,6 +845,7 @@ let tagOptionsController = null
 let scanTaskOptionsController = null
 let selectAllController = null
 let batchStatusController = null
+let batchDeleteController = null
 let currentRequestId = 0
 let scanTaskOptionRequestId = 0
 let filterTimer = null
@@ -896,6 +985,19 @@ const batchStatusProgressText = computed(() => {
   }
 
   return `已提交 ${batchStatusCompleted.value} / ${batchStatusTotal.value} 个漏洞`
+})
+const isBatchOperationSubmitting = computed(
+  () => batchStatusSubmitting.value || batchDeleteSubmitting.value
+)
+const canSubmitBatchDelete = computed(
+  () => selectedVulnerabilityCount.value > 0 && !batchDeleteSubmitting.value
+)
+const batchDeleteProgressText = computed(() => {
+  if (!batchDeleteSubmitting.value || !batchDeleteTotal.value) {
+    return ''
+  }
+
+  return `已提交 ${batchDeleteCompleted.value} / ${batchDeleteTotal.value} 个漏洞`
 })
 
 function createEmptyFilterInput() {
@@ -1360,7 +1462,7 @@ function isVulnerabilitySelected(vulnerabilityId) {
 }
 
 function toggleVulnerabilitySelection(vulnerabilityId) {
-  if (!vulnerabilityId || batchStatusSubmitting.value) {
+  if (!vulnerabilityId || isBatchOperationSubmitting.value) {
     return
   }
 
@@ -1377,7 +1479,7 @@ function toggleVulnerabilitySelection(vulnerabilityId) {
 }
 
 function selectCurrentPageVulnerabilities() {
-  if (!currentPageSelectableIds.value.length || batchStatusSubmitting.value) {
+  if (!currentPageSelectableIds.value.length || isBatchOperationSubmitting.value) {
     return
   }
 
@@ -1389,7 +1491,7 @@ function selectCurrentPageVulnerabilities() {
 }
 
 async function selectAllMatchingVulnerabilities() {
-  if (isSelectingAll.value || batchStatusSubmitting.value) {
+  if (isSelectingAll.value || isBatchOperationSubmitting.value) {
     return
   }
 
@@ -1436,6 +1538,7 @@ function clearVulnerabilitySelection() {
   selectionError.value = ''
   closeBatchActionMenu()
   closeBatchStatusDialog()
+  closeBatchDeleteDialog()
 }
 
 function clearSelectionNotice() {
@@ -1457,11 +1560,12 @@ function closeBatchActionMenu() {
 }
 
 function openBatchStatusDialog() {
-  if (!selectedVulnerabilityCount.value || batchStatusSubmitting.value) {
+  if (!selectedVulnerabilityCount.value || isBatchOperationSubmitting.value) {
     return
   }
 
   closeBatchActionMenu()
+  closeBatchDeleteDialog()
   selectedBatchStatus.value = ''
   batchStatusError.value = ''
   batchStatusCompleted.value = 0
@@ -1536,6 +1640,83 @@ async function submitBatchStatusUpdate() {
   } finally {
     batchStatusSubmitting.value = false
     batchStatusController = null
+  }
+}
+
+function openBatchDeleteDialog() {
+  if (!selectedVulnerabilityCount.value || isBatchOperationSubmitting.value) {
+    return
+  }
+
+  closeBatchActionMenu()
+  closeBatchStatusDialog()
+  batchDeleteError.value = ''
+  batchDeleteCompleted.value = 0
+  batchDeleteTotal.value = selectedVulnerabilityCount.value
+  isBatchDeleteDialogOpen.value = true
+  void nextTick(() => {
+    batchDeleteDialogRef.value?.focus()
+  })
+}
+
+function closeBatchDeleteDialog() {
+  if (batchDeleteSubmitting.value) {
+    return
+  }
+
+  isBatchDeleteDialogOpen.value = false
+  resetBatchDeleteDialogState()
+}
+
+function resetBatchDeleteDialogState() {
+  batchDeleteError.value = ''
+  batchDeleteCompleted.value = 0
+  batchDeleteTotal.value = 0
+}
+
+async function submitBatchDelete() {
+  if (!canSubmitBatchDelete.value) {
+    return
+  }
+
+  const vulnerabilityIds = normalizeSelectedVulnerabilityIds(selectedVulnerabilityIds.value)
+  if (!vulnerabilityIds.length) {
+    batchDeleteError.value = '选中的漏洞 ID 无效，请刷新列表后重试。'
+    return
+  }
+
+  if (vulnerabilityIds.length !== selectedVulnerabilityIds.value.length) {
+    batchDeleteError.value = '选中的漏洞包含无效 ID，请刷新列表后重新选择。'
+    return
+  }
+
+  const batches = chunkArray(vulnerabilityIds, vulnerabilityBulkStatusBatchSize)
+  batchDeleteController?.abort()
+  batchDeleteController = new AbortController()
+  batchDeleteSubmitting.value = true
+  batchDeleteError.value = ''
+  batchDeleteCompleted.value = 0
+  batchDeleteTotal.value = vulnerabilityIds.length
+
+  try {
+    for (const batch of batches) {
+      const result = await deleteVulnerabilities(batch, batchDeleteController.signal)
+      batchDeleteCompleted.value += Number(result?.deleted_count ?? batch.length)
+    }
+
+    isBatchDeleteDialogOpen.value = false
+    clearVulnerabilitySelection()
+    await loadVulnerabilities()
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      batchDeleteError.value = error instanceof Error ? error.message : '批量删除漏洞失败，请稍后重试。'
+    }
+  } finally {
+    batchDeleteSubmitting.value = false
+    batchDeleteController = null
+    if (!isBatchDeleteDialogOpen.value) {
+      resetBatchDeleteDialogState()
+    }
   }
 }
 
@@ -1648,6 +1829,7 @@ onBeforeUnmount(() => {
   scanTaskOptionsController?.abort()
   selectAllController?.abort()
   batchStatusController?.abort()
+  batchDeleteController?.abort()
   stopRequest()
   window.clearTimeout(filterTimer)
   window.clearTimeout(scanTaskKeywordTimer)
