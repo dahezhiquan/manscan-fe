@@ -1716,6 +1716,10 @@
   white-space: pre;
 }
 
+.vulnerability-detail-evidence-stack .template-detail-code-shell {
+  margin-top: 0;
+}
+
 .vulnerability-detail-tags-cloud {
   margin-top: 16px;
 }

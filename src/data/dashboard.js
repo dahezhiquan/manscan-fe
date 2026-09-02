@@ -15,7 +15,7 @@ export const secondaryNav = [
 
 export const footerNav = [
   { label: '设置', icon: 'gear' },
-  { label: '帮助', icon: 'help' },
+  { label: '文档中心', icon: 'help' },
   { label: '退出登录', icon: 'logout' }
 ]
 

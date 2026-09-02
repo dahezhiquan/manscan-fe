@@ -487,5 +487,6 @@
   - 列表行点击后跳转到 `/vulnerabilities/:id`，详情页请求 `GET /api/v1/vulnerabilities/:id`
   - `tags` 和 `reference_links` 推荐返回字符串数组；前端也兼容 JSON 字符串或分隔文本
   - `latest_scan_task_id` 会在右侧以 URL 跳转标记展示，点击后在新标签页打开 `/scan/:id`，前端会兼容映射到现有扫描任务详情页
-  - `detail` 如果是对象，前端会读取 `request`、`response`、`curl-command` 并拆成三个代码面板展示，三个面板均支持一键复制
+  - `detail` 如果是对象，前端会读取 `request`、`response`、`curl-command` 并拆成代码面板展示
+  - 当 `detail.request` / `detail.response` 是按步骤编号的对象时，前端会按编号升序展示为 `请求 1 / 响应 1 / 请求 2 / 响应 2` 的顺序
   - `detail` 如果是合法 JSON 字符串，前端会先解析再读取以上字段；无法解析时会按原始文本兜底展示
