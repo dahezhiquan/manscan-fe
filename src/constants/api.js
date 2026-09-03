@@ -11,6 +11,7 @@ export const TEMPLATE_PROTOCOLS_API = `${API_PREFIX}/templates/options/protocols
 export const SCAN_TASK_CREATE_API = `${API_PREFIX}/scans`
 export const SCAN_TASK_STATS_API = `${API_PREFIX}/scans/stats`
 export const SCAN_TASK_NAME_OPTIONS_API = `${API_PREFIX}/scans/options/names`
+export const SCAN_TASK_DELETE_API = SCAN_TASK_CREATE_API
 export const VULNERABILITY_LIST_API = `${API_PREFIX}/vulnerabilities`
 export const VULNERABILITY_BATCH_STATUS_API = `${VULNERABILITY_LIST_API}/status`
 

@@ -116,6 +116,7 @@ const taskTitle = computed(() => {
 
   return taskId.value ? `扫描任务 #${taskId.value}` : '扫描任务详情'
 })
+const pageTitle = computed(() => `扫描 - ${taskTitle.value}`)
 
 const taskSubtitle = computed(() => {
   const description = resolveTaskDescription(task.value)
@@ -1392,6 +1393,14 @@ watch(
   taskId,
   () => {
     initializePage()
+  },
+  { immediate: true }
+)
+
+watch(
+  pageTitle,
+  (title) => {
+    document.title = title
   },
   { immediate: true }
 )

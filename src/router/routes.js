@@ -3,7 +3,8 @@ export const ROUTE_PATHS = {
   VULNERABILITIES: '/vulnerabilities',
   SCANS: '/scans',
   SCAN_CREATE: '/scans/create',
-  TEMPLATES: '/templates/all'
+  TEMPLATES: '/templates/all',
+  ASSET_CONFIG: '/assets/config'
 }
 
 export const ROUTE_TITLES = {
@@ -11,7 +12,8 @@ export const ROUTE_TITLES = {
   [ROUTE_PATHS.TEMPLATES]: 'ManScan - 漏洞模版',
   [ROUTE_PATHS.VULNERABILITIES]: 'ManScan - 漏洞',
   [ROUTE_PATHS.SCANS]: 'ManScan - 扫描',
-  [ROUTE_PATHS.SCAN_CREATE]: 'ManScan - 创建扫描任务'
+  [ROUTE_PATHS.SCAN_CREATE]: 'ManScan - 创建扫描任务',
+  [ROUTE_PATHS.ASSET_CONFIG]: 'ManScan - 资产配置中心'
 }
 
 export function normalizePath(path) {
@@ -39,6 +41,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.SCAN_CREATE
   }
 
+  if (path === ROUTE_PATHS.ASSET_CONFIG) {
+    return ROUTE_PATHS.ASSET_CONFIG
+  }
+
   if (/^\/scan\/[^/]+$/.test(path)) {
     const scanId = path.split('/').filter(Boolean).pop()
     return `${ROUTE_PATHS.SCANS}/${scanId}`
@@ -50,6 +56,10 @@ export function normalizePath(path) {
 
   if (path.startsWith('/templates/')) {
     return path
+  }
+
+  if (path.startsWith('/assets/config')) {
+    return ROUTE_PATHS.ASSET_CONFIG
   }
 
   return ROUTE_PATHS.HOME
@@ -66,6 +76,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/templates/')) {
     return 'ManScan - 模版详情'
+  }
+
+  if (path.startsWith('/assets/config')) {
+    return 'ManScan - 资产配置中心'
   }
 
   return ROUTE_TITLES[path] || ROUTE_TITLES[ROUTE_PATHS.HOME]

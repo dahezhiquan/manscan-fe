@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import DashboardPage from './pages/DashboardPage.vue'
+import AssetConfigCenterPage from './pages/AssetConfigCenterPage.vue'
 import ScansDashboardPage from './pages/ScansDashboardPage.vue'
 import TemplateDetailPage from './pages/TemplateDetailPage.vue'
 import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
@@ -12,6 +13,10 @@ const isSidebarCollapsed = ref(false)
 const { currentPath, navigateTo } = useAppRouter()
 
 const currentView = computed(() => {
+  if (currentPath.value === '/assets/config') {
+    return AssetConfigCenterPage
+  }
+
   if (currentPath.value === '/templates/all') {
     return TemplatesDashboardPage
   }

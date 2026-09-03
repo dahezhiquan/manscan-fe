@@ -4,6 +4,7 @@
 @import './styles/templates.css';
 @import './styles/vulnerabilities.css';
 @import './styles/scans.css';
+@import './styles/asset-config.css';
 @import './styles/responsive.css';
 @import './styles/cartoon-theme.css';
 @import './styles/scans-list.css';

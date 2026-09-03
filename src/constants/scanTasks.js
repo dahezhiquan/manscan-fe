@@ -1,8 +1,11 @@
 export const SCAN_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export const SCAN_LIST_POLL_INTERVAL = 7000
 export const SCAN_LIST_SEARCH_DEBOUNCE = 320
+export const SCAN_TASK_SELECT_ALL_PAGE_SIZE = 100
+export const SCAN_TASK_BULK_DELETE_BATCH_SIZE = 1000
 
 export const ACTIVE_SCAN_STATUSES = new Set(['running', 'pending'])
+export const SCAN_TASK_DELETABLE_STATUSES = new Set(['success', 'failed', 'cancelled', 'paused'])
 
 export const SCAN_SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info']
 

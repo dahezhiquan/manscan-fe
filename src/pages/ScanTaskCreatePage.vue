@@ -110,7 +110,7 @@ const stepFields = {
   request: [
     {
       key: 'store_response',
-      label: '保存响应',
+      label: '保存请求/响应',
       type: 'boolean',
       tooltip: '是否把扫描过程中的请求/响应内容保存到日志中（会占用更多磁盘空间，且响应里可能包含敏感信息）'
     },
@@ -118,7 +118,7 @@ const stepFields = {
       key: 'timestamp',
       label: '输出带时间戳',
       type: 'boolean',
-      tooltip: '输出结果时是否附带时间戳'
+      tooltip: '后端 error.log 的输出结果时是否附带时间戳（不建议关闭）'
     },
     {
       key: 'matcher_status',
@@ -276,7 +276,13 @@ const stepFields = {
       placeholder: '默认：30',
       tooltip: '单个 host 累计允许的最大错误数，超过后跳过扫描该 host。'
     },
-    { key: 'no_host_errors', label: '禁用 Host Error 跳过', type: 'boolean' },
+    {
+      key: 'no_host_errors',
+      label: '禁用 Host Error 跳过',
+      type: 'boolean',
+      tooltip:
+        '扫描执行时，系统会先把目标交给模板执行器；如果目标连不通，HTTP 请求会先失败，随后这些失败会被记录到 hosterrorscache。当同一主机的错误次数超过阈值后，后面的模板请求会被直接跳过。默认阈值是 MaxHostError=30。'
+    },
     {
       key: 'project',
       label: '启用 Project 缓存',

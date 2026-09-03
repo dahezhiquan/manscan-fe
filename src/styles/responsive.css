@@ -25,6 +25,18 @@
     padding: 26px 24px 24px;
   }
 
+  .asset-config-page {
+    padding: 22px 24px 24px;
+  }
+
+  .asset-config-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .asset-config-detail-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .scans-content {
     padding: 18px 24px 24px;
   }
@@ -111,6 +123,60 @@
 
   .templates-content {
     padding: 18px 16px 20px;
+  }
+
+  .asset-config-page {
+    height: auto;
+    min-height: 100vh;
+    padding: 18px 16px 20px;
+  }
+
+  .asset-config-hero,
+  .asset-config-panel-head,
+  .asset-config-detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .asset-config-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-config-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+
+  .asset-config-tab {
+    flex: 0 0 auto;
+  }
+
+  .asset-config-content {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-config-detail-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-config-entry-head,
+  .asset-config-entry-row {
+    min-width: 920px;
+  }
+
+  .asset-config-dialog-overlay {
+    padding: 12px;
+  }
+
+  .asset-config-dialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .asset-config-dialog-grid {
+    grid-template-columns: 1fr;
   }
 
   .scans-page {

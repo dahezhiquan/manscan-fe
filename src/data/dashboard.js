@@ -3,7 +3,7 @@ export const primaryNav = [
   { label: '漏洞', active: false, count: 1, icon: 'shield', route: '/vulnerabilities' },
   { label: '扫描', active: false, count: 0, icon: 'scan', route: '/scans' },
   { label: '资产清单', active: false, count: 0, icon: 'stack' },
-  { label: '资产分组', active: false, count: 0, icon: 'server' }
+  { label: '资产配置中心', active: false, count: 0, icon: 'server', route: '/assets/config' }
 ]
 
 export const secondaryNav = [
@@ -37,6 +37,10 @@ export function getNavigationState(path = '/', options = {}) {
 
     if (route === '/templates/all') {
       return path === '/templates/all' || path.startsWith('/templates/')
+    }
+
+    if (route === '/assets/config') {
+      return path === '/assets/config' || path.startsWith('/assets/config')
     }
 
     return path === route

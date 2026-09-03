@@ -1,5 +1,6 @@
 import {
   SCAN_TASK_CREATE_API,
+  SCAN_TASK_DELETE_API,
   SCAN_TASK_NAME_OPTIONS_API,
   SCAN_TASK_STATS_API,
   buildScanTaskApi,
@@ -89,6 +90,17 @@ export async function resumeScanTask(taskId) {
 export async function rescanScanTask(taskId, signal) {
   return requestJson(buildScanTaskRescanApi(taskId), {
     method: 'POST',
+    signal
+  })
+}
+
+export async function deleteScanTasks(ids, signal) {
+  return requestJson(SCAN_TASK_DELETE_API, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ ids }),
     signal
   })
 }

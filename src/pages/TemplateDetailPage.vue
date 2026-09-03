@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getTemplateDetail } from '../api/templates'
 import manscanIcon from '../assets/manscan-icon.png'
 import { templateDetailMock } from '../data/templates'
@@ -39,6 +39,10 @@ const templateId = computed(() => {
 const detail = computed(() =>
   detailData.value ? normalizeDetail(detailData.value, templateId.value) : null
 )
+const pageTitle = computed(() => {
+  const name = String(detail.value?.name ?? '').trim()
+  return name ? `模版详情 - ${name}` : 'ManScan - 模版详情'
+})
 const metricItems = computed(() => {
   const items = [
     { label: '模板 ID', value: detail.value.id, monospace: true },
@@ -502,6 +506,14 @@ async function shareTemplate() {
 onMounted(() => {
   fetchTemplateDetail()
 })
+
+watch(
+  pageTitle,
+  (title) => {
+    document.title = title
+  },
+  { immediate: true }
+)
 
 onBeforeUnmount(() => {
   detailAbortController?.abort()

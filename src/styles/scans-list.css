@@ -316,6 +316,7 @@
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
+  flex-wrap: wrap;
 }
 
 .scans-filter-wrap {
@@ -666,6 +667,11 @@
   color: var(--line);
 }
 
+.scans-state-button.is-danger {
+  background: #c94b61;
+  color: #fff;
+}
+
 .scans-page-notice button:hover,
 .scans-state-button:hover,
 .scans-toolbar-icon:hover,
@@ -741,6 +747,7 @@
 
 .scans-table-scroll {
   --scans-table-columns:
+    52px
     minmax(260px, 1.45fr)
     112px
     248px
@@ -756,7 +763,7 @@
 
 .scans-table-inner {
   width: max-content;
-  min-width: max(100%, 1080px);
+  min-width: max(100%, 1132px);
 }
 
 .scans-table-head,
@@ -787,12 +794,17 @@
   letter-spacing: 0.04em;
 }
 
-.scans-table-head > :not(:first-child),
+.scans-table-head > :first-child,
+.scans-table-head > :not(:first-child):not(.scans-head-name),
 .scans-muted-cell,
 .scans-updated-cell,
 .scans-status-cell,
 .scans-message-cell {
   text-align: center;
+}
+
+.scans-head-name {
+  text-align: left;
 }
 
 .scans-table-body {
@@ -816,6 +828,20 @@
   background: rgba(255, 255, 255, 0.94);
   outline: none;
   box-shadow: inset 0 0 0 3px rgba(132, 215, 255, 0.55);
+}
+
+.scans-table-row.selected {
+  background: #eef8ff;
+}
+
+.scans-table-row.selected:hover {
+  background: #e1f3ff;
+}
+
+.scans-row-select-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .scans-name-cell {
@@ -1095,6 +1121,7 @@
 @media (max-width: 1280px) {
   .scans-table-scroll {
     --scans-table-columns:
+      52px
       minmax(240px, 1.4fr)
       110px
       238px
@@ -1108,7 +1135,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: max(100%, 1040px);
+    min-width: max(100%, 1092px);
   }
 
   .scans-table-head,
@@ -1148,6 +1175,11 @@
     justify-content: flex-end;
   }
 
+  .vulnerabilities-selection-tools {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .scans-filter-field,
   .scans-filter-field.is-wide,
   .scans-search {
@@ -1162,7 +1194,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: max(100%, 1040px);
+    min-width: max(100%, 1092px);
   }
 }
 
@@ -1189,7 +1221,7 @@
 
   .scans-table-inner {
     width: max-content;
-    min-width: max(100%, 1040px);
+    min-width: max(100%, 1092px);
   }
 }
 

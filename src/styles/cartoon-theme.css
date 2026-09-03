@@ -1324,6 +1324,58 @@
   box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
 }
 
+.scan-create-page .scan-create-switch {
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.scan-create-page .scan-create-switch:hover {
+  background: var(--surface-2);
+}
+
+.scan-create-page .scan-create-switch.is-on {
+  border-color: rgba(31, 26, 23, 0.32);
+  background: linear-gradient(180deg, rgba(255, 245, 214, 0.98), rgba(255, 238, 181, 0.98));
+  color: var(--line);
+}
+
+.scan-create-page .scan-create-switch-track {
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(221, 226, 236, 0.98), rgba(241, 243, 248, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.scan-create-page .scan-create-switch.is-on .scan-create-switch-track {
+  background: var(--accent-yellow);
+}
+
+.scan-create-page .scan-create-switch-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  background: #fffaf1;
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.28);
+}
+
+.scan-create-page .scan-create-switch.is-on .scan-create-switch-thumb {
+  transform: translateX(18px);
+}
+
+.scan-create-page .scan-create-switch-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: inherit;
+}
+
 .scan-create-page .scan-create-field select {
   cursor: pointer;
   padding-right: 44px;
