@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   cancelScanTask,
   createScanTaskStream,
+  downloadScanTaskResponsesArchive,
   getScanTask,
   getScanTaskLogs,
   pauseScanTask,
@@ -52,6 +53,8 @@ const isRefreshing = ref(false)
 const isCancelling = ref(false)
 const isPauseActionLoading = ref(false)
 const isRescanning = ref(false)
+const isDownloadingResponsesArchive = ref(false)
+const downloadArchiveError = ref('')
 const streamOffset = ref(0)
 const olderLogsOffset = ref(null)
 const isInitializing = ref(false)
@@ -1090,6 +1093,23 @@ async function handleRescanTask() {
   }
 }
 
+async function handleDownloadResponsesArchive() {
+  if (!taskId.value || isDownloadingResponsesArchive.value) {
+    return
+  }
+
+  isDownloadingResponsesArchive.value = true
+  downloadArchiveError.value = ''
+
+  try {
+    await downloadScanTaskResponsesArchive(taskId.value)
+  } catch (error) {
+    downloadArchiveError.value = error instanceof Error ? error.message : '下载请求/响应压缩包失败，请稍后重试。'
+  } finally {
+    isDownloadingResponsesArchive.value = false
+  }
+}
+
 async function handleCancelTask() {
   if (!taskId.value || isCancelling.value || isRescanning.value || !canCancelTask.value) {
     return
@@ -1334,6 +1354,8 @@ function resetState() {
   isCancelling.value = false
   isPauseActionLoading.value = false
   isRescanning.value = false
+  isDownloadingResponsesArchive.value = false
+  downloadArchiveError.value = ''
   streamOffset.value = 0
   olderLogsOffset.value = null
   isInitializing.value = false
@@ -1546,6 +1568,21 @@ onBeforeUnmount(() => {
               {{ streamStatusMeta.label }}
             </span>
             <button
+              v-if="isTaskFinished"
+              class="scan-task-detail-download-button"
+              type="button"
+              :disabled="isDownloadingResponsesArchive"
+              :aria-busy="isDownloadingResponsesArchive ? 'true' : 'false'"
+              @click="handleDownloadResponsesArchive"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3v11" />
+                <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
+                <path d="M5 18.5h14" />
+              </svg>
+              <span>{{ isDownloadingResponsesArchive ? '下载中...' : '下载请求/响应' }}</span>
+            </button>
+            <button
               v-if="showReconnectButton"
               class="scan-task-detail-inline-button"
               type="button"
@@ -1558,6 +1595,10 @@ onBeforeUnmount(() => {
 
         <div v-if="streamError" class="scan-task-detail-stream-tip is-warning">
           {{ streamError }}
+        </div>
+
+        <div v-if="downloadArchiveError" class="scan-task-detail-stream-tip is-warning">
+          {{ downloadArchiveError }}
         </div>
 
         <div ref="logViewport" class="scan-task-detail-log-viewport" @scroll="handleLogScroll">
@@ -1629,6 +1670,7 @@ onBeforeUnmount(() => {
             <strong>{{ item.value }}</strong>
           </div>
         </div>
+
       </article>
     </section>
   </main>

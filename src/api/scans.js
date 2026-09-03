@@ -6,6 +6,7 @@ import {
   buildScanTaskApi,
   buildScanTaskCancelApi,
   buildScanTaskLogsApi,
+  buildScanTaskResponsesArchiveApi,
   buildScanTaskPauseApi,
   buildScanTaskRescanApi,
   buildScanTaskResumeApi,
@@ -94,6 +95,24 @@ export async function rescanScanTask(taskId, signal) {
   })
 }
 
+export async function downloadScanTaskResponsesArchive(taskId) {
+  const response = await fetch(buildScanTaskResponsesArchiveApi(taskId), {
+    method: 'GET'
+  })
+
+  if (!response.ok) {
+    throw new Error(await readDownloadErrorMessage(response))
+  }
+
+  const blob = await response.blob()
+  const filename = resolveDownloadFilename(
+    response.headers.get('content-disposition'),
+    `${taskId}.zip`
+  )
+
+  triggerBrowserDownload(blob, filename)
+}
+
 export async function deleteScanTasks(ids, signal) {
   return requestJson(SCAN_TASK_DELETE_API, {
     method: 'DELETE',
@@ -133,4 +152,65 @@ function appendMultiQueryParam(searchParams, key, value) {
   }
 
   appendSingleQueryParam(searchParams, key, value)
+}
+
+async function readDownloadErrorMessage(response) {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json') || contentType.includes('+json')) {
+    const payload = await response.json().catch(() => null)
+
+    if (payload && typeof payload === 'object') {
+      if ('message' in payload && payload.message) {
+        return String(payload.message)
+      }
+
+      if ('code' in payload && 'data' in payload && payload.data && typeof payload.data === 'object' && payload.data.message) {
+        return String(payload.data.message)
+      }
+    }
+  }
+
+  const text = await response.text().catch(() => '')
+  return text || `请求失败：${response.status}`
+}
+
+function resolveDownloadFilename(contentDisposition, fallbackName) {
+  if (!contentDisposition) {
+    return fallbackName
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim())
+    } catch {
+      return utf8Match[1].trim()
+    }
+  }
+
+  const filenameMatch = contentDisposition.match(/filename\s*=\s*("?)([^";]+)\1/i)
+
+  if (filenameMatch?.[2]) {
+    return filenameMatch[2].trim()
+  }
+
+  return fallbackName
+}
+
+function triggerBrowserDownload(blob, filename) {
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = objectUrl
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl)
+  }, 1000)
 }
