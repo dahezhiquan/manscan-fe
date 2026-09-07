@@ -25,6 +25,46 @@
   color: #232631;
 }
 
+.vulnerabilities-page-crumbs {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.vulnerabilities-page-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #5f6572;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.vulnerabilities-page-crumb-separator {
+  color: rgba(95, 101, 114, 0.5);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.vulnerabilities-page-crumb-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #2d3340;
+  flex: 0 0 auto;
+}
+
+.vulnerabilities-page-crumb-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .vuln-toolbar {
   display: flex;
   align-items: center;
@@ -542,7 +582,6 @@
   }
 }
 
-.vulnerabilities-hero,
 .vulnerabilities-filter-panel,
 .vulnerabilities-list-card,
 .vulnerabilities-page-notice,
@@ -552,68 +591,6 @@
   background: rgba(255, 253, 247, 0.94);
   box-shadow: var(--shadow-flat-lg);
 }
-
-.vulnerabilities-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 22px 24px;
-  background:
-    radial-gradient(circle at 100% 0, rgba(132, 215, 255, 0.24), transparent 32%),
-    linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(255, 247, 226, 0.96));
-}
-
-.vulnerabilities-kicker {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border: var(--border-strong);
-  border-radius: 999px;
-  background: var(--accent-yellow);
-  color: var(--ink-soft);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.vulnerabilities-hero h1 {
-  margin: 12px 0 0;
-  font-size: clamp(30px, 3vw, 40px);
-  line-height: 1.05;
-}
-
-.vulnerabilities-hero-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.vulnerabilities-hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
-.vulnerabilities-hero-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 0 13px;
-  border: 2px solid #2f2925;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow-flat);
-  color: var(--ink-soft);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .vulnerabilities-icon-button,
 .vulnerabilities-clear-button,
 .vulnerabilities-pagination-arrow {
@@ -632,17 +609,17 @@
 }
 
 .vulnerabilities-icon-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
+  width: 36px;
+  height: 36px;
+  border-radius: 13px;
   flex: 0 0 auto;
 }
 
 .vulnerabilities-icon-button svg,
 .vulnerabilities-clear-button svg,
 .vulnerabilities-pagination-arrow svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -664,7 +641,7 @@
 }
 
 .vulnerabilities-content {
-  padding-top: 18px;
+  padding-top: 14px;
 }
 
 .vulnerabilities-clear-button {
@@ -2339,16 +2316,10 @@
 }
 
 @media (max-width: 760px) {
-  .vulnerabilities-hero,
   .vulnerabilities-row,
   .vulnerabilities-pagination {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .vulnerabilities-hero-actions {
-    align-self: stretch;
-    justify-content: flex-end;
   }
 
   .vulnerabilities-filter-panel {
@@ -2406,4 +2377,220 @@
   .vulnerability-detail-code-block {
     max-height: 320px;
   }
+}
+
+.vuln-page {
+  padding: 12px 10px 16px;
+}
+
+.vulnerabilities-page-crumbs {
+  margin-bottom: 6px;
+}
+
+.vulnerabilities-page-crumb {
+  gap: 6px;
+  font-size: 11px;
+}
+
+.vulnerabilities-page-crumb-separator {
+  font-size: 13px;
+}
+
+.vulnerabilities-page-crumb-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.vulnerabilities-page-crumb-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vulnerabilities-content {
+  padding-top: 10px;
+}
+
+.vulnerabilities-filter-panel {
+  margin-bottom: 10px;
+  gap: 6px;
+}
+
+.vulnerabilities-search-field {
+  height: 40px;
+  border-radius: 16px;
+}
+
+.vulnerabilities-search-field.is-main {
+  flex-basis: 480px;
+}
+
+.vulnerabilities-search-field.is-host {
+  flex-basis: 220px;
+}
+
+.vulnerabilities-search-field input {
+  padding: 0 38px 0 12px;
+  font-size: 12px;
+}
+
+.vulnerabilities-search-icon {
+  width: 14px;
+  height: 14px;
+  right: 12px;
+}
+
+.vulnerabilities-search-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vulnerabilities-filter-trigger,
+.vulnerabilities-selection-tool,
+.vulnerabilities-page-size-trigger {
+  height: 40px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.vulnerabilities-filter-trigger {
+  min-width: 78px;
+  padding: 0 10px;
+}
+
+.vulnerabilities-filter-trigger-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.vulnerabilities-filter-trigger > svg,
+.vulnerabilities-filter-trigger-icon svg,
+.vulnerabilities-filter-option-icon,
+.vulnerabilities-filter-option-icon svg,
+.vulnerabilities-bulk-action-icon,
+.vulnerabilities-bulk-action-icon svg,
+.vulnerabilities-selection-tool svg,
+.vulnerabilities-page-size-trigger svg,
+.vulnerabilities-page-nav svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vulnerabilities-filter-count {
+  min-width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+.vulnerabilities-filter-menu {
+  width: 200px;
+  max-width: min(200px, calc(100vw - 24px));
+  padding: 8px;
+}
+
+.vulnerabilities-filter-menu.is-tag-menu {
+  width: 280px;
+  max-width: min(280px, calc(100vw - 24px));
+}
+
+.vulnerabilities-page-notice {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+}
+
+.vulnerabilities-page-notice button,
+.vulnerabilities-state-button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.vulnerabilities-list-card {
+  margin-top: 10px;
+}
+
+.vulnerabilities-row {
+  min-height: 74px;
+  padding: 10px 12px;
+  gap: 12px;
+}
+
+.vulnerabilities-row-main {
+  gap: 10px;
+}
+
+.vulnerabilities-row-select {
+  width: 24px;
+  height: 24px;
+}
+
+.vulnerabilities-severity-pill {
+  min-width: 64px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.vulnerabilities-title-block {
+  gap: 5px;
+}
+
+.vulnerabilities-title-line {
+  gap: 6px;
+}
+
+.vulnerabilities-title-line h3 {
+  font-size: 13px;
+  line-height: 1.28;
+}
+
+.vulnerabilities-protocol-tag,
+.vulnerabilities-status-pill {
+  min-height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+.vulnerabilities-asset-line {
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.vulnerabilities-asset-host {
+  min-height: 24px;
+  padding: 0 8px 0 22px;
+  font-size: 11px;
+}
+
+.vulnerabilities-tag {
+  min-height: 22px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.vulnerabilities-template-id {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.vulnerabilities-pagination {
+  padding: 10px 12px;
+}
+
+.vulnerabilities-page-size > span,
+.vulnerabilities-pagination-summary {
+  font-size: 11px;
+}
+
+.vulnerabilities-page-size {
+  gap: 8px;
+}
+
+.vulnerabilities-page-size-trigger {
+  width: 84px;
+}
+
+.vulnerabilities-page-nav {
+  width: 28px;
+  height: 28px;
 }

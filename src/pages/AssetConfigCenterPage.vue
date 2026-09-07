@@ -5,9 +5,10 @@ import {
   ASSET_CONFIG_CATEGORY_ORDER,
   ASSET_CONFIG_CATEGORY_META,
   createAssetConfigState,
+  normalizeAssetConfigState,
   getAssetConfigCategoryMeta
 } from '../data/asset-config'
-import { formatCount, formatDateTime } from '../utils/scanTask'
+import { formatCount } from '../utils/scanTask'
 import { iconPath } from '../utils/icons'
 
 const props = defineProps({
@@ -28,49 +29,28 @@ const props = defineProps({
 const emit = defineEmits(['toggle-sidebar'])
 
 const STORAGE_KEY = 'manscan.asset-config-center.v1'
+const FILTER_MENU_KEYS = {
+  group: 'group',
+  status: 'status'
+}
 
 const categories = ref(loadAssetConfigState())
 const activeCategoryKey = ref(categories.value[0]?.key ?? ASSET_CONFIG_CATEGORY_ORDER[0])
-const activeGroupId = ref(categories.value[0]?.groups[0]?.id ?? '')
-const groupSearch = ref('')
-const lastActionMessage = ref('按分组管理四类全局配置。')
-const isGroupDialogOpen = ref(false)
+const filtersRef = ref(null)
+const entrySearch = ref('')
+const selectedGroupFilter = ref('all')
+const selectedStatusFilter = ref('all')
+const activeFilterMenu = ref('')
 const isItemDialogOpen = ref(false)
-const groupDialogMode = ref('create')
 const itemDialogMode = ref('create')
-const groupDialogError = ref('')
 const itemDialogError = ref('')
 
-const groupForm = reactive(createEmptyGroupForm())
 const itemForm = reactive(createEmptyItemForm())
 
 const statusMetaMap = {
   enabled: { label: '启用', tone: 'low' },
-  paused: { label: '暂停', tone: 'medium' }
+  disabled: { label: '未启用', tone: 'medium' }
 }
-
-const summaryCards = computed(() => [
-  {
-    label: '配置分组',
-    value: formatCount(totalGroupCount.value),
-    note: '覆盖全部配置域'
-  },
-  {
-    label: '配置条目',
-    value: formatCount(totalEntryCount.value),
-    note: '按组统一管理'
-  },
-  {
-    label: '启用条目',
-    value: formatCount(enabledEntryCount.value),
-    note: '当前生效项'
-  },
-  {
-    label: '最近更新',
-    value: latestUpdatedLabel.value,
-    note: lastActionMessage.value
-  }
-])
 
 const categoryTabs = computed(() =>
   ASSET_CONFIG_CATEGORY_ORDER.map((key) => {
@@ -80,7 +60,6 @@ const categoryTabs = computed(() =>
     return {
       key,
       meta,
-      groupCount: groups.length,
       entryCount: groups.reduce((total, group) => total + (group.entries?.length ?? 0), 0)
     }
   })
@@ -96,90 +75,109 @@ const activeCategoryMeta = computed(() =>
 
 const activeGroups = computed(() => activeCategory.value?.groups ?? [])
 
-const visibleGroups = computed(() => {
-  const keyword = groupSearch.value.trim().toLowerCase()
-  const groups = activeGroups.value
+const activeEntryRows = computed(() =>
+  activeGroups.value.flatMap((group) =>
+    (group.entries ?? []).map((entry) => ({
+      id: entry.id,
+      value: entry.value,
+      note: entry.note,
+      scope: entry.scope,
+      status: normalizeStatus(entry.status),
+      groupId: group.id,
+      groupName: group.name,
+      groupDescription: group.description,
+      groupOwner: group.owner,
+      groupScope: group.scope,
+      groupTags: group.tags ?? []
+    }))
+  )
+)
 
-  if (!keyword) {
-    return groups
-  }
+const groupFilterOptions = computed(() => {
+  const allCount = activeEntryRows.value.length
+  return [
+    { value: 'all', label: '全部组', count: allCount },
+    ...activeGroups.value.map((group) => ({
+      value: group.id,
+      label: group.name,
+      count: (group.entries ?? []).length
+    }))
+  ]
+})
 
-  return groups.filter((group) =>
-    [group.name, group.description, group.owner, group.scope, ...(group.tags ?? [])]
+const statusFilterOptions = computed(() => {
+  const rows = activeEntryRows.value
+  const statusKeys = ['enabled', 'disabled']
+
+  return [
+    { value: 'all', label: '全部状态', count: rows.length },
+    ...statusKeys.map((value) => ({
+      value,
+      label: formatStatusLabel(value),
+      count: rows.filter((row) => row.status === value).length
+    }))
+  ]
+})
+
+const selectedGroupLabel = computed(
+  () => groupFilterOptions.value.find((item) => item.value === selectedGroupFilter.value)?.label ?? '组'
+)
+
+const selectedStatusLabel = computed(
+  () => statusFilterOptions.value.find((item) => item.value === selectedStatusFilter.value)?.label ?? '状态'
+)
+
+const filteredEntryRows = computed(() => {
+  const keyword = entrySearch.value.trim().toLowerCase()
+  const groupFilter = selectedGroupFilter.value
+  const statusFilter = selectedStatusFilter.value
+
+  return activeEntryRows.value.filter((row) => {
+    if (groupFilter !== 'all' && row.groupId !== groupFilter) {
+      return false
+    }
+
+    if (statusFilter !== 'all' && row.status !== statusFilter) {
+      return false
+    }
+
+    if (!keyword) {
+      return true
+    }
+
+    return [
+      row.value,
+      row.note,
+      row.groupName,
+      row.groupOwner,
+      row.groupScope,
+      row.status,
+      ...row.groupTags
+    ]
       .join(' ')
       .toLowerCase()
       .includes(keyword)
-  )
+  })
 })
-
-const activeGroup = computed(
-  () => activeGroups.value.find((group) => group.id === activeGroupId.value) ?? activeGroups.value[0] ?? null
-)
-
-const activeEntries = computed(() => activeGroup.value?.entries ?? [])
-const activeGroupMeta = computed(() => ({
-  status: getStatusMeta(activeGroup.value?.status),
-  updatedAt: formatDisplayDate(activeGroup.value?.updatedAt),
-  tags: activeGroup.value?.tags ?? []
-}))
-
-const activeGroupMetrics = computed(() => [
-  { label: '条目数量', value: formatCount(activeEntries.value.length) },
-  { label: '负责人', value: activeGroup.value?.owner || '--' },
-  { label: '作用范围', value: activeGroup.value?.scope || '--' },
-  { label: '最后更新', value: activeGroupMeta.value.updatedAt }
-])
-
-const activeGroupDialogTitle = computed(() =>
-  groupDialogMode.value === 'create' ? '新增分组' : '编辑分组'
-)
 
 const activeItemDialogTitle = computed(() =>
   itemDialogMode.value === 'create' ? '新增条目' : '编辑条目'
 )
 
 const itemFieldMeta = computed(() => activeCategoryMeta.value)
+const itemSearchPlaceholder = computed(() => `搜索${itemFieldMeta.value.itemLabel}...`)
 
-const totalGroupCount = computed(() =>
-  categories.value.reduce((total, category) => total + (category.groups?.length ?? 0), 0)
+const hasFilters = computed(
+  () =>
+    entrySearch.value.trim() !== '' ||
+    selectedGroupFilter.value !== 'all' ||
+    selectedStatusFilter.value !== 'all'
 )
-
-const totalEntryCount = computed(() =>
-  categories.value.reduce(
-    (total, category) =>
-      total + (category.groups ?? []).reduce((groupTotal, group) => groupTotal + (group.entries?.length ?? 0), 0),
-    0
-  )
-)
-
-const enabledEntryCount = computed(() =>
-  categories.value.reduce(
-    (total, category) =>
-      total +
-      (category.groups ?? []).reduce(
-        (groupTotal, group) =>
-          groupTotal + (group.entries ?? []).filter((entry) => normalizeStatus(entry.status) === 'enabled').length,
-        0
-      ),
-    0
-  )
-)
-
-const latestUpdatedLabel = computed(() => {
-  const latest = categories.value
-    .flatMap((category) => category.groups ?? [])
-    .map((group) => group.updatedAt)
-    .filter(Boolean)
-    .sort()
-    .at(-1)
-
-  return latest ? formatSummaryDate(latest) : '--'
-})
 
 watch(
   activeCategoryKey,
   () => {
-    syncActiveGroup()
+    syncFilterState()
   },
   { immediate: true }
 )
@@ -194,14 +192,18 @@ watch(
 
 function syncActiveGroup() {
   if (!activeCategory.value) {
-    activeGroupId.value = ''
     return
   }
 
-  const currentGroupExists = activeCategory.value.groups.some((group) => group.id === activeGroupId.value)
+  const currentGroupExists = activeGroups.value.some((group) => group.id === selectedGroupFilter.value)
   if (!currentGroupExists) {
-    activeGroupId.value = activeCategory.value.groups[0]?.id ?? ''
+    selectedGroupFilter.value = 'all'
   }
+}
+
+function syncFilterState() {
+  syncActiveGroup()
+  closeFilterMenus()
 }
 
 function selectCategory(key) {
@@ -210,48 +212,42 @@ function selectCategory(key) {
   }
 
   activeCategoryKey.value = key
-  groupSearch.value = ''
 }
 
-function selectGroup(groupId) {
-  activeGroupId.value = groupId
+function isMenuOpen(key) {
+  return activeFilterMenu.value === key
 }
 
-function openGroupDialog(mode, group = null) {
-  if (mode === 'create') {
-    groupDialogMode.value = mode
-    groupDialogError.value = ''
-    isGroupDialogOpen.value = true
-    resetGroupForm()
-    groupForm.categoryKey = activeCategoryKey.value
-    return
-  }
+function toggleFilterMenu(key) {
+  activeFilterMenu.value = activeFilterMenu.value === key ? '' : key
+}
 
-  const currentGroup = group ?? activeGroup.value
-  if (!currentGroup) {
-    groupDialogError.value = '请先选择一个分组。'
-    return
-  }
+function closeFilterMenus() {
+  activeFilterMenu.value = ''
+}
 
-  groupDialogMode.value = mode
-  groupDialogError.value = ''
-  isGroupDialogOpen.value = true
-  populateGroupForm(currentGroup)
+function selectGroupFilter(groupId) {
+  selectedGroupFilter.value = groupId || 'all'
+  closeFilterMenus()
+}
+
+function selectStatusFilter(status) {
+  selectedStatusFilter.value = status || 'all'
+  closeFilterMenus()
 }
 
 function openItemDialog(mode, item = null) {
   if (mode === 'create') {
-    if (!activeGroup.value) {
-      itemDialogError.value = '请先选择一个分组。'
+    const defaultGroupId = resolveDefaultGroupId()
+    if (!defaultGroupId) {
+      itemDialogError.value = '请先选择一个筛选项。'
       return
     }
 
     itemDialogMode.value = mode
     itemDialogError.value = ''
     isItemDialogOpen.value = true
-    resetItemForm()
-    itemForm.groupId = activeGroup.value?.id ?? ''
-    itemForm.scope = ''
+    resetItemForm(defaultGroupId)
     return
   }
 
@@ -266,69 +262,15 @@ function openItemDialog(mode, item = null) {
   populateItemForm(item)
 }
 
-function closeGroupDialog() {
-  isGroupDialogOpen.value = false
-  groupDialogError.value = ''
-}
-
 function closeItemDialog() {
   isItemDialogOpen.value = false
   itemDialogError.value = ''
 }
 
-function handleGroupSubmit() {
-  const name = groupForm.name.trim()
-  if (!name) {
-    groupDialogError.value = '请先填写分组名称。'
-    return
-  }
-
-  const category = activeCategory.value
-  if (!category) {
-    groupDialogError.value = '当前没有可用的配置域。'
-    return
-  }
-
-  const tags = normalizeListInput(groupForm.tags)
-  const payload = {
-    id: groupForm.id || createKey('group'),
-    name,
-    description: groupForm.description.trim(),
-    owner: groupForm.owner.trim() || 'SecOps',
-    scope: groupForm.scope.trim() || '未指定',
-    status: normalizeStatus(groupForm.status),
-    tags,
-    updatedAt: new Date().toISOString(),
-    entries: groupForm.id
-      ? findGroupById(groupForm.id)?.entries?.map((entry) => ({ ...entry })) ?? []
-      : []
-  }
-
-  if (groupForm.id) {
-    const targetGroup = findGroupById(groupForm.id)
-    if (!targetGroup) {
-      groupDialogError.value = '未找到要编辑的分组。'
-      return
-    }
-
-    Object.assign(targetGroup, payload)
-    lastActionMessage.value = `已更新「${payload.name}」分组。`
-  } else {
-    category.groups.unshift({
-      ...payload,
-      entries: []
-    })
-    lastActionMessage.value = `已新增「${payload.name}」分组。`
-  }
-
-  activeGroupId.value = payload.id
-  closeGroupDialog()
-}
-
 function handleItemSubmit() {
-  const group = activeGroup.value
-  if (!group) {
-    itemDialogError.value = '请先选择一个分组。'
+  const targetGroup = findGroupById(itemForm.groupId)
+  if (!targetGroup) {
+    itemDialogError.value = '请先选择一个组信息。'
     return
   }
 
@@ -341,35 +283,42 @@ function handleItemSubmit() {
   const payload = {
     id: itemForm.id || createKey('item'),
     value,
-    scope: itemForm.scope.trim() || '未指定',
+    scope: targetGroup.scope || '未指定',
     note: itemForm.note.trim(),
     status: normalizeStatus(itemForm.status)
   }
 
-  const existingIndex = group.entries.findIndex((entry) => entry.id === itemForm.id)
-  if (existingIndex >= 0) {
-    group.entries.splice(existingIndex, 1, payload)
-    lastActionMessage.value = `已更新「${value}」条目。`
-  } else {
-    group.entries.push(payload)
-    lastActionMessage.value = `已新增「${value}」条目。`
+  const sourceGroup = findGroupById(itemForm.sourceGroupId || itemForm.groupId)
+  if (sourceGroup && sourceGroup.id !== targetGroup.id) {
+    const sourceIndex = sourceGroup.entries.findIndex((entry) => entry.id === itemForm.id)
+    if (sourceIndex >= 0) {
+      sourceGroup.entries.splice(sourceIndex, 1)
+      sourceGroup.updatedAt = new Date().toISOString()
+    }
   }
 
-  group.updatedAt = new Date().toISOString()
+  const existingIndex = targetGroup.entries.findIndex((entry) => entry.id === itemForm.id)
+  if (existingIndex >= 0) {
+    targetGroup.entries.splice(existingIndex, 1, payload)
+  } else {
+    targetGroup.entries.push(payload)
+  }
+
+  targetGroup.updatedAt = new Date().toISOString()
   closeItemDialog()
 }
 
-function handleResetView() {
-  groupSearch.value = ''
-  activeCategoryKey.value = categories.value[0]?.key ?? ASSET_CONFIG_CATEGORY_ORDER[0]
-  activeGroupId.value = categories.value[0]?.groups[0]?.id ?? ''
-  lastActionMessage.value = '已恢复当前视图。'
+function clearEntryFilters() {
+  entrySearch.value = ''
+  selectedGroupFilter.value = 'all'
+  selectedStatusFilter.value = 'all'
+  closeFilterMenus()
 }
 
-function handleRefresh() {
-  closeGroupDialog()
-  closeItemDialog()
-  handleResetView()
+function handleDocumentClick(event) {
+  if (!filtersRef.value?.contains(event.target)) {
+    closeFilterMenus()
+  }
 }
 
 function handleGlobalKeydown(event) {
@@ -377,33 +326,22 @@ function handleGlobalKeydown(event) {
     return
   }
 
+  if (activeFilterMenu.value) {
+    closeFilterMenus()
+    return
+  }
+
   if (isItemDialogOpen.value) {
     closeItemDialog()
   }
-
-  if (isGroupDialogOpen.value) {
-    closeGroupDialog()
-  }
 }
 
-function formatDisplayDate(value) {
-  return formatDateTime(value)
+function isGroupFilterSelected(value) {
+  return selectedGroupFilter.value === value
 }
 
-function formatSummaryDate(value) {
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value ?? '--')
-  }
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).format(date)
+function isStatusFilterSelected(value) {
+  return selectedStatusFilter.value === value
 }
 
 function formatStatusLabel(value) {
@@ -413,22 +351,27 @@ function formatStatusLabel(value) {
 function getStatusMeta(value) {
   const normalized = String(value ?? '').trim().toLowerCase()
 
-  if (!normalized) {
-    return { label: '未知', tone: 'unknown' }
+  if (normalized === 'enabled') {
+    return statusMetaMap.enabled
   }
 
-  return statusMetaMap[normalized] ?? { label: '未知', tone: 'unknown' }
+  return statusMetaMap.disabled
 }
 
 function normalizeStatus(value) {
-  return String(value ?? '').trim().toLowerCase() || 'enabled'
+  return String(value ?? '').trim().toLowerCase() === 'enabled' ? 'enabled' : 'disabled'
 }
 
-function normalizeListInput(value) {
-  return String(value ?? '')
-    .split(/[,\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean)
+function resolveDefaultGroupId() {
+  if (selectedGroupFilter.value !== 'all' && findGroupById(selectedGroupFilter.value)) {
+    return selectedGroupFilter.value
+  }
+
+  return activeGroups.value[0]?.id ?? ''
+}
+
+function findGroupById(groupId) {
+  return activeGroups.value.find((group) => group.id === groupId) ?? null
 }
 
 function createKey(prefix) {
@@ -436,66 +379,35 @@ function createKey(prefix) {
   return `${prefix}-${Date.now()}-${randomPart}`
 }
 
-function createEmptyGroupForm() {
-  return {
-    id: '',
-    name: '',
-    description: '',
-    owner: '',
-    scope: '',
-    tags: '',
-    status: 'enabled',
-    categoryKey: ''
-  }
-}
-
 function createEmptyItemForm() {
   return {
     id: '',
+    sourceGroupId: '',
     groupId: '',
     value: '',
-    scope: '',
     note: '',
     status: 'enabled'
   }
 }
 
-function resetGroupForm() {
-  Object.assign(groupForm, createEmptyGroupForm(), {
-    categoryKey: activeCategoryKey.value
+function resetItemForm(groupId = '') {
+  const group = findGroupById(groupId) ?? activeGroups.value[0] ?? null
+  Object.assign(itemForm, createEmptyItemForm(), {
+    groupId: group?.id ?? '',
+    sourceGroupId: group?.id ?? ''
   })
-}
-
-function populateGroupForm(group) {
-  Object.assign(groupForm, {
-    id: group.id,
-    name: group.name,
-    description: group.description,
-    owner: group.owner,
-    scope: group.scope,
-    tags: (group.tags ?? []).join(', '),
-    status: normalizeStatus(group.status),
-    categoryKey: activeCategoryKey.value
-  })
-}
-
-function resetItemForm() {
-  Object.assign(itemForm, createEmptyItemForm())
 }
 
 function populateItemForm(item) {
+  const group = findGroupById(item.groupId) ?? activeGroups.value[0] ?? null
   Object.assign(itemForm, {
     id: item.id,
-    groupId: activeGroup.value?.id ?? '',
+    sourceGroupId: item.groupId,
+    groupId: item.groupId || group?.id || '',
     value: item.value,
-    scope: item.scope,
     note: item.note,
     status: normalizeStatus(item.status)
   })
-}
-
-function findGroupById(groupId) {
-  return categories.value.flatMap((category) => category.groups ?? []).find((group) => group.id === groupId) ?? null
 }
 
 function loadAssetConfigState() {
@@ -514,7 +426,7 @@ function loadAssetConfigState() {
       return createAssetConfigState()
     }
 
-    return parsed
+    return normalizeAssetConfigState(parsed)
   } catch {
     return createAssetConfigState()
   }
@@ -534,10 +446,12 @@ function persistAssetConfigState() {
 
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
+  document.addEventListener('click', handleDocumentClick)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
+  document.removeEventListener('click', handleDocumentClick)
 })
 </script>
 
@@ -551,56 +465,14 @@ onBeforeUnmount(() => {
   >
     <template #default>
       <main class="asset-config-page">
-        <section class="asset-config-hero">
-          <div class="asset-config-hero-copy">
-            <span class="asset-config-kicker">ASSET CONFIG</span>
-            <h1>资产配置中心</h1>
-            <p>
-              统一维护全局扫描白名单、User-Agent、网络网段和被动流量地址，按分组查看、添加和编辑。
-            </p>
-            <div class="asset-config-hero-meta">
-              <span
-                v-for="card in summaryCards"
-                :key="card.label"
-                class="asset-config-hero-chip"
-              >
-                <strong>{{ card.value }}</strong>
-                <span>{{ card.label }}</span>
-              </span>
-            </div>
+        <section class="asset-config-page-crumbs" aria-label="当前位置">
+          <div class="asset-config-page-crumb">
+            <span class="asset-config-page-crumb-separator">/</span>
+            <span class="asset-config-page-crumb-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath('gear')" />
+            </span>
+            <span>资产配置中心</span>
           </div>
-
-          <div class="asset-config-hero-actions">
-            <button class="asset-config-action-button" type="button" @click="openGroupDialog('create')">
-              <span class="asset-config-action-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M12 5v14" />
-                  <path d="M5 12h14" />
-                </svg>
-              </span>
-              <span>新增分组</span>
-            </button>
-
-            <button
-              class="asset-config-icon-button"
-              type="button"
-              aria-label="重置当前视图"
-              @click="handleRefresh"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-                <path d="M20 4v5h-5" />
-              </svg>
-            </button>
-          </div>
-        </section>
-
-        <section class="asset-config-summary">
-          <article v-for="card in summaryCards" :key="card.label" class="asset-config-summary-card">
-            <span class="asset-config-summary-label">{{ card.label }}</span>
-            <strong class="asset-config-summary-value">{{ card.value }}</strong>
-            <p>{{ card.note }}</p>
-          </article>
         </section>
 
         <section class="asset-config-tabs" aria-label="配置域切换">
@@ -617,160 +489,149 @@ onBeforeUnmount(() => {
             </span>
             <span class="asset-config-tab-label">
               <strong>{{ tab.meta.label }}</strong>
-              <small>{{ tab.groupCount }} 组 · {{ tab.entryCount }} 项</small>
+              <small>{{ tab.entryCount }} 项</small>
             </span>
           </button>
         </section>
 
         <section class="asset-config-content">
-          <aside class="asset-config-panel asset-config-groups-panel">
-            <header class="asset-config-panel-head">
-              <div>
-                <span class="asset-config-panel-kicker">{{ activeCategoryMeta.label }}</span>
-                <h2>分组列表</h2>
-                <p>{{ activeCategoryMeta.summary }}</p>
-              </div>
-
-              <button class="asset-config-panel-link" type="button" @click="openGroupDialog('create')">
-                新增分组
-              </button>
-            </header>
-
-            <label class="asset-config-search">
-              <input
-                v-model="groupSearch"
-                type="text"
-                placeholder="搜索分组名称、负责人或标签"
-                autocomplete="off"
-              />
-              <span class="asset-config-search-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <circle cx="11" cy="11" r="6.5" />
-                  <path d="m16 16 4 4" />
-                </svg>
-              </span>
-            </label>
-
-            <div class="asset-config-group-list">
-              <div
-                v-for="group in visibleGroups"
-                :key="group.id"
-                class="asset-config-group-row"
-                :class="{ active: group.id === activeGroupId }"
-              >
-                <button
-                  class="asset-config-group-row-main"
-                  type="button"
-                  @click="selectGroup(group.id)"
-                >
-                  <div class="asset-config-group-row-top">
-                    <strong>{{ group.name }}</strong>
-                    <span class="asset-config-status-pill" :class="`is-${normalizeStatus(group.status)}`">
-                      {{ formatStatusLabel(group.status) }}
-                    </span>
-                  </div>
-                  <p>{{ group.description }}</p>
-                  <div class="asset-config-group-row-meta">
-                    <span>{{ group.owner }}</span>
-                    <span>{{ group.scope }}</span>
-                    <span>{{ group.entries.length }} 项</span>
-                    <span>{{ formatDateTime(group.updatedAt) }}</span>
-                  </div>
-                  <div v-if="group.tags?.length" class="asset-config-tag-row">
-                    <span v-for="tag in group.tags" :key="tag" class="asset-config-tag">#{{ tag }}</span>
-                  </div>
-                </button>
-
-                <button
-                  class="asset-config-row-action"
-                  type="button"
-                  :aria-label="`编辑分组 ${group.name}`"
-                  @click.stop="openGroupDialog('edit', group)"
-                >
-                  编辑
-                </button>
-              </div>
-
-              <div v-if="visibleGroups.length === 0" class="asset-config-empty-state">
-                <strong>没有匹配到分组</strong>
-                <p>换个关键词试试，或者直接新增一个分组。</p>
-              </div>
-            </div>
-          </aside>
-
           <section class="asset-config-panel asset-config-detail-panel">
             <header class="asset-config-detail-head">
               <div>
-                <span class="asset-config-panel-kicker">{{ activeCategoryMeta.label }}</span>
-                <h2>{{ activeGroup?.name ?? '请选择一个分组' }}</h2>
-                <p>{{ activeGroup?.description ?? '当前配置域里还没有可展示的分组。' }}</p>
-              </div>
-
-              <div class="asset-config-detail-actions">
-                <button
-                  class="asset-config-action-button"
-                  type="button"
-                  :disabled="!activeGroup"
-                  @click="openItemDialog('create')"
-                >
-                  <span class="asset-config-action-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
-                    </svg>
-                  </span>
-                  <span>新增条目</span>
-                </button>
-
-                <button
-                  class="asset-config-action-button is-secondary"
-                  type="button"
-                  :disabled="!activeGroup"
-                  @click="openGroupDialog('edit', activeGroup)"
-                >
-                  编辑分组
-                </button>
+                <h2>配置内容</h2>
               </div>
             </header>
 
-            <div class="asset-config-detail-meta">
-              <span class="asset-config-meta-pill">负责人 {{ activeGroup?.owner ?? '--' }}</span>
-              <span class="asset-config-meta-pill">范围 {{ activeGroup?.scope ?? '--' }}</span>
-              <span class="asset-config-meta-pill" :class="`is-${activeGroupMeta.status.tone}`">
-                {{ activeGroupMeta.status.label }}
-              </span>
-              <span class="asset-config-meta-pill">更新于 {{ activeGroupMeta.updatedAt }}</span>
-            </div>
+            <div ref="filtersRef" class="asset-config-toolbar" aria-label="配置筛选">
+              <label class="asset-config-search-field">
+                <input
+                  v-model="entrySearch"
+                  type="text"
+                  :placeholder="itemSearchPlaceholder"
+                  autocomplete="off"
+                />
+                <span class="asset-config-search-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="m16 16 4 4" />
+                  </svg>
+                </span>
+              </label>
 
-            <div v-if="activeGroupMeta.tags.length" class="asset-config-tag-row asset-config-tag-row--detail">
-              <span v-for="tag in activeGroupMeta.tags" :key="tag" class="asset-config-tag">#{{ tag }}</span>
-            </div>
+              <div class="asset-config-filter-wrap" @click.stop>
+                <button
+                  class="asset-config-filter-trigger"
+                  :class="{ active: isMenuOpen(FILTER_MENU_KEYS.group) || selectedGroupFilter !== 'all' }"
+                  type="button"
+                  @click.stop="toggleFilterMenu(FILTER_MENU_KEYS.group)"
+                >
+                  <span>{{ selectedGroupFilter === 'all' ? '筛选组' : selectedGroupLabel }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path :d="isMenuOpen(FILTER_MENU_KEYS.group) ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+                  </svg>
+                </button>
 
-            <div class="asset-config-detail-stats">
-              <article v-for="metric in activeGroupMetrics" :key="metric.label" class="asset-config-stat">
-                <span>{{ metric.label }}</span>
-                <strong>{{ metric.value }}</strong>
-              </article>
+                <div v-if="isMenuOpen(FILTER_MENU_KEYS.group)" class="asset-config-filter-menu">
+                  <button
+                    v-for="option in groupFilterOptions"
+                    :key="option.value"
+                    class="asset-config-filter-option"
+                    :class="{ selected: isGroupFilterSelected(option.value) }"
+                    type="button"
+                    @click.stop="selectGroupFilter(option.value)"
+                  >
+                    <span class="asset-config-filter-check" :class="{ selected: isGroupFilterSelected(option.value) }"></span>
+                    <span class="asset-config-filter-option-label">{{ option.label }}</span>
+                    <span class="asset-config-filter-option-count">{{ formatCount(option.count) }} 项</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="asset-config-filter-wrap" @click.stop>
+                <button
+                  class="asset-config-filter-trigger"
+                  :class="{ active: isMenuOpen(FILTER_MENU_KEYS.status) || selectedStatusFilter !== 'all' }"
+                  type="button"
+                  @click.stop="toggleFilterMenu(FILTER_MENU_KEYS.status)"
+                >
+                  <span>{{ selectedStatusFilter === 'all' ? '状态' : selectedStatusLabel }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path :d="isMenuOpen(FILTER_MENU_KEYS.status) ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+                  </svg>
+                </button>
+
+                <div v-if="isMenuOpen(FILTER_MENU_KEYS.status)" class="asset-config-filter-menu">
+                  <button
+                    v-for="option in statusFilterOptions"
+                    :key="option.value"
+                    class="asset-config-filter-option"
+                    :class="{ selected: isStatusFilterSelected(option.value) }"
+                    type="button"
+                    @click.stop="selectStatusFilter(option.value)"
+                  >
+                    <span class="asset-config-filter-check" :class="{ selected: isStatusFilterSelected(option.value) }"></span>
+                    <span class="asset-config-filter-option-label">{{ option.label }}</span>
+                    <span class="asset-config-filter-option-count">{{ formatCount(option.count) }} 项</span>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                v-if="hasFilters"
+                class="asset-config-clear-button"
+                type="button"
+                aria-label="清空筛选"
+                title="清空筛选"
+                @click="clearEntryFilters"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M15.8 8.2 8.2 15.8" />
+                  <path d="M8.2 8.2 15.8 15.8" />
+                  <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
+                </svg>
+              </button>
+
+              <button
+                class="asset-config-filter-trigger asset-config-create-trigger"
+                type="button"
+                :disabled="activeGroups.length === 0"
+                @click="openItemDialog('create')"
+              >
+                <span class="asset-config-action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </span>
+                <span>新增条目</span>
+              </button>
             </div>
 
             <div class="asset-config-entry-board">
               <div class="asset-config-entry-head">
                 <span class="asset-config-entry-col is-main">{{ itemFieldMeta.itemLabel }}</span>
-                <span class="asset-config-entry-col">{{ itemFieldMeta.itemScopeLabel }}</span>
+                <span class="asset-config-entry-col">组信息</span>
                 <span class="asset-config-entry-col">状态</span>
                 <span class="asset-config-entry-col">说明</span>
                 <span class="asset-config-entry-col">操作</span>
               </div>
 
-              <div v-if="activeEntries.length > 0" class="asset-config-entry-list">
-                <div v-for="entry in activeEntries" :key="entry.id" class="asset-config-entry-row">
+              <div v-if="filteredEntryRows.length > 0" class="asset-config-entry-list">
+                <div v-for="entry in filteredEntryRows" :key="`${entry.groupId}-${entry.id}`" class="asset-config-entry-row">
                   <div class="asset-config-entry-main">
                     <strong>{{ entry.value }}</strong>
-                    <span>{{ entry.note || '暂无说明' }}</span>
                   </div>
-                  <div class="asset-config-entry-text">{{ entry.scope }}</div>
+                  <div class="asset-config-entry-group">
+                    <div class="asset-config-entry-group-top">
+                      <strong>{{ entry.groupName }}</strong>
+                    </div>
+                    <div class="asset-config-entry-group-meta">
+                      <span>{{ entry.groupOwner }}</span>
+                      <span>{{ entry.groupScope }}</span>
+                    </div>
+                  </div>
                   <div class="asset-config-entry-status">
-                    <span class="asset-config-status-pill" :class="`is-${normalizeStatus(entry.status)}`">
+                    <span class="asset-config-status-pill" :class="`is-${entry.status}`">
                       {{ formatStatusLabel(entry.status) }}
                     </span>
                   </div>
@@ -789,89 +650,12 @@ onBeforeUnmount(() => {
               </div>
 
               <div v-else class="asset-config-empty-state asset-config-empty-state--detail">
-                <strong>当前分组还没有条目</strong>
-                <p>先新增一个条目，补齐这组配置。</p>
+                <strong>没有匹配的条目</strong>
+                <p>试试换个关键词，或者清空筛选条件。</p>
               </div>
             </div>
           </section>
         </section>
-
-        <div
-          v-if="isGroupDialogOpen"
-          class="asset-config-dialog-overlay"
-          role="presentation"
-          @click.self="closeGroupDialog"
-        >
-          <section
-            class="asset-config-dialog"
-            role="dialog"
-            aria-modal="true"
-            :aria-labelledby="'asset-config-group-dialog-title'"
-          >
-            <header class="asset-config-dialog-head">
-              <div>
-                <span class="asset-config-panel-kicker">{{ activeCategoryMeta.label }}</span>
-                <h2 id="asset-config-group-dialog-title">{{ activeGroupDialogTitle }}</h2>
-              </div>
-              <button class="asset-config-dialog-close" type="button" aria-label="关闭" @click="closeGroupDialog">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="m6 6 12 12" />
-                  <path d="m18 6-12 12" />
-                </svg>
-              </button>
-            </header>
-
-            <form class="asset-config-dialog-form" @submit.prevent="handleGroupSubmit">
-              <div class="asset-config-dialog-grid">
-                <label>
-                  <span>分组名称</span>
-                  <input v-model="groupForm.name" type="text" placeholder="例如：生产核心系统" />
-                </label>
-
-                <label>
-                  <span>负责人</span>
-                  <input v-model="groupForm.owner" type="text" placeholder="例如：SecOps" />
-                </label>
-
-                <label>
-                  <span>生效范围</span>
-                  <input v-model="groupForm.scope" type="text" placeholder="例如：主动扫描 / 被动采集" />
-                </label>
-
-                <label>
-                  <span>状态</span>
-                  <select v-model="groupForm.status">
-                    <option value="enabled">启用</option>
-                    <option value="paused">暂停</option>
-                  </select>
-                </label>
-              </div>
-
-              <label class="asset-config-dialog-textarea">
-                <span>分组说明</span>
-                <textarea v-model="groupForm.description" rows="3" placeholder="描述这组配置的使用边界和注意事项"></textarea>
-              </label>
-
-              <label class="asset-config-dialog-textarea">
-                <span>标签</span>
-                <textarea
-                  v-model="groupForm.tags"
-                  rows="2"
-                  placeholder="多个标签用英文逗号或换行分隔"
-                ></textarea>
-              </label>
-
-              <p v-if="groupDialogError" class="asset-config-dialog-error">{{ groupDialogError }}</p>
-
-              <footer class="asset-config-dialog-actions">
-                <button class="asset-config-dialog-button is-ghost" type="button" @click="closeGroupDialog">
-                  取消
-                </button>
-                <button class="asset-config-dialog-button" type="submit">保存分组</button>
-              </footer>
-            </form>
-          </section>
-        </div>
 
         <div
           v-if="isItemDialogOpen"
@@ -901,20 +685,24 @@ onBeforeUnmount(() => {
             <form class="asset-config-dialog-form" @submit.prevent="handleItemSubmit">
               <div class="asset-config-dialog-grid">
                 <label>
-                  <span>{{ itemFieldMeta.itemValueLabel }}</span>
+                  <span>{{ itemFieldMeta.itemLabel }}</span>
                   <input v-model="itemForm.value" type="text" :placeholder="itemFieldMeta.itemPlaceholder" />
                 </label>
 
                 <label>
-                  <span>{{ itemFieldMeta.itemScopeLabel }}</span>
-                  <input v-model="itemForm.scope" type="text" :placeholder="itemFieldMeta.itemScopePlaceholder" />
+                  <span>组信息</span>
+                  <select v-model="itemForm.groupId">
+                    <option v-for="group in activeGroups" :key="group.id" :value="group.id">
+                      {{ group.name }} · {{ group.scope }}
+                    </option>
+                  </select>
                 </label>
 
                 <label>
                   <span>状态</span>
                   <select v-model="itemForm.status">
                     <option value="enabled">启用</option>
-                    <option value="paused">暂停</option>
+                    <option value="disabled">未启用</option>
                   </select>
                 </label>
               </div>

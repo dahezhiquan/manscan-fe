@@ -20,6 +20,7 @@ import {
   normalizeScanTaskListResponse,
   severityLabel
 } from '../utils/scanTask'
+import { iconPath } from '../utils/icons'
 
 const props = defineProps({
   navigateTo: {
@@ -36,6 +37,7 @@ const activeFilterMenu = ref('')
 const filtersRef = ref(null)
 const selectedScanTaskIds = ref([])
 const isSelectingAll = ref(false)
+const isAllMatchingScanTasksSelected = ref(false)
 const selectionError = ref('')
 const isBulkActionMenuOpen = ref(false)
 const isBatchDeleteDialogOpen = ref(false)
@@ -88,20 +90,6 @@ const showInitialLoading = computed(() => isLoading.value && !hasData.value)
 const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
 const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
 const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
-const totalTaskCount = computed(() => {
-  if (summaryStats.value.total !== null && summaryStats.value.total !== undefined) {
-    return summaryStats.value.total
-  }
-
-  return total.value
-})
-const runningTaskCount = computed(() => {
-  if (summaryStats.value.running !== null && summaryStats.value.running !== undefined) {
-    return summaryStats.value.running
-  }
-
-  return activeTaskCount.value
-})
 const savedRequestCount = computed(() => summaryStats.value.savedRequests)
 const hasGlobalRunningTasks = computed(() => {
   if (summaryStats.value.running !== null && summaryStats.value.running !== undefined) {
@@ -273,12 +261,14 @@ function handleRowKeydown(event, taskId) {
 }
 
 function handleStatusChange() {
+  isAllMatchingScanTasksSelected.value = false
   currentPage.value = 1
   closeFilterMenus()
   void loadScanTasks()
 }
 
 function toggleHighRiskFilter() {
+  isAllMatchingScanTasksSelected.value = false
   hasHighRiskOnly.value = !hasHighRiskOnly.value
   currentPage.value = 1
   void loadScanTasks()
@@ -307,6 +297,7 @@ function clearFilters() {
   window.clearTimeout(keywordTimer)
   closeFilterMenus()
   closeBatchActionMenu()
+  isAllMatchingScanTasksSelected.value = false
   keywordInput.value = ''
   appliedKeyword.value = ''
   selectedStatus.value = ''
@@ -344,6 +335,8 @@ function toggleScanTaskSelection(taskId) {
     return
   }
 
+  isAllMatchingScanTasksSelected.value = false
+
   const selectedSet = new Set(selectedScanTaskIds.value)
 
   if (selectedSet.has(taskId)) {
@@ -361,6 +354,7 @@ function selectCurrentPageScanTasks() {
     return
   }
 
+  isAllMatchingScanTasksSelected.value = false
   selectedScanTaskIds.value = mergeUniqueIds(selectedScanTaskIds.value, currentPageSelectableIds.value)
   selectionError.value = ''
 }
@@ -411,6 +405,7 @@ async function selectAllMatchingScanTasks() {
     } while (true)
 
     selectedScanTaskIds.value = mergeUniqueIds(selectedScanTaskIds.value, allIds)
+    isAllMatchingScanTasksSelected.value = allIds.length > 0
   } catch (error) {
     if (error?.name !== 'AbortError') {
       selectionError.value = error instanceof Error ? error.message : '全选扫描任务失败，请稍后重试。'
@@ -424,6 +419,7 @@ async function selectAllMatchingScanTasks() {
 function clearScanTaskSelection() {
   selectAllController?.abort()
   selectedScanTaskIds.value = []
+  isAllMatchingScanTasksSelected.value = false
   selectionError.value = ''
   closeBatchActionMenu()
   closeBatchDeleteDialog()
@@ -632,48 +628,33 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="scans-page">
-    <section class="scans-hero">
-      <div class="scans-hero-copy">
-        <span class="scans-kicker">SCAN TASKS</span>
-        <h1>任务总览</h1>
-
-        <div class="scans-hero-meta">
-          <span class="scans-hero-chip">总任务 {{ formatCount(totalTaskCount) }}</span>
-          <span class="scans-hero-chip is-running">运行中 {{ formatCount(runningTaskCount) }}</span>
-          <span class="scans-hero-chip is-saved">
-            <span>模版聚类/缓存算法已为您节省请求数量：</span>
-            <strong>{{ formatCount(savedRequestCount) }}</strong>
-            <span class="scans-chip-tooltip-anchor" tabindex="0" aria-label="查看模版聚类与缓存算法说明">
-              <span class="scans-chip-tooltip-icon">?</span>
-              <span class="scans-chip-tooltip" role="tooltip">
-                <span>了解关于模版聚类/缓存算法的更多细节：</span>
-                <a
-                  href="https://duxiaoman.feishu.cn/wiki/X4gNwtseeiXV7Jkg8lHcapJ5nQd?fromScene=spaceOverview"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  文档
-                </a>
-              </span>
-            </span>
-          </span>
-        </div>
+    <section class="scans-page-crumbs" aria-label="当前位置">
+      <div class="scans-page-crumb">
+        <span class="scans-page-crumb-separator">/</span>
+        <span class="scans-page-crumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath('scan')" />
+        </span>
+        <span>任务总览</span>
       </div>
 
-      <div class="scans-hero-actions">
-        <button
-          class="scans-toolbar-icon"
-          type="button"
-          :disabled="isLoading || isRefreshing"
-          :aria-busy="isRefreshing ? 'true' : 'false'"
-          aria-label="刷新扫描任务列表"
-          @click="handleRefresh"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-            <path d="M20 4v5h-5" />
-          </svg>
-        </button>
+      <div class="scans-page-actions">
+        <span class="scans-page-saved-chip">
+          <span>模版聚类/缓存算法已为您节省请求数量：</span>
+          <strong>{{ formatCount(savedRequestCount) }}</strong>
+          <span class="scans-chip-tooltip-anchor" tabindex="0" aria-label="查看模版聚类与缓存算法说明">
+            <span class="scans-chip-tooltip-icon">?</span>
+            <span class="scans-chip-tooltip" role="tooltip">
+              <span>了解关于模版聚类/缓存算法的更多细节：</span>
+              <a
+                href="https://duxiaoman.feishu.cn/wiki/X4gNwtseeiXV7Jkg8lHcapJ5nQd?fromScene=spaceOverview"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                文档
+              </a>
+            </span>
+          </span>
+        </span>
 
         <button class="scans-upgrade-button" type="button" @click="props.navigateTo('/scans/create')">
           <span>发起任务</span>
@@ -855,11 +836,11 @@ onBeforeUnmount(() => {
             <button
               class="scans-selection-tool vulnerabilities-selection-tool"
               type="button"
-              :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isSelectingAll"
+              :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isSelectingAll || isAllMatchingScanTasksSelected"
               :aria-busy="isSelectingAll ? 'true' : 'false'"
               @click="selectAllMatchingScanTasks"
             >
-              {{ isSelectingAll ? '全选中...' : '全选' }}
+              {{ isSelectingAll ? '全选中...' : isAllMatchingScanTasksSelected ? '已全选' : '全选' }}
             </button>
             <button
               v-if="selectedScanTaskCount"

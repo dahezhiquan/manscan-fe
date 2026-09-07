@@ -28,15 +28,41 @@ export const SCAN_STATUS_META = {
   cancelled: { label: '已取消', tone: 'warning' }
 }
 
+export const SCAN_ATTACK_TYPE_OPTIONS = [
+  {
+    value: 'batteringram',
+    label: '齐发模式',
+    description: 'Battering ram · 所有位置共用同一个 payload'
+  },
+  {
+    value: 'pitchfork',
+    label: '按位配对',
+    description: 'Pitchfork · 多个 payload 列表按相同下标一一配对'
+  },
+  {
+    value: 'clusterbomb',
+    label: '全组合模式',
+    description: 'Cluster bomb · 对多个 payload 做全组合'
+  }
+]
+
 export const SCAN_STRATEGY_LABELS = {
   auto: '自动适配',
-  'host-spray': '先按 Host 扫描',
-  'template-spray': '先按模板扫描'
+  'host-spray': '按主机推进',
+  'template-spray': '按模板推进'
 }
 
 export const SCAN_STRATEGY_OPTIONS = [
   { value: '', label: '全部策略' },
-  { value: 'auto', label: SCAN_STRATEGY_LABELS.auto },
-  { value: 'host-spray', label: SCAN_STRATEGY_LABELS['host-spray'] },
-  { value: 'template-spray', label: SCAN_STRATEGY_LABELS['template-spray'] }
+  { value: 'auto', label: SCAN_STRATEGY_LABELS.auto, description: 'Auto · 系统自动适配调度方式' },
+  {
+    value: 'host-spray',
+    label: SCAN_STRATEGY_LABELS['host-spray'],
+    description: 'Host spray · 优先围绕主机推进模板'
+  },
+  {
+    value: 'template-spray',
+    label: SCAN_STRATEGY_LABELS['template-spray'],
+    description: 'Template spray · 优先围绕模板推进主机'
+  }
 ]

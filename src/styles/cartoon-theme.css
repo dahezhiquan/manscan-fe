@@ -1409,9 +1409,11 @@
 }
 
 .scan-create-page .scan-create-select-button {
+  border-width: 2px;
   border-radius: 18px;
   color: var(--line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 246, 227, 0.95));
+  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.88);
 }
 
 .scan-create-page .scan-create-select-button:hover {
@@ -1421,15 +1423,51 @@
 .scan-create-page .scan-create-select-button:focus-visible,
 .scan-create-page .scan-create-select.is-open .scan-create-select-button {
   background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(247, 239, 210, 0.98));
+  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.88);
 }
 
 .scan-create-page .scan-create-select-menu {
-  border-width: 1px;
-  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.5);
+  border-width: 2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(255, 244, 207, 0.98));
+  box-shadow: 3px 3px 0 rgba(31, 26, 23, 0.9);
+}
+
+.scan-create-page .scan-create-select-option {
+  border-radius: 14px;
+}
+
+.scan-create-page .scan-create-select-option.has-description {
+  background: transparent;
+}
+
+.scan-create-page .scan-create-select-option-copy strong {
+  color: var(--line);
+}
+
+.scan-create-page .scan-create-select-option-copy small {
+  color: var(--ink-soft);
+}
+
+.scan-create-page .scan-create-select-option:hover {
+  background: rgba(255, 244, 207, 0.96);
 }
 
 .scan-create-page .scan-create-select-option.is-selected {
-  background: rgba(111, 132, 255, 0.1);
+  background: rgba(255, 214, 79, 0.22);
+  box-shadow: inset 0 0 0 2px rgba(31, 26, 23, 0.18);
+}
+
+.scan-create-page .scan-create-select-check {
+  border-width: 2px;
+  border-color: var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
+}
+
+.scan-create-page .scan-create-select-check.is-selected {
+  background: var(--accent-yellow);
+  box-shadow: 1px 1px 0 rgba(31, 26, 23, 0.45);
 }
 
 .scan-create-page .scan-create-hero-panel > div,

@@ -10,6 +10,7 @@ import {
   rescanScanTask,
   resumeScanTask
 } from '../api/scans'
+import { SCAN_STRATEGY_LABELS } from '../constants/scanTasks'
 import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
@@ -37,12 +38,6 @@ const LOG_LEVEL_LABELS = {
   error: 'ERROR',
   match: 'MATCH'
 }
-const SCAN_STRATEGY_LABELS = {
-  auto: '自动适配',
-  'host-spray': '先按 Host 扫描',
-  'template-spray': '先按模板扫描'
-}
-
 const task = ref(null)
 const progress = ref(null)
 const events = ref([])

@@ -10,17 +10,6 @@ export const ASSET_CONFIG_CATEGORY_META = {
     itemValueLabel: '白名单值',
     theme: 'green'
   },
-  userAgent: {
-    label: '全局扫描 User-Agent',
-    icon: 'doc',
-    summary: '统一控制主动扫描与探测请求使用的标识',
-    itemLabel: 'User-Agent',
-    itemPlaceholder: '例如：Mozilla/5.0 (...)',
-    itemScopeLabel: '使用场景',
-    itemScopePlaceholder: '例如：HTTP 探测 / Headless',
-    itemValueLabel: 'UA 字符串',
-    theme: 'blue'
-  },
   subnet: {
     label: '网络网段信息',
     icon: 'stack',
@@ -45,7 +34,7 @@ export const ASSET_CONFIG_CATEGORY_META = {
   }
 }
 
-export const ASSET_CONFIG_CATEGORY_ORDER = ['whitelist', 'userAgent', 'subnet', 'passive']
+export const ASSET_CONFIG_CATEGORY_ORDER = ['whitelist', 'subnet', 'passive']
 
 export const ASSET_CONFIG_SEED = [
   {
@@ -106,66 +95,7 @@ export const ASSET_CONFIG_SEED = [
             value: 'status.example.net',
             scope: '外联窗口',
             note: '状态页与公告页',
-            status: 'paused'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    key: 'userAgent',
-    groups: [
-      {
-        id: 'ua-browser',
-        name: '浏览器模拟',
-        description: '适合页面探测、登录态检查和需要浏览器痕迹的任务。',
-        owner: 'Scan Team',
-        scope: 'HTTP / Headless',
-        status: 'enabled',
-        tags: ['浏览器', '通用'],
-        updatedAt: '2026-09-01T20:10:00+08:00',
-        entries: [
-          {
-            id: 'ua-browser-1',
-            value:
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
-            scope: 'HTTP 探测',
-            note: '默认浏览器 UA',
-            status: 'enabled'
-          },
-          {
-            id: 'ua-browser-2',
-            value:
-              'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
-            scope: 'Headless',
-            note: 'macOS 场景',
-            status: 'enabled'
-          }
-        ]
-      },
-      {
-        id: 'ua-bot',
-        name: '扫描器伪装',
-        description: '更偏稳定、低特征的请求头组合。',
-        owner: 'SecOps',
-        scope: '主动扫描',
-        status: 'paused',
-        tags: ['扫描器', '低特征'],
-        updatedAt: '2026-08-31T16:30:00+08:00',
-        entries: [
-          {
-            id: 'ua-bot-1',
-            value: 'ManScan/1.0 (+https://internal.example.com)',
-            scope: '主动扫描',
-            note: '内部统一标识',
-            status: 'enabled'
-          },
-          {
-            id: 'ua-bot-2',
-            value: 'Mozilla/5.0 (compatible; ManScan/1.0; +https://internal.example.com)',
-            scope: '主动扫描',
-            note: '兼容旧策略',
-            status: 'paused'
+            status: 'disabled'
           }
         ]
       }
@@ -203,7 +133,7 @@ export const ASSET_CONFIG_SEED = [
             value: '172.16.48.0/21',
             scope: '共享服务',
             note: '共享服务区',
-            status: 'paused'
+            status: 'disabled'
           }
         ]
       },
@@ -270,7 +200,7 @@ export const ASSET_CONFIG_SEED = [
         description: '被动流量产生的告警同步目标。',
         owner: 'SOC',
         scope: '告警 / Webhook',
-        status: 'paused',
+        status: 'disabled',
         tags: ['告警', '同步'],
         updatedAt: '2026-08-29T14:25:00+08:00',
         entries: [
@@ -286,7 +216,7 @@ export const ASSET_CONFIG_SEED = [
             value: 'http://10.8.12.58:8080/api/passive',
             scope: '内网出口',
             note: '联动中台',
-            status: 'paused'
+            status: 'disabled'
           }
         ]
       }
@@ -295,14 +225,24 @@ export const ASSET_CONFIG_SEED = [
 ]
 
 export function createAssetConfigState() {
-  return ASSET_CONFIG_SEED.map((category) => ({
-    ...category,
-    groups: category.groups.map((group) => ({
-      ...group,
-      tags: [...group.tags],
-      entries: group.entries.map((entry) => ({ ...entry }))
-    }))
-  }))
+  return cloneAssetConfigState(ASSET_CONFIG_SEED)
+}
+
+export function normalizeAssetConfigState(state) {
+  if (!Array.isArray(state)) {
+    return createAssetConfigState()
+  }
+
+  const sourceMap = new Map(
+    state
+      .filter((category) => category && typeof category.key === 'string')
+      .map((category) => [category.key, category])
+  )
+
+  return ASSET_CONFIG_CATEGORY_ORDER.map((key) => {
+    const source = sourceMap.get(key) ?? ASSET_CONFIG_SEED.find((category) => category.key === key)
+    return source ? cloneAssetConfigCategory(source) : null
+  }).filter(Boolean)
 }
 
 export function getAssetConfigCategoryMeta(key) {
@@ -317,4 +257,35 @@ export function getAssetConfigCategoryMeta(key) {
     itemValueLabel: '配置值',
     theme: 'yellow'
   }
+}
+
+function cloneAssetConfigState(state) {
+  return state.map((category) => cloneAssetConfigCategory(category)).filter(Boolean)
+}
+
+function cloneAssetConfigCategory(category) {
+  if (!category || typeof category !== 'object') {
+    return null
+  }
+
+  return {
+    ...category,
+    groups: Array.isArray(category.groups)
+      ? category.groups.map((group) => ({
+          ...group,
+          status: normalizeAssetConfigStatus(group.status),
+          tags: [...(group.tags ?? [])],
+          entries: Array.isArray(group.entries)
+            ? group.entries.map((entry) => ({
+                ...entry,
+                status: normalizeAssetConfigStatus(entry.status)
+              }))
+            : []
+        }))
+      : []
+  }
+}
+
+function normalizeAssetConfigStatus(value) {
+  return String(value ?? '').trim().toLowerCase() === 'enabled' ? 'enabled' : 'disabled'
 }

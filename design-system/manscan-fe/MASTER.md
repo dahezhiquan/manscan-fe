@@ -7,7 +7,7 @@
 ---
 
 **Project:** manscan-fe
-**Generated:** 2026-06-18 15:53:36
+**Generated:** 2026-09-04 13:38:53
 **Category:** Analytics Dashboard
 
 ---
@@ -163,11 +163,10 @@
 
 ### Page Pattern
 
-**Pattern Name:** Before-After Transformation
+**Pattern Name:** Data-Dense + Drill-Down
 
-- **Conversion Strategy:** Visual proof of value. 45% higher conversion. Real results. Specific metrics. Guarantee offer.
-- **CTA Placement:** After transformation reveal + Bottom
-- **Section Order:** 1. Hero (problem state), 2. Transformation slider/comparison, 3. How it works, 4. Results CTA
+- **CTA Placement:** Above fold
+- **Section Order:** Hero > Features > CTA
 
 ---
 

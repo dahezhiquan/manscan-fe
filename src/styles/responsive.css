@@ -26,24 +26,30 @@
   }
 
   .asset-config-page {
-    padding: 22px 24px 24px;
+    padding: 18px 20px 22px;
   }
 
   .asset-config-content {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .asset-config-detail-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .scans-content {
-    padding: 18px 24px 24px;
+    padding: 14px 16px 18px;
   }
 
   .scans-table-head,
   .scans-table-row {
-    grid-template-columns: 52px minmax(200px, 1.45fr) 330px 88px 88px 88px 116px 68px;
+    grid-template-columns:
+      48px
+      minmax(210px, 1.28fr)
+      100px
+      206px
+      76px
+      76px
+      82px
+      136px
+      136px
+      100px;
   }
 
   .templates-stats {
@@ -128,42 +134,43 @@
   .asset-config-page {
     height: auto;
     min-height: 100vh;
-    padding: 18px 16px 20px;
+    padding: 16px 14px 18px;
   }
 
-  .asset-config-hero,
   .asset-config-panel-head,
   .asset-config-detail-head {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .asset-config-summary {
-    grid-template-columns: 1fr;
-  }
-
   .asset-config-tabs {
-    overflow-x: auto;
-    overflow-y: hidden;
-    flex-wrap: nowrap;
-    padding-bottom: 2px;
-  }
-
-  .asset-config-tab {
-    flex: 0 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .asset-config-content {
     grid-template-columns: 1fr;
   }
 
-  .asset-config-detail-stats {
-    grid-template-columns: 1fr;
+  .asset-config-toolbar {
+    flex-wrap: wrap;
   }
 
-  .asset-config-entry-head,
-  .asset-config-entry-row {
-    min-width: 920px;
+  .asset-config-search-field {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .asset-config-filter-wrap {
+    flex: 1 1 220px;
+  }
+
+  .asset-config-filter-trigger,
+  .asset-config-clear-button {
+    width: 100%;
+  }
+
+  .asset-config-filter-menu {
+    width: min(320px, 100%);
   }
 
   .asset-config-dialog-overlay {
@@ -185,7 +192,7 @@
   }
 
   .scans-content {
-    padding: 24px 16px 20px;
+    padding: 16px 12px 18px;
   }
 
   .scans-topbar {
@@ -219,7 +226,7 @@
   .scans-table-head,
   .scans-table-row,
   .scans-pagination {
-    min-width: 1020px;
+    min-width: 976px;
   }
 
   .templates-stats {
@@ -251,6 +258,16 @@
 
   .template-detail-info-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .asset-config-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-config-filter-wrap {
+    flex-basis: 100%;
   }
 }
 
@@ -334,7 +351,7 @@
   }
 
   .scans-content {
-    padding: 18px 12px 18px;
+    padding: 16px 12px 18px;
   }
 
   .scans-filter-button,
@@ -345,8 +362,8 @@
   }
 
   .scans-toolbar-icon {
-    width: 46px;
-    flex: 0 0 46px;
+    width: 40px;
+    flex: 0 0 40px;
   }
 
   .templates-stat-card {

@@ -2175,6 +2175,35 @@
   transition: background-color 0.18s ease, color 0.18s ease;
 }
 
+.scan-create-select-option.has-description {
+  align-items: flex-start;
+  min-height: 52px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.scan-create-select-option-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.scan-create-select-option-copy strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: inherit;
+}
+
+.scan-create-select-option-copy small {
+  color: #768196;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .scan-create-select-option:hover {
   background: rgba(244, 247, 252, 0.96);
 }

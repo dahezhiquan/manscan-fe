@@ -1,6 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { createScanTask } from '../api/scans'
+import {
+  SCAN_ATTACK_TYPE_OPTIONS,
+  SCAN_STRATEGY_OPTIONS,
+} from '../constants/scanTasks'
 import { getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
 import { protocolFilterOptions, severityFilterOptions } from '../data/templates'
 import {
@@ -64,16 +68,8 @@ const stepDefinitions = [
   }
 ]
 
-const attackTypeOptions = [
-  { value: 'batteringram', label: 'batteringram' },
-  { value: 'pitchfork', label: 'pitchfork' },
-  { value: 'clusterbomb', label: 'clusterbomb' }
-]
-
-const scanStrategyOptions = [
-  { value: 'auto', label: 'auto · 自动适配' },
-  { value: 'host-spray', label: 'host-spray · 先按 Host 跑' },
-  { value: 'template-spray', label: 'template-spray · 先按模板跑' }
+const DEFAULT_CUSTOM_HEADERS = [
+  'User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 c2fbccf08ddd46b93fa4e87cff76a009 Xray/Scan'
 ]
 
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])
@@ -164,7 +160,7 @@ const stepFields = {
       key: 'attack_type',
       label: '攻击类型',
       type: 'select',
-      options: attackTypeOptions,
+      options: SCAN_ATTACK_TYPE_OPTIONS,
       tooltip:
         '你可以把它理解成 Burp Intruder 里那几种攻击模式。1. batteringram：所有位置共用同一个 payload 值。2. pitchfork：多个 payload 列表按相同下标一一配对。3. clusterbomb：对多个 payload 做全组合（笛卡尔积）。'
     },
@@ -182,11 +178,11 @@ const stepFields = {
   runtime: [
     {
       key: 'rate_limit',
-      label: '每秒请求数',
+      label: '每速率窗口请求数',
       type: 'number',
       min: 0,
       placeholder: '默认：150',
-      tooltip: '这个扫描任务 1 秒钟内，最多发多少个请求。'
+      tooltip: '这个扫描任务 1 速率窗口内，最多发多少个请求。'
     },
     {
       key: 'rate_limit_duration',
@@ -301,7 +297,7 @@ const stepFields = {
       key: 'scan_strategy',
       label: '扫描策略',
       type: 'select',
-      options: scanStrategyOptions,
+      options: SCAN_STRATEGY_OPTIONS.filter((option) => option.value),
       tooltip:
         '决定“模板”和“目标”这两个维度，优先按什么顺序调度扫描。1. auto：让程序自己根据场景做适配。2. host-spray：对一个 host，尽量把相关模板都跑掉，再切下一个 host。3. template-spray：先拿一个模板批量扫很多 host，再换下一个模板。'
     },
@@ -537,7 +533,7 @@ function createInitialForm() {
     store_response: false,
     timestamp: true,
     matcher_status: false,
-    custom_headers: [],
+    custom_headers: [...DEFAULT_CUSTOM_HEADERS],
     vars: [],
     follow_redirects: false,
     follow_host_redirects: true,
@@ -885,6 +881,10 @@ function closeCustomSelect() {
 
 function getSelectOptionLabel(field) {
   return field.options?.find((option) => option.value === form[field.key])?.label ?? ''
+}
+
+function getSelectOptionDescription(option) {
+  return String(option?.description ?? '').trim()
 }
 
 function selectFieldOption(field, value) {
@@ -1711,12 +1711,18 @@ onBeforeUnmount(() => {
                   v-for="option in field.options ?? []"
                   :key="option.value"
                   class="scan-create-select-option"
-                  :class="{ 'is-selected': form[field.key] === option.value }"
+                  :class="{
+                    'has-description': getSelectOptionDescription(option),
+                    'is-selected': form[field.key] === option.value
+                  }"
                   type="button"
                   @click.stop="selectFieldOption(field, option.value)"
                 >
                   <span class="scan-create-select-check" :class="{ 'is-selected': form[field.key] === option.value }" aria-hidden="true"></span>
-                  <span>{{ option.label }}</span>
+                  <span class="scan-create-select-option-copy">
+                    <strong>{{ option.label }}</strong>
+                    <small v-if="getSelectOptionDescription(option)">{{ getSelectOptionDescription(option) }}</small>
+                  </span>
                 </button>
               </div>
             </div>

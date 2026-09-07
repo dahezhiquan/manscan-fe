@@ -197,6 +197,7 @@
 - 联调注意事项：
   - `task.id` 缺失时，前端会尝试从 `task_api` 中解析详情 ID
   - `task_api` 建议返回 `/api/v1/scans/:id`
+  - 创建页的“自定义请求头”会默认预填一行 `User-Agent`，值为 `User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 c2fbccf08ddd46b93fa4e87cff76a009 Xray/Scan`，用户可按需删除或覆盖
 
 ### 10. 重新扫描任务
 

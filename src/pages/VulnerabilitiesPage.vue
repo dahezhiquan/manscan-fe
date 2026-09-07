@@ -1,28 +1,12 @@
 <template>
   <main class="vuln-page">
-    <section class="vulnerabilities-hero">
-      <div>
-        <span class="vulnerabilities-kicker">VULNERABILITIES</span>
-        <h1>漏洞查询</h1>
-        <div class="vulnerabilities-hero-meta">
-          <span class="vulnerabilities-hero-chip">总数 {{ formatVulnerabilityCount(total) }}</span>
-        </div>
-      </div>
-
-      <div class="vulnerabilities-hero-actions">
-        <button
-          class="vulnerabilities-icon-button"
-          type="button"
-          :disabled="isLoading || isRefreshing"
-          :aria-busy="isRefreshing ? 'true' : 'false'"
-          aria-label="刷新漏洞列表"
-          @click="handleRefresh"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-            <path d="M20 4v5h-5" />
-          </svg>
-        </button>
+    <section class="vulnerabilities-page-crumbs" aria-label="当前位置">
+      <div class="vulnerabilities-page-crumb">
+        <span class="vulnerabilities-page-crumb-separator">/</span>
+        <span class="vulnerabilities-page-crumb-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath('shield')" />
+        </span>
+        <span>漏洞查询</span>
       </div>
     </section>
 
@@ -788,6 +772,7 @@ import {
 } from '../utils/vulnerability'
 import { normalizeScanTaskNameOptionsResponse } from '../utils/scanTask'
 import { normalizeProtocolOptions, normalizeTagOptions } from '../utils/template'
+import { iconPath } from '../utils/icons'
 
 const filtersRef = ref(null)
 const filterInput = ref(createEmptyFilterInput())
