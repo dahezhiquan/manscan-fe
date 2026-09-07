@@ -161,16 +161,23 @@
   }
 
   .asset-config-filter-wrap {
-    flex: 1 1 220px;
+    flex: 0 0 auto;
   }
 
   .asset-config-filter-trigger,
   .asset-config-clear-button {
-    width: 100%;
+    width: auto;
+  }
+
+  .asset-config-clear-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
   }
 
   .asset-config-filter-menu {
-    width: min(320px, 100%);
+    width: min(218px, 100%);
   }
 
   .asset-config-dialog-overlay {
@@ -267,7 +274,7 @@
   }
 
   .asset-config-filter-wrap {
-    flex-basis: 100%;
+    flex-basis: auto;
   }
 }
 

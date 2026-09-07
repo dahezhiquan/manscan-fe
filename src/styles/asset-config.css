@@ -3,6 +3,7 @@
   min-width: 0;
   height: 100vh;
   overflow: hidden;
+  background: #fcfbf8;
 }
 
 .asset-config-page {
@@ -14,6 +15,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 12px 24px;
+  background: #fcfbf8;
   color: #23262e;
   scrollbar-gutter: stable;
 }
@@ -295,32 +297,37 @@
 
 .asset-config-toolbar {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  width: 100%;
   min-width: 0;
+  margin-top: 14px;
+  overflow: visible;
 }
 
 .asset-config-search-field {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1 1 520px;
+  flex: 1 1 460px;
+  max-width: 720px;
   min-width: 0;
   height: 46px;
-  border: 2px solid #2f2925;
-  border-radius: 18px;
-  background: rgba(255, 253, 247, 0.96);
+  border: 3px solid #2f2925;
+  border-radius: 20px;
+  background: #fffdf6;
   box-shadow: 0 2px 0 #2f2925;
   transition:
     background-color 0.2s ease,
+    border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
 }
 
 .asset-config-search-field:hover,
 .asset-config-search-field:focus-within {
-  background: #fffaf1;
+  background: #fff8e9;
   box-shadow: 0 4px 0 #2f2925;
   transform: translateY(-1px);
 }
@@ -328,45 +335,31 @@
 .asset-config-search-field input {
   width: 100%;
   height: 100%;
-  padding: 0 42px 0 14px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 16px;
+  border-radius: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
   background: transparent;
   box-shadow: none;
-  color: #25211e;
+  color: #2f2925;
   font-size: 13px;
   font-weight: 700;
-  outline: none;
 }
 
 .asset-config-search-field input::placeholder {
-  color: #beb8b0;
+  color: #c2baaf;
 }
 
 .asset-config-search-icon {
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: #2f2925;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.asset-config-search-icon svg {
-  width: 18px;
-  height: 18px;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  display: none;
 }
 
 .asset-config-filter-wrap {
   position: relative;
   flex: 0 0 auto;
+  z-index: 2;
 }
 
 .asset-config-filter-trigger,
@@ -374,21 +367,29 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
   height: 46px;
-  padding: 0 12px;
-  border: 2px solid #2f2925;
-  border-radius: 15px;
-  background: rgba(255, 253, 247, 0.96);
-  box-shadow: 0 2px 0 #2f2925;
-  color: #25211e;
+  padding: 0 16px;
+  border: 3px solid #2f2925;
+  border-radius: 18px;
+  background: #fffdf6;
+  color: #2f2925;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 800;
   white-space: nowrap;
+  box-shadow: 0 2px 0 #2f2925;
   transition:
     background-color 0.2s ease,
+    border-color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+.asset-config-filter-trigger svg,
+.asset-config-clear-button svg {
+  width: 18px;
+  height: 18px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .asset-config-create-trigger {
@@ -397,34 +398,32 @@
 }
 
 .asset-config-filter-trigger:hover,
+.asset-config-filter-trigger:focus-visible,
 .asset-config-filter-trigger.active {
   background: #fff4cf;
   box-shadow: 0 4px 0 #2f2925;
   transform: translateY(-1px);
 }
 
-.asset-config-filter-trigger svg,
-.asset-config-clear-button svg {
-  width: 16px;
-  height: 16px;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .asset-config-clear-button {
-  width: 46px;
+  width: 32px;
+  min-width: 32px;
   padding: 0;
   background: #fff1f3;
   color: #d3455a;
 }
 
 .asset-config-create-trigger {
+  min-width: 0;
+  padding: 0 16px;
   background: #fff4cf;
-  color: #25211e;
+  color: #2f2925;
 }
 
 .asset-config-create-trigger:hover:not(:disabled) {
   background: #ffeaa3;
+  box-shadow: 0 4px 0 #2f2925;
+  transform: translateY(-1px);
 }
 
 .asset-config-clear-button:hover {
@@ -437,67 +436,93 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  z-index: 20;
-  width: 260px;
-  max-width: min(260px, calc(100vw - 24px));
+  z-index: 30;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 24px));
   max-height: 360px;
-  padding: 10px;
+  padding: 8px;
   border: 3px solid #2f2925;
-  border-radius: 18px;
-  background: rgba(255, 253, 247, 0.98);
-  box-shadow: 0 4px 0 #2f2925;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #fffdf6 0%, #fff9ed 100%);
+  box-shadow: 0 6px 0 #2f2925;
   overflow: auto;
   transform-origin: top right;
 }
 
 .asset-config-filter-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 38px;
-  padding: 0 10px;
-  border-radius: 11px;
-  color: #25211e;
-  font-size: 13px;
-  font-weight: 900;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
+  color: #2f2925;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
   text-align: left;
   transition:
     background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
     transform 0.18s ease;
 }
 
-.asset-config-filter-option:hover,
+.asset-config-filter-option:hover {
+  background: #fff7df;
+  border-color: rgba(47, 41, 37, 0.18);
+  box-shadow: 0 2px 0 rgba(47, 41, 37, 0.9);
+  transform: translate(-1px, -1px);
+}
+
 .asset-config-filter-option.selected {
-  background: rgba(255, 226, 131, 0.35);
+  background: #ffe89e;
+  border-color: #2f2925;
+  box-shadow: 0 3px 0 #2f2925;
+  transform: translate(-1px, -1px);
 }
 
 .asset-config-filter-check {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border: 2px solid #2f2925;
-  border-radius: 4px;
-  background: #fff;
+  border-radius: 8px;
+  background: #fffef9;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
   flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
 .asset-config-filter-check.selected {
-  background: #ffd54f;
+  position: relative;
+  background: #2f2925;
+}
+
+.asset-config-filter-check.selected::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 8px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: translate(-45%, -58%) rotate(45deg);
+  box-sizing: border-box;
 }
 
 .asset-config-filter-option-label {
   min-width: 0;
   flex: 1 1 auto;
-}
-
-.asset-config-filter-option-count {
-  flex: 0 0 auto;
-  color: #6f7684;
-  font-size: 11px;
-  font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .asset-config-panel-link {
@@ -839,10 +864,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
+  padding: 18px;
   border: 3px solid var(--line);
-  border-radius: 20px;
-  background: var(--surface);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(255, 249, 229, 0.98));
   box-shadow: var(--shadow-flat-lg);
   overflow: hidden;
 }
@@ -876,31 +901,215 @@
 .asset-config-dialog-textarea {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .asset-config-dialog-grid span,
 .asset-config-dialog-textarea span {
-  color: #6c7280;
-  font-size: 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .asset-config-dialog input,
 .asset-config-dialog textarea,
 .asset-config-dialog select {
   width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 2px solid rgba(31, 26, 23, 0.22);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: none;
+  min-height: 46px;
+  padding: 0 14px;
+  border: var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.asset-config-dialog input::placeholder,
+.asset-config-dialog textarea::placeholder {
+  color: rgba(94, 88, 80, 0.72);
+}
+
+.asset-config-dialog input:hover,
+.asset-config-dialog textarea:hover,
+.asset-config-dialog select:hover,
+.asset-config-dialog input:focus,
+.asset-config-dialog textarea:focus,
+.asset-config-dialog select:focus {
+  background: #fff8e9;
+  box-shadow: var(--shadow-flat-lg);
+  transform: translate(-1px, -1px);
 }
 
 .asset-config-dialog textarea {
-  min-height: 96px;
-  padding: 12px;
+  min-height: 104px;
+  padding: 12px 14px;
   resize: vertical;
+}
+
+.asset-config-dialog-combobox {
+  position: relative;
+  min-width: 0;
+}
+
+.asset-config-dialog-combobox-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 8;
+  max-height: 240px;
+  padding: 8px;
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.99), rgba(255, 246, 219, 0.99));
+  box-shadow: var(--shadow-flat-lg);
+  overflow: auto;
+}
+
+.asset-config-dialog-combobox-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  text-align: left;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.asset-config-dialog-combobox-option:hover {
+  background: #fff4cf;
+  border-color: rgba(31, 26, 23, 0.16);
+  box-shadow: 0 2px 0 rgba(31, 26, 23, 0.88);
+  transform: translate(-1px, -1px);
+}
+
+.asset-config-dialog-combobox-option-main {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.asset-config-dialog-combobox-option-sub {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.asset-config-dialog-combobox-empty {
+  padding: 10px 12px 8px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.asset-config-dialog-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.asset-config-dialog-status-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+  color: var(--ink);
+  text-align: left;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.asset-config-dialog-status-option:hover {
+  background: #fff8e9;
+  transform: translate(-1px, -1px);
+  box-shadow: var(--shadow-flat-lg);
+}
+
+.asset-config-dialog-status-option.active {
+  background: #ffe89e;
+  box-shadow: var(--shadow-flat-lg);
+}
+
+.asset-config-dialog-status-mark {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: #fffef9;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.asset-config-dialog-status-mark.is-low {
+  background: #c9efb8;
+}
+
+.asset-config-dialog-status-mark.is-medium {
+  background: #f5d38a;
+}
+
+.asset-config-dialog-status-option.active .asset-config-dialog-status-mark {
+  background: var(--line);
+}
+
+.asset-config-dialog-status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.asset-config-dialog-status-copy strong {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.asset-config-dialog-status-copy small {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.asset-config-dialog select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--line) 50%),
+    linear-gradient(135deg, var(--line) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 50%,
+    calc(100% - 14px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .asset-config-dialog-error {
@@ -916,7 +1125,7 @@
 }
 
 .asset-config-dialog-button.is-ghost {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--surface);
 }
 
 .asset-config-dialog-button:hover:not(:disabled) {
@@ -1003,7 +1212,7 @@
 }
 
 .asset-config-toolbar {
-  gap: 6px;
+  gap: 8px;
 }
 
 .asset-config-search-field,
@@ -1014,14 +1223,19 @@
 }
 
 .asset-config-search-field input {
-  padding: 0 38px 0 12px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: inherit;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  box-shadow: none;
   font-size: 12px;
 }
 
 .asset-config-search-icon {
-  width: 14px;
-  height: 14px;
-  right: 12px;
+  display: none;
 }
 
 .asset-config-search-icon svg,
@@ -1035,36 +1249,41 @@
 }
 
 .asset-config-filter-trigger {
-  padding: 0 10px;
+  padding: 0 12px;
   min-width: 0;
   font-size: 12px;
 }
 
 .asset-config-clear-button {
-  width: 40px;
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
 }
 
 .asset-config-filter-menu {
-  width: 228px;
-  max-width: min(228px, calc(100vw - 24px));
-  padding: 8px;
+  width: 218px;
+  max-width: min(218px, calc(100vw - 24px));
+  padding: 6px;
 }
 
 .asset-config-filter-option {
-  min-height: 34px;
+  min-height: 40px;
   padding: 0 8px;
   gap: 8px;
+  border-radius: 14px;
   font-size: 12px;
 }
 
 .asset-config-filter-check {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-width: 2px;
 }
 
-.asset-config-filter-option-count {
-  font-size: 10px;
+.asset-config-filter-check.selected::after {
+  width: 4px;
+  height: 7px;
+  transform: translate(-45%, -58%) rotate(45deg);
 }
 
 .asset-config-entry-board {
@@ -1142,10 +1361,60 @@
 .asset-config-dialog input,
 .asset-config-dialog textarea,
 .asset-config-dialog select {
-  min-height: 38px;
-  border-radius: 12px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  font-size: 13px;
 }
 
 .asset-config-dialog textarea {
-  min-height: 88px;
+  min-height: 92px;
+  padding: 10px 12px;
+}
+
+.asset-config-dialog-combobox-menu {
+  top: calc(100% + 6px);
+  max-height: 200px;
+  padding: 6px;
+  border-radius: 16px;
+}
+
+.asset-config-dialog-combobox-option {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.asset-config-dialog-combobox-option-main {
+  font-size: 13px;
+}
+
+.asset-config-dialog-combobox-option-sub {
+  font-size: 11px;
+}
+
+.asset-config-dialog select {
+  padding-right: 38px;
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 5px 5px, 5px 5px;
+}
+
+.asset-config-dialog-status {
+  gap: 6px;
+}
+
+.asset-config-dialog-status-option {
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+.asset-config-dialog-status-copy strong {
+  font-size: 12px;
+}
+
+.asset-config-dialog-status-copy small {
+  font-size: 10px;
 }

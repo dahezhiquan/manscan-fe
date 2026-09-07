@@ -76,7 +76,7 @@ export const vulnerabilityStats = [
   { key: 'critical', label: '严重', value: 0, tone: 'critical' },
   { key: 'high', label: '高危', value: 0, tone: 'high' },
   { key: 'medium', label: '中危', value: 0, tone: 'medium' },
-  { key: 'info', label: 'info', value: 0, tone: 'info' },
+  { key: 'info', label: 'INFO', value: 0, tone: 'info' },
   { key: 'low', label: '低危', value: 0, tone: 'low' }
 ]
 

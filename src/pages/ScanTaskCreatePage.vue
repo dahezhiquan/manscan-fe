@@ -87,16 +87,16 @@ const stepFields = {
       key: 'targets',
       label: '目标列表',
       type: 'string[]',
-      placeholder: '每行一个目标，例如：https://example.com',
-      helper: '',
+      placeholder: '每行一个目标，例如：https://example.com；支持 URL、域名、IP、IP:port、CIDR 网段',
+      showMeta: false,
       itemLabel: '目标'
     },
     {
       key: 'exclude_targets',
       label: '排除目标',
       type: 'string[]',
-      placeholder: '每行一个排除项',
-      helper: '',
+      placeholder: '每行一个排除项，例如：10.0.0.0/8；支持 URL、域名、IP、IP:port、CIDR 网段',
+      showMeta: false,
       itemLabel: '排除项'
     }
   ],
@@ -1684,7 +1684,7 @@ onBeforeUnmount(() => {
                 rows="6"
                 @input="updateFieldValue(field, $event)"
               ></textarea>
-              <div v-if="field.type === 'string[]'" class="scan-create-field-note">
+              <div v-if="field.type === 'string[]' && field.showMeta !== false" class="scan-create-field-note">
                 <span>{{ getArrayFieldMeta(field)?.helper }}</span>
                 <strong>{{ getArrayFieldMeta(field)?.summary }}</strong>
               </div>

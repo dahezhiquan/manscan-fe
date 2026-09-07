@@ -4,7 +4,7 @@ export const ASSET_CONFIG_CATEGORY_META = {
     icon: 'shield',
     summary: '不参与扫描的域名、Host、路径和资产前缀',
     itemLabel: '白名单项',
-    itemPlaceholder: '例如：*.internal.example.com',
+    itemPlaceholder: '例如：example.com',
     itemScopeLabel: '生效范围',
     itemScopePlaceholder: '例如：主动扫描 / 被动采集',
     itemValueLabel: '白名单值',
