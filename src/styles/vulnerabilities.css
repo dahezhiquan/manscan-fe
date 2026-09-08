@@ -652,16 +652,16 @@
 }
 
 .vulnerabilities-filter-panel > .vulnerabilities-clear-button {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   margin-left: 2px;
-  border-radius: 15px;
+  border-radius: 11px;
 }
 
 .vulnerabilities-selection-tools .vulnerabilities-clear-button {
-  width: 46px;
-  height: 46px;
-  border-radius: 15px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
 }
 
 .vulnerabilities-clear-button:hover {

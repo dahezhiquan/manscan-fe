@@ -87,7 +87,7 @@ const stepFields = {
       key: 'targets',
       label: '目标列表',
       type: 'string[]',
-      placeholder: '每行一个目标，例如：https://example.com；支持 URL、域名、IP、IP:port、CIDR 网段',
+      placeholder: '每行一个目标，例如：https://example.com；支持 URL、域名、IPv4、IPv6、IP:port、CIDR 网段',
       showMeta: false,
       itemLabel: '目标'
     },
@@ -95,7 +95,7 @@ const stepFields = {
       key: 'exclude_targets',
       label: '排除目标',
       type: 'string[]',
-      placeholder: '每行一个排除项，例如：10.0.0.0/8；支持 URL、域名、IP、IP:port、CIDR 网段',
+      placeholder: '每行一个排除项，例如：10.0.0.0/8；支持 URL、域名、IPv4、IPv6、IP:port、CIDR 网段',
       showMeta: false,
       itemLabel: '排除项'
     }

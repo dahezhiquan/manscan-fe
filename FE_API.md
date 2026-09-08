@@ -258,7 +258,98 @@
 - 联调注意事项：
   - 前端当前仅在任务状态为 `paused` 时展示恢复按钮
   - 点击后前端会立即切回“继续执行中”交互态，并恢复实时日志连接与详情轮询
-  - 后端受理恢复后，任务状态通常会先回到 `pending`，随后再进入 `running`
+
+## 资产配置中心接口
+
+### 14. 获取资产配置中心列表
+
+- 用途：资产配置中心页表格渲染、分页、筛选和当前列表总数展示
+- 请求方式：`GET`
+- 路径：`/api/v1/asset-config-centers`
+- 请求参数：
+  - `page`: 页码
+  - `page_size`: 每页条数，前端当前使用 `10` / `20` / `50`
+  - `item_name`: 项名称模糊搜索
+  - `big_category`: 大分类过滤，前端固定支持 `scanDisabled`、`network`、`passive_traffic_addresses`
+  - `small_category`: 小分类筛选，筛选值来自 `/api/v1/asset-config-centers/options/small-categories`
+  - `status`: 状态过滤，支持 `enabled`、`disabled`
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].id`
+  - `items[].item_name`
+  - `items[].big_category`
+  - `items[].small_category`
+  - `items[].status`
+  - `items[].description`
+- 异常分支：
+  - 首屏失败时展示阻塞错误态和重试按钮
+  - 有数据时失败展示顶部告警条，但保留当前列表
+  - `page` 超出总页数时，前端会自动回跳到最后一页并重试
+- 联调注意事项：
+  - 资产配置中心页顶部 4 个分类标签分别对应 `全部配置`、`scanDisabled`、`network`、`passive_traffic_addresses`
+  - 前端小类筛选使用选项菜单，不再提供手输小分类搜索框
+  - 返回项建议保持 `item_name` 全局唯一
+
+### 15. 获取资产配置中心小分类选项
+
+- 用途：资产配置中心页“小分类”筛选菜单选项
+- 请求方式：`GET`
+- 路径：`/api/v1/asset-config-centers/options/small-categories`
+- 请求参数：
+  - `big_category`: 大分类，前端在单个分类页传当前大类；在“全部配置”页会传 `scanDisabled`、`network`、`passive_traffic_addresses`
+- 返回结构：前端使用 `data.items`
+- 异常分支：
+  - 请求失败时，小分类菜单展示失败原因和重试按钮
+  - 失败不阻塞资产配置中心列表渲染
+- 联调注意事项：
+  - `items` 推荐返回字符串数组，例如 `["api", "web"]`
+  - 前端会过滤空字符串并去重
+
+### 16. 新增资产配置项
+
+- 用途：资产配置中心页新增弹窗提交
+- 请求方式：`POST`
+- 路径：`/api/v1/asset-config-centers`
+- 请求参数：
+  - 请求体为 JSON
+  - `item_name`: 项名称
+  - `big_category`: 大分类
+  - `small_category`: 小分类
+  - `status`: `enabled` / `disabled`
+  - `description`: 说明
+- 返回结构：前端使用后端标准响应包裹中的 `data`
+- 异常分支：
+  - `item_name` 重复、必填字段缺失或 `status` 非法时，前端展示后端返回的错误信息
+- 联调注意事项：
+  - 前端提交前只做基础空值校验，唯一性仍以后端返回为准
+
+### 17. 编辑资产配置项
+
+- 用途：资产配置中心页编辑弹窗提交
+- 请求方式：`PUT`
+- 路径：`/api/v1/asset-config-centers/:id`
+- 请求参数：
+  - 路径参数 `id`
+  - 请求体为 JSON，字段与新增接口一致
+- 返回结构：前端使用后端标准响应包裹中的 `data`
+- 异常分支：
+  - `40401` 时展示“资产配置项不存在”一类错误
+  - `item_name` 重复或字段非法时，展示后端返回的错误信息
+- 联调注意事项：
+  - 前端按当前行数据回填表单，保存成功后会刷新当前列表和小类选项
+
+### 18. 删除资产配置项
+
+- 用途：资产配置中心页删除确认弹窗提交
+- 请求方式：`DELETE`
+- 路径：`/api/v1/asset-config-centers/:id`
+- 请求参数：
+  - 路径参数 `id`
+- 返回结构：前端使用后端标准响应包裹中的 `data`
+- 异常分支：
+  - `40401` 时展示资源不存在错误
+  - `50001` 时展示删除失败提示
+- 联调注意事项：
+  - 删除成功后前端会刷新当前列表和小类选项
 
 ### 14. 获取扫描任务详情
 

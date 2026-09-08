@@ -1,13 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import AppShell from '../components/layout/AppShell.vue'
 import {
-  ASSET_CONFIG_CATEGORY_ORDER,
-  ASSET_CONFIG_CATEGORY_META,
-  createAssetConfigState,
-  normalizeAssetConfigState,
-  getAssetConfigCategoryMeta
-} from '../data/asset-config'
+  createAssetConfigCenter,
+  deleteAssetConfigCenter,
+  getAssetConfigCenterList,
+  getAssetConfigCenterSmallCategoryOptions,
+  updateAssetConfigCenter
+} from '../api/asset-config'
+import AppShell from '../components/layout/AppShell.vue'
 import { formatCount } from '../utils/scanTask'
 import { iconPath } from '../utils/icons'
 
@@ -28,376 +28,573 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-sidebar'])
 
-const STORAGE_KEY = 'manscan.asset-config-center.v1'
-const FILTER_MENU_KEYS = {
-  group: 'group',
-  status: 'status'
-}
-
-const categories = ref(loadAssetConfigState())
-const activeCategoryKey = ref(categories.value[0]?.key ?? ASSET_CONFIG_CATEGORY_ORDER[0])
-const filtersRef = ref(null)
-const entrySearch = ref('')
-const selectedGroupFilter = ref('all')
-const selectedStatusFilter = ref('all')
-const activeFilterMenu = ref('')
-const isItemDialogOpen = ref(false)
-const itemDialogMode = ref('create')
-const itemDialogError = ref('')
-const groupInfoMenuOpen = ref(false)
-
-const itemForm = reactive(createEmptyItemForm())
-let groupInfoCloseTimer = null
-
-const statusMetaMap = {
-  enabled: { label: '启用', tone: 'low' },
-  disabled: { label: '未启用', tone: 'medium' }
-}
-
-const categoryTabs = computed(() =>
-  ASSET_CONFIG_CATEGORY_ORDER.map((key) => {
-    const category = categories.value.find((item) => item.key === key)
-    const meta = getAssetConfigCategoryMeta(key)
-    const groups = category?.groups ?? []
-    return {
-      key,
-      meta,
-      entryCount: groups.reduce((total, group) => total + (group.entries?.length ?? 0), 0)
-    }
-  })
-)
-
-const activeCategory = computed(
-  () => categories.value.find((category) => category.key === activeCategoryKey.value) ?? categories.value[0] ?? null
-)
-
-const activeCategoryMeta = computed(() =>
-  activeCategory.value ? getAssetConfigCategoryMeta(activeCategory.value.key) : ASSET_CONFIG_CATEGORY_META.whitelist
-)
-
-const activeGroups = computed(() => activeCategory.value?.groups ?? [])
-
-const activeEntryRows = computed(() =>
-  activeGroups.value.flatMap((group) =>
-    (group.entries ?? []).map((entry) => ({
-      id: entry.id,
-      value: entry.value,
-      note: entry.note,
-      scope: entry.scope,
-      status: normalizeStatus(entry.status),
-      groupId: group.id,
-      groupName: group.name,
-      groupDescription: group.description,
-      groupOwner: group.owner,
-      groupScope: group.scope,
-      groupTags: group.tags ?? []
-    }))
-  )
-)
-
-const groupFilterOptions = computed(() => {
-  const allCount = activeEntryRows.value.length
-  return [
-    { value: 'all', label: '全部组', count: allCount },
-    ...activeGroups.value.map((group) => ({
-      value: group.id,
-      label: group.name,
-      count: (group.entries ?? []).length
-    }))
-  ]
-})
-
-const statusFilterOptions = computed(() => {
-  const rows = activeEntryRows.value
-  const statusKeys = ['enabled', 'disabled']
-
-  return [
-    { value: 'all', label: '全部状态', count: rows.length },
-    ...statusKeys.map((value) => ({
-      value,
-      label: formatStatusLabel(value),
-      count: rows.filter((row) => row.status === value).length
-    }))
-  ]
-})
-
-const selectedGroupLabel = computed(
-  () => groupFilterOptions.value.find((item) => item.value === selectedGroupFilter.value)?.label ?? '组'
-)
-
-const selectedStatusLabel = computed(
-  () => statusFilterOptions.value.find((item) => item.value === selectedStatusFilter.value)?.label ?? '状态'
-)
-
-const filteredEntryRows = computed(() => {
-  const keyword = entrySearch.value.trim().toLowerCase()
-  const groupFilter = selectedGroupFilter.value
-  const statusFilter = selectedStatusFilter.value
-
-  return activeEntryRows.value.filter((row) => {
-    if (groupFilter !== 'all' && row.groupId !== groupFilter) {
-      return false
-    }
-
-    if (statusFilter !== 'all' && row.status !== statusFilter) {
-      return false
-    }
-
-    if (!keyword) {
-      return true
-    }
-
-    return [
-      row.value,
-      row.note,
-      row.groupName,
-      row.groupOwner,
-      row.groupScope,
-      row.status,
-      ...row.groupTags
-    ]
-      .join(' ')
-      .toLowerCase()
-      .includes(keyword)
-  })
-})
-
-const activeItemDialogTitle = computed(() =>
-  itemDialogMode.value === 'create' ? '新增条目' : '编辑条目'
-)
-
-const itemFieldMeta = computed(() => activeCategoryMeta.value)
-const itemSearchPlaceholder = computed(() => `搜索${itemFieldMeta.value.itemLabel}...`)
-const groupInfoSuggestions = computed(() => {
-  const keyword = normalizeGroupInfo(itemForm.groupInfo)
-  const groups = activeGroups.value
-
-  return groups
-    .map((group, index) => {
-      if (!keyword) {
-        return { group, index, rank: 0 }
-      }
-
-      const fields = [group.id, group.name, group.scope, formatGroupDisplay(group)].map(normalizeGroupInfo)
-      const exactMatch = fields.some((value) => value === keyword)
-      const partialMatch = fields.some((value) => value.includes(keyword))
-
-      return {
-        group,
-        index,
-        rank: exactMatch ? 0 : partialMatch ? 1 : 2
-      }
-    })
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
-    .map((item) => item.group)
-})
-const statusOptions = [
-  { value: 'enabled', label: '启用', summary: '当前生效', tone: 'low' },
-  { value: 'disabled', label: '未启用', summary: '暂不生效', tone: 'medium' }
+const CATEGORY_OPTIONS = [
+  {
+    value: '',
+    label: '全部配置',
+    icon: 'grid'
+  },
+  {
+    value: 'scanDisabled',
+    label: '全局扫描白名单',
+    icon: 'shield'
+  },
+  {
+    value: 'network',
+    label: '网络网段信息',
+    icon: 'stack'
+  },
+  {
+    value: 'passive_traffic_addresses',
+    label: '被动流量地址配置',
+    icon: 'server'
+  }
 ]
 
+const CATEGORY_VALUE_SET = new Set(CATEGORY_OPTIONS.map((item) => item.value).filter(Boolean))
+const STATUS_OPTIONS = [
+  { value: '', label: '全部状态', tone: 'all' },
+  { value: 'enabled', label: '启用', tone: 'low' },
+  { value: 'disabled', label: '停用', tone: 'medium' }
+]
+const FORM_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value)
+const DEFAULT_PAGE_SIZE = 10
+const SEARCH_DEBOUNCE = 280
+
+const filtersRef = ref(null)
+const activeFilterMenu = ref('')
+const isFormDialogOpen = ref(false)
+const isDeleteDialogOpen = ref(false)
+const formMode = ref('create')
+const currentPage = ref(1)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
+const selectedCategory = ref('')
+const selectedStatus = ref('')
+const selectedSmallCategory = ref('')
+const itemNameInput = ref('')
+const appliedItemName = ref('')
+const smallCategoryOptions = ref([])
+const tableRows = ref([])
+const total = ref(0)
+const totalPages = ref(1)
+const listError = ref('')
+const smallCategoryOptionsError = ref('')
+const isLoading = ref(true)
+const isRefreshing = ref(false)
+const isSmallCategoryOptionsLoading = ref(false)
+const isSaving = ref(false)
+const isDeleting = ref(false)
+const formError = ref('')
+const deleteError = ref('')
+const deleteTarget = ref(null)
+const formState = reactive(createEmptyForm())
+
+let listController = null
+let smallCategoryOptionsController = null
+let searchTimer = null
+let listRequestId = 0
+let smallCategoryOptionsRequestId = 0
+
+const activeCategoryMeta = computed(() => getCategoryMeta(selectedCategory.value))
+const activeCategoryLabel = computed(() => activeCategoryMeta.value.label)
+const selectedStatusLabel = computed(() => getFilterStatusMeta(selectedStatus.value).label)
+const selectedSmallCategoryLabel = computed(() => selectedSmallCategory.value || '小分类')
 const hasFilters = computed(
   () =>
-    entrySearch.value.trim() !== '' ||
-    selectedGroupFilter.value !== 'all' ||
-    selectedStatusFilter.value !== 'all'
+    selectedCategory.value !== '' ||
+    selectedStatus.value !== '' ||
+    appliedItemName.value !== '' ||
+    selectedSmallCategory.value !== ''
+)
+const hasData = computed(() => tableRows.value.length > 0)
+const showInitialLoading = computed(() => isLoading.value && !hasData.value)
+const showBlockingError = computed(() => Boolean(listError.value) && !hasData.value && !isLoading.value)
+const showInlineError = computed(() => Boolean(listError.value) && hasData.value)
+const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
+const currentPageStart = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+const currentPageEnd = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return Math.min(total.value, currentPageStart.value + tableRows.value.length - 1)
+})
+const pageSummary = computed(() => {
+  if (!total.value) {
+    return '当前没有匹配到资产配置项'
+  }
+
+  return `第 ${currentPage.value} / ${Math.max(totalPages.value, 1)} 页，显示 ${formatCount(currentPageStart.value)} - ${formatCount(currentPageEnd.value)}，共 ${formatCount(total.value)} 条`
+})
+const categoryTabs = computed(() => CATEGORY_OPTIONS)
+const formTitle = computed(() => (formMode.value === 'create' ? '新增资产配置项' : '编辑资产配置项'))
+const deleteTargetLabel = computed(() => deleteTarget.value?.item_name || '')
+const deleteTargetCategoryLabel = computed(() => getCategoryLabel(deleteTarget.value?.big_category))
+const deleteTargetSummary = computed(() => {
+  if (!deleteTarget.value) {
+    return ''
+  }
+
+  const parts = [deleteTargetCategoryLabel.value]
+  if (deleteTarget.value.small_category) {
+    parts.push(deleteTarget.value.small_category)
+  }
+  if (deleteTarget.value.status) {
+    parts.push(getStatusMeta(deleteTarget.value.status).label)
+  }
+
+  return parts.filter(Boolean).join(' · ')
+})
+
+const normalizedRows = computed(() =>
+  tableRows.value.map((item) => ({
+    id: item.id,
+    item_name: item.item_name,
+    big_category: item.big_category,
+    bigCategoryLabel: getCategoryLabel(item.big_category),
+    small_category: item.small_category,
+    status: normalizeStatus(item.status),
+    statusLabel: getStatusMeta(item.status).label,
+    description: item.description
+  }))
 )
 
 watch(
-  activeCategoryKey,
+  [selectedCategory, selectedStatus, appliedItemName, selectedSmallCategory, currentPage, pageSize],
   () => {
-    syncFilterState()
+    void loadAssetConfigList()
   },
   { immediate: true }
 )
 
+watch(itemNameInput, scheduleSearchCommit)
+
 watch(
-  categories,
+  selectedCategory,
   () => {
-    persistAssetConfigState()
+    void loadSmallCategoryOptions()
   },
-  { deep: true }
+  { immediate: true }
 )
 
-function syncActiveGroup() {
-  if (!activeCategory.value) {
-    return
+function getCategoryMeta(value) {
+  return CATEGORY_OPTIONS.find((item) => item.value === value) ?? CATEGORY_OPTIONS[0]
+}
+
+function getCategoryLabel(value) {
+  return getCategoryMeta(value).label
+}
+
+function getStatusMeta(value) {
+  const normalized = normalizeStatus(value)
+  return STATUS_OPTIONS.find((item) => item.value === normalized) ?? STATUS_OPTIONS[0]
+}
+
+function getFilterStatusMeta(value) {
+  const normalized = normalizeFilterStatus(value)
+  return STATUS_OPTIONS.find((item) => item.value === normalized) ?? STATUS_OPTIONS[0]
+}
+
+function normalizeStatus(value) {
+  return String(value ?? '').trim().toLowerCase() === 'enabled' ? 'enabled' : 'disabled'
+}
+
+function normalizeFilterStatus(value) {
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return normalized === 'enabled' || normalized === 'disabled' ? normalized : ''
+}
+
+function normalizeCategory(value) {
+  const normalized = String(value ?? '').trim()
+  return CATEGORY_VALUE_SET.has(normalized) ? normalized : ''
+}
+
+function normalizeText(value) {
+  return String(value ?? '').trim()
+}
+
+function toPositiveInt(value, fallback = 1) {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+function toNonNegativeInt(value, fallback = 0) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : fallback
+}
+
+function createEmptyForm() {
+  return {
+    id: '',
+    item_name: '',
+    big_category: CATEGORY_OPTIONS[1]?.value ?? '',
+    small_category: '',
+    status: 'enabled',
+    description: ''
   }
+}
 
-  const currentGroupExists = activeGroups.value.some((group) => group.id === selectedGroupFilter.value)
-  if (!currentGroupExists) {
-    selectedGroupFilter.value = 'all'
+function resetForm(nextCategory = '') {
+  Object.assign(formState, createEmptyForm(), {
+    big_category: normalizeCategory(nextCategory) || CATEGORY_OPTIONS[1]?.value || ''
+  })
+}
+
+function populateForm(row) {
+  Object.assign(formState, {
+    id: row.id,
+    item_name: row.item_name,
+    big_category: normalizeCategory(row.big_category) || CATEGORY_OPTIONS[1]?.value || '',
+    small_category: row.small_category || '',
+    status: normalizeStatus(row.status),
+    description: row.description || ''
+  })
+}
+
+function normalizeListResponse(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : []
+  const nextPageSize = toPositiveInt(payload?.pageSize ?? payload?.page_size, pageSize.value)
+  const nextTotal = toNonNegativeInt(payload?.total, 0)
+  const nextTotalPages = toPositiveInt(
+    payload?.totalPages ?? payload?.total_pages,
+    nextTotal > 0 ? Math.max(1, Math.ceil(nextTotal / nextPageSize)) : 1
+  )
+
+  return {
+    page: toPositiveInt(payload?.page, currentPage.value),
+    pageSize: nextPageSize,
+    total: nextTotal,
+    totalPages: nextTotalPages,
+    items: items.map(normalizeAssetConfigItem)
   }
 }
 
-function syncFilterState() {
-  syncActiveGroup()
-  closeFilterMenus()
+function normalizeSmallCategoryOptionsResponse(payload) {
+  const items = Array.isArray(payload?.items) ? payload.items : []
+  const values = items
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item
+      }
+
+      return item?.value ?? item?.label ?? item?.small_category ?? item?.name ?? ''
+    })
+    .map(normalizeText)
+    .filter(Boolean)
+
+  return [...new Set(values)]
 }
 
-function selectCategory(key) {
-  if (!key || key === activeCategoryKey.value) {
-    return
+function normalizeAssetConfigItem(item) {
+  return {
+    id: item?.id,
+    item_name: normalizeText(item?.item_name),
+    big_category: normalizeCategory(item?.big_category),
+    small_category: normalizeText(item?.small_category),
+    status: normalizeStatus(item?.status),
+    description: normalizeText(item?.description)
   }
-
-  activeCategoryKey.value = key
 }
 
-function isMenuOpen(key) {
-  return activeFilterMenu.value === key
+function buildListFilters() {
+  return {
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    itemName: appliedItemName.value,
+    bigCategory: selectedCategory.value || undefined,
+    smallCategory: selectedSmallCategory.value,
+    status: selectedStatus.value || undefined
+  }
 }
 
-function toggleFilterMenu(key) {
-  activeFilterMenu.value = activeFilterMenu.value === key ? '' : key
+function buildSmallCategoryOptionFilters() {
+  return {
+    bigCategory: selectedCategory.value || [...CATEGORY_VALUE_SET]
+  }
 }
 
-function closeFilterMenus() {
+function scheduleSearchCommit() {
+  window.clearTimeout(searchTimer)
+  searchTimer = window.setTimeout(() => {
+    appliedItemName.value = normalizeText(itemNameInput.value)
+    currentPage.value = 1
+  }, SEARCH_DEBOUNCE)
+}
+
+function selectCategory(value) {
+  selectedCategory.value = normalizeCategory(value)
+  selectedSmallCategory.value = ''
+  currentPage.value = 1
+}
+
+function selectSmallCategory(value) {
+  selectedSmallCategory.value = normalizeText(value)
+  currentPage.value = 1
+  closeFilterMenu()
+}
+
+function selectStatus(value) {
+  selectedStatus.value = normalizeFilterStatus(value)
+  currentPage.value = 1
+  closeFilterMenu()
+}
+
+function clearFilters() {
+  selectedCategory.value = ''
+  selectedStatus.value = ''
+  selectedSmallCategory.value = ''
+  itemNameInput.value = ''
+  appliedItemName.value = ''
+  currentPage.value = 1
+  closeFilterMenu()
+}
+
+function toggleSmallCategoryMenu() {
+  activeFilterMenu.value = activeFilterMenu.value === 'smallCategory' ? '' : 'smallCategory'
+}
+
+function toggleStatusMenu() {
+  activeFilterMenu.value = activeFilterMenu.value === 'status' ? '' : 'status'
+}
+
+function closeFilterMenu() {
   activeFilterMenu.value = ''
 }
 
-function selectGroupFilter(groupId) {
-  selectedGroupFilter.value = groupId || 'all'
-  closeFilterMenus()
+function isSmallCategoryMenuOpen() {
+  return activeFilterMenu.value === 'smallCategory'
 }
 
-function selectStatusFilter(status) {
-  selectedStatusFilter.value = status || 'all'
-  closeFilterMenus()
+function isStatusMenuOpen() {
+  return activeFilterMenu.value === 'status'
 }
 
-function openItemDialog(mode, item = null) {
-  if (mode === 'create') {
-    const defaultGroupInfo = resolveDefaultGroupInfo()
-    if (!defaultGroupInfo) {
-      itemDialogError.value = '请先选择一个筛选项。'
-      return
-    }
+function openCreateDialog() {
+  formMode.value = 'create'
+  formError.value = ''
+  resetForm(selectedCategory.value)
+  isFormDialogOpen.value = true
+}
 
-    itemDialogMode.value = mode
-    itemDialogError.value = ''
-    isItemDialogOpen.value = true
-    resetItemForm(defaultGroupInfo)
-    closeGroupInfoMenu()
+function openEditDialog(row) {
+  if (!row) {
     return
   }
 
-  if (!item) {
-    itemDialogError.value = '未找到要编辑的条目。'
+  formMode.value = 'edit'
+  formError.value = ''
+  populateForm(row)
+  isFormDialogOpen.value = true
+}
+
+function closeFormDialog() {
+  isFormDialogOpen.value = false
+  formError.value = ''
+}
+
+function openDeleteDialog(row) {
+  if (!row) {
     return
   }
 
-  itemDialogMode.value = mode
-  itemDialogError.value = ''
-  isItemDialogOpen.value = true
-  populateItemForm(item)
-  closeGroupInfoMenu()
+  deleteTarget.value = row
+  deleteError.value = ''
+  isDeleteDialogOpen.value = true
 }
 
-function closeItemDialog() {
-  isItemDialogOpen.value = false
-  itemDialogError.value = ''
-  closeGroupInfoMenu()
+function closeDeleteDialog() {
+  isDeleteDialogOpen.value = false
+  deleteError.value = ''
+  deleteTarget.value = null
 }
 
-function handleItemSubmit() {
-  const groupInfo = itemForm.groupInfo.trim()
-  const targetGroup = findGroupByInput(groupInfo)
-  if (!targetGroup) {
-    itemDialogError.value = '请输入有效的组信息。'
+async function submitForm() {
+  const nextItemName = normalizeText(formState.item_name)
+  const nextBigCategory = normalizeCategory(formState.big_category)
+  const nextSmallCategory = normalizeText(formState.small_category)
+  const nextDescription = normalizeText(formState.description)
+  const nextStatus = normalizeStatus(formState.status)
+
+  if (!nextItemName) {
+    formError.value = '项名称不能为空。'
     return
   }
 
-  const value = itemForm.value.trim()
-  if (!value) {
-    itemDialogError.value = `${itemFieldMeta.value.itemValueLabel}不能为空。`
+  if (!nextBigCategory) {
+    formError.value = '请选择有效的大分类。'
+    return
+  }
+
+  if (!nextSmallCategory) {
+    formError.value = '小分类不能为空。'
+    return
+  }
+
+  if (!['enabled', 'disabled'].includes(nextStatus)) {
+    formError.value = '状态仅支持启用或停用。'
     return
   }
 
   const payload = {
-    id: itemForm.id || createKey('item'),
-    value,
-    scope: targetGroup.scope || '未指定',
-    note: itemForm.note.trim(),
-    status: normalizeStatus(itemForm.status)
+    item_name: nextItemName,
+    big_category: nextBigCategory,
+    small_category: nextSmallCategory,
+    status: nextStatus,
+    description: nextDescription
   }
 
-  const sourceGroup = findGroupById(itemForm.sourceGroupId || itemForm.groupId)
-  if (sourceGroup && sourceGroup.id !== targetGroup.id) {
-    const sourceIndex = sourceGroup.entries.findIndex((entry) => entry.id === itemForm.id)
-    if (sourceIndex >= 0) {
-      sourceGroup.entries.splice(sourceIndex, 1)
-      sourceGroup.updatedAt = new Date().toISOString()
+  const request = formMode.value === 'create'
+    ? createAssetConfigCenter(payload)
+    : updateAssetConfigCenter(formState.id, payload)
+
+  isSaving.value = true
+  formError.value = ''
+
+  try {
+    await request
+    closeFormDialog()
+    await refreshData()
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : '保存失败，请稍后重试。'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value?.id) {
+    deleteError.value = '未找到要删除的资产配置项。'
+    return
+  }
+
+  isDeleting.value = true
+  deleteError.value = ''
+
+  try {
+    await deleteAssetConfigCenter(deleteTarget.value.id)
+    closeDeleteDialog()
+    await refreshData()
+  } catch (error) {
+    deleteError.value = error instanceof Error ? error.message : '删除失败，请稍后重试。'
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+async function refreshData() {
+  await Promise.all([loadAssetConfigList(), loadSmallCategoryOptions()])
+}
+
+async function loadAssetConfigList() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (listController) {
+    listController.abort()
+  }
+
+  const controller = new AbortController()
+  listController = controller
+  const requestId = ++listRequestId
+  const shouldShowBlockingLoader = !hasData.value && isLoading.value
+  const wasLoading = isLoading.value
+
+  if (shouldShowBlockingLoader) {
+    isLoading.value = true
+  } else if (wasLoading) {
+    isLoading.value = true
+  } else {
+    isRefreshing.value = true
+  }
+
+  listError.value = ''
+
+  try {
+    const payload = await getAssetConfigCenterList(buildListFilters(), controller.signal)
+
+    if (requestId !== listRequestId || controller.signal.aborted) {
+      return
+    }
+
+    const normalized = normalizeListResponse(payload)
+    tableRows.value = normalized.items
+    total.value = normalized.total
+    totalPages.value = normalized.totalPages
+    currentPage.value = normalized.page
+    pageSize.value = normalized.pageSize
+
+    if (!normalized.items.length && normalized.total > 0 && currentPage.value > normalized.totalPages) {
+      currentPage.value = normalized.totalPages
+      return
+    }
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== listRequestId) {
+      return
+    }
+
+    listError.value = error instanceof Error ? error.message : '资产配置中心列表加载失败，请稍后重试。'
+  } finally {
+    if (requestId === listRequestId) {
+      isLoading.value = false
+      isRefreshing.value = false
     }
   }
-
-  const existingIndex = targetGroup.entries.findIndex((entry) => entry.id === itemForm.id)
-  if (existingIndex >= 0) {
-    targetGroup.entries.splice(existingIndex, 1, payload)
-  } else {
-    targetGroup.entries.push(payload)
-  }
-
-  targetGroup.updatedAt = new Date().toISOString()
-  closeItemDialog()
 }
 
-function openGroupInfoMenu() {
-  if (activeGroups.value.length === 0) {
+async function loadSmallCategoryOptions() {
+  if (typeof window === 'undefined') {
     return
   }
 
-  if (groupInfoCloseTimer) {
-    window.clearTimeout(groupInfoCloseTimer)
-    groupInfoCloseTimer = null
+  if (smallCategoryOptionsController) {
+    smallCategoryOptionsController.abort()
   }
 
-  groupInfoMenuOpen.value = true
-}
+  const controller = new AbortController()
+  smallCategoryOptionsController = controller
+  const requestId = ++smallCategoryOptionsRequestId
 
-function closeGroupInfoMenu() {
-  if (groupInfoCloseTimer) {
-    window.clearTimeout(groupInfoCloseTimer)
-    groupInfoCloseTimer = null
+  isSmallCategoryOptionsLoading.value = true
+  smallCategoryOptionsError.value = ''
+
+  try {
+    const payload = await getAssetConfigCenterSmallCategoryOptions(buildSmallCategoryOptionFilters(), controller.signal)
+
+    if (requestId !== smallCategoryOptionsRequestId || controller.signal.aborted) {
+      return
+    }
+
+    const options = normalizeSmallCategoryOptionsResponse(payload)
+    smallCategoryOptions.value = options
+
+    if (selectedSmallCategory.value && !options.includes(selectedSmallCategory.value)) {
+      selectedSmallCategory.value = ''
+      currentPage.value = 1
+    }
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== smallCategoryOptionsRequestId) {
+      return
+    }
+
+    smallCategoryOptions.value = []
+    smallCategoryOptionsError.value = error instanceof Error ? error.message : '小分类选项加载失败，请稍后重试。'
+  } finally {
+    if (requestId === smallCategoryOptionsRequestId) {
+      isSmallCategoryOptionsLoading.value = false
+    }
   }
-
-  groupInfoMenuOpen.value = false
-}
-
-function handleGroupInfoInput() {
-  openGroupInfoMenu()
-}
-
-function handleGroupInfoBlur() {
-  groupInfoCloseTimer = window.setTimeout(() => {
-    groupInfoMenuOpen.value = false
-    groupInfoCloseTimer = null
-  }, 120)
-}
-
-function selectGroupInfoOption(group) {
-  if (!group) {
-    return
-  }
-
-  itemForm.groupId = group.id
-  itemForm.groupInfo = formatGroupDisplay(group)
-  closeGroupInfoMenu()
-}
-
-function selectItemStatus(status) {
-  itemForm.status = normalizeStatus(status)
-}
-
-function clearEntryFilters() {
-  entrySearch.value = ''
-  selectedGroupFilter.value = 'all'
-  selectedStatusFilter.value = 'all'
-  closeFilterMenus()
 }
 
 function handleDocumentClick(event) {
   if (!filtersRef.value?.contains(event.target)) {
-    closeFilterMenus()
+    closeFilterMenu()
   }
 }
 
@@ -406,192 +603,38 @@ function handleGlobalKeydown(event) {
     return
   }
 
-  if (groupInfoMenuOpen.value) {
-    closeGroupInfoMenu()
+  if (isDeleteDialogOpen.value) {
+    closeDeleteDialog()
     return
   }
 
-  if (activeFilterMenu.value) {
-    closeFilterMenus()
+  if (isFormDialogOpen.value) {
+    closeFormDialog()
     return
   }
 
-  if (isItemDialogOpen.value) {
-    closeItemDialog()
-  }
+  closeFilterMenu()
 }
 
-function isGroupFilterSelected(value) {
-  return selectedGroupFilter.value === value
-}
-
-function isStatusFilterSelected(value) {
-  return selectedStatusFilter.value === value
-}
-
-function formatStatusLabel(value) {
-  return getStatusMeta(value).label
-}
-
-function getStatusMeta(value) {
-  const normalized = String(value ?? '').trim().toLowerCase()
-
-  if (normalized === 'enabled') {
-    return statusMetaMap.enabled
-  }
-
-  return statusMetaMap.disabled
-}
-
-function normalizeStatus(value) {
-  return String(value ?? '').trim().toLowerCase() === 'enabled' ? 'enabled' : 'disabled'
-}
-
-function resolveDefaultGroupId() {
-  if (selectedGroupFilter.value !== 'all' && findGroupById(selectedGroupFilter.value)) {
-    return selectedGroupFilter.value
-  }
-
-  return activeGroups.value[0]?.id ?? ''
-}
-
-function resolveDefaultGroupInfo() {
-  const groupId = resolveDefaultGroupId()
-  const group = groupId ? findGroupById(groupId) : null
-  return group ? formatGroupDisplay(group) : ''
-}
-
-function findGroupById(groupId) {
-  return activeGroups.value.find((group) => group.id === groupId) ?? null
-}
-
-function findGroupByInput(groupInfo) {
-  const normalized = String(groupInfo ?? '').trim()
-  if (!normalized) {
-    return null
-  }
-
-  const normalizedKey = normalizeGroupInfo(normalized)
-  const exactMatch = activeGroups.value.find((group) => {
-    return [
-      group.id,
-      group.name,
-      group.scope,
-      formatGroupDisplay(group)
-    ].some((value) => normalizeGroupInfo(value) === normalizedKey)
-  })
-
-  if (exactMatch) {
-    return exactMatch
-  }
-
-  const partialMatches = activeGroups.value.filter((group) => {
-    return [group.name, formatGroupDisplay(group)].some((value) => normalizeGroupInfo(value).includes(normalizedKey))
-  })
-
-  return partialMatches.length === 1 ? partialMatches[0] : null
-}
-
-function createKey(prefix) {
-  const randomPart = Math.random().toString(36).slice(2, 7)
-  return `${prefix}-${Date.now()}-${randomPart}`
-}
-
-function createEmptyItemForm() {
-  return {
-    id: '',
-    sourceGroupId: '',
-    groupId: '',
-    groupInfo: '',
-    value: '',
-    note: '',
-    status: 'enabled'
-  }
-}
-
-function resetItemForm(groupInfo = '') {
-  const group = findGroupByInput(groupInfo) ?? activeGroups.value[0] ?? null
-  Object.assign(itemForm, createEmptyItemForm(), {
-    groupId: group?.id ?? '',
-    sourceGroupId: group?.id ?? '',
-    groupInfo: group ? formatGroupDisplay(group) : ''
-  })
-}
-
-function populateItemForm(item) {
-  const group = findGroupById(item.groupId) ?? activeGroups.value[0] ?? null
-  Object.assign(itemForm, {
-    id: item.id,
-    sourceGroupId: item.groupId,
-    groupId: item.groupId || group?.id || '',
-    groupInfo: group ? formatGroupDisplay(group) : '',
-    value: item.value,
-    note: item.note,
-    status: normalizeStatus(item.status)
-  })
-}
-
-function formatGroupDisplay(group) {
-  if (!group) {
-    return ''
-  }
-
-  return `${group.name} · ${group.scope}`
-}
-
-function normalizeGroupInfo(value) {
-  return String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-}
-
-function loadAssetConfigState() {
-  if (typeof window === 'undefined') {
-    return createAssetConfigState()
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(STORAGE_KEY)
-    if (!rawValue) {
-      return createAssetConfigState()
-    }
-
-    const parsed = JSON.parse(rawValue)
-    if (!Array.isArray(parsed)) {
-      return createAssetConfigState()
-    }
-
-    return normalizeAssetConfigState(parsed)
-  } catch {
-    return createAssetConfigState()
-  }
-}
-
-function persistAssetConfigState() {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(categories.value))
-  } catch {
-    // Ignore storage quota / privacy mode failures.
-  }
+function retryLoad() {
+  void refreshData()
 }
 
 onMounted(() => {
-  document.addEventListener('keydown', handleGlobalKeydown)
   document.addEventListener('click', handleDocumentClick)
+  document.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleGlobalKeydown)
   document.removeEventListener('click', handleDocumentClick)
-  if (groupInfoCloseTimer) {
-    window.clearTimeout(groupInfoCloseTimer)
-    groupInfoCloseTimer = null
+  document.removeEventListener('keydown', handleGlobalKeydown)
+  if (listController) {
+    listController.abort()
   }
+  if (smallCategoryOptionsController) {
+    smallCategoryOptionsController.abort()
+  }
+  window.clearTimeout(searchTimer)
 })
 </script>
 
@@ -618,85 +661,143 @@ onBeforeUnmount(() => {
         <section class="asset-config-tabs" aria-label="配置域切换">
           <button
             v-for="tab in categoryTabs"
-            :key="tab.key"
+            :key="tab.value || 'all'"
             class="asset-config-tab"
-            :class="{ active: tab.key === activeCategoryKey }"
+            :class="{ active: tab.value === selectedCategory }"
             type="button"
-            @click="selectCategory(tab.key)"
+            @click="selectCategory(tab.value)"
           >
             <span class="asset-config-tab-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath(tab.meta.icon)" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath(tab.icon)" />
             </span>
             <span class="asset-config-tab-label">
-              <strong>{{ tab.meta.label }}</strong>
-              <small>{{ tab.entryCount }} 项</small>
+              <strong>{{ tab.label }}</strong>
+            </span>
+          </button>
+
+          <button class="asset-config-tab asset-config-tab--action" type="button" @click="openCreateDialog">
+            <span class="asset-config-tab-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+            </span>
+            <span class="asset-config-tab-label">
+              <strong>新增配置项</strong>
             </span>
           </button>
         </section>
 
         <section class="asset-config-content">
-          <section class="asset-config-panel asset-config-detail-panel">
-            <header class="asset-config-detail-head">
+          <section class="asset-config-panel">
+            <header class="asset-config-panel-head">
               <div>
-                <h2>配置内容</h2>
+                <span class="asset-config-panel-kicker">{{ activeCategoryLabel }}</span>
+                <h2>资产配置项</h2>
+              </div>
+
+              <div class="asset-config-panel-head-meta">
+                <span class="asset-config-panel-head-chip">{{ formatCount(total) }} 条</span>
               </div>
             </header>
 
             <div ref="filtersRef" class="asset-config-toolbar" aria-label="配置筛选">
               <label class="asset-config-search-field">
+                <span class="sr-only">项名称</span>
                 <input
-                  v-model="entrySearch"
+                  v-model="itemNameInput"
                   type="text"
-                  :placeholder="itemSearchPlaceholder"
+                  placeholder="按项名称搜索"
                   autocomplete="off"
                 />
+                <span class="asset-config-search-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="11" cy="11" r="6.5" />
+                    <path d="m16 16 4 4" />
+                  </svg>
+                </span>
               </label>
 
               <div class="asset-config-filter-wrap" @click.stop>
                 <button
-                  class="asset-config-filter-trigger"
-                  :class="{ active: isMenuOpen(FILTER_MENU_KEYS.group) || selectedGroupFilter !== 'all' }"
+                  class="asset-config-filter-trigger asset-config-filter-trigger--wide"
+                  :class="{ active: isSmallCategoryMenuOpen() || selectedSmallCategory !== '' }"
                   type="button"
-                  @click.stop="toggleFilterMenu(FILTER_MENU_KEYS.group)"
+                  @click.stop="toggleSmallCategoryMenu"
                 >
-                  <span>{{ selectedGroupFilter === 'all' ? '筛选组' : selectedGroupLabel }}</span>
+                  <span>{{ selectedSmallCategoryLabel }}</span>
+                  <span class="asset-config-filter-trigger-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path :d="isSmallCategoryMenuOpen() ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+                    </svg>
+                  </span>
                 </button>
 
-                <div v-if="isMenuOpen(FILTER_MENU_KEYS.group)" class="asset-config-filter-menu">
+                <div v-if="isSmallCategoryMenuOpen()" class="asset-config-filter-menu asset-config-filter-menu--small-category">
                   <button
-                    v-for="option in groupFilterOptions"
-                    :key="option.value"
                     class="asset-config-filter-option"
-                    :class="{ selected: isGroupFilterSelected(option.value) }"
+                    :class="{ selected: selectedSmallCategory === '' }"
                     type="button"
-                    @click.stop="selectGroupFilter(option.value)"
+                    @click.stop="selectSmallCategory('')"
                   >
-                    <span class="asset-config-filter-check" :class="{ selected: isGroupFilterSelected(option.value) }"></span>
-                    <span class="asset-config-filter-option-label">{{ option.label }}</span>
+                    <span class="asset-config-filter-check" :class="{ selected: selectedSmallCategory === '' }"></span>
+                    <span class="asset-config-filter-option-label">全部小类</span>
                   </button>
+
+                  <div v-if="isSmallCategoryOptionsLoading" class="asset-config-filter-message">加载中...</div>
+
+                  <template v-else-if="smallCategoryOptions.length">
+                    <button
+                      v-for="option in smallCategoryOptions"
+                      :key="option"
+                      class="asset-config-filter-option"
+                      :class="{ selected: selectedSmallCategory === option }"
+                      type="button"
+                      @click.stop="selectSmallCategory(option)"
+                    >
+                      <span class="asset-config-filter-check" :class="{ selected: selectedSmallCategory === option }"></span>
+                      <span class="asset-config-filter-option-label">{{ option }}</span>
+                    </button>
+                  </template>
+
+                  <div v-else class="asset-config-filter-message">
+                    <span>{{ smallCategoryOptionsError || '暂无小类选项' }}</span>
+                    <button
+                      v-if="smallCategoryOptionsError"
+                      type="button"
+                      @click.stop="loadSmallCategoryOptions"
+                    >
+                      重试
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div class="asset-config-filter-wrap" @click.stop>
                 <button
                   class="asset-config-filter-trigger"
-                  :class="{ active: isMenuOpen(FILTER_MENU_KEYS.status) || selectedStatusFilter !== 'all' }"
+                  :class="{ active: isStatusMenuOpen() || selectedStatus !== '' }"
                   type="button"
-                  @click.stop="toggleFilterMenu(FILTER_MENU_KEYS.status)"
+                  @click.stop="toggleStatusMenu"
                 >
-                  <span>{{ selectedStatusFilter === 'all' ? '状态' : selectedStatusLabel }}</span>
+                  <span>{{ selectedStatus ? selectedStatusLabel : '状态' }}</span>
+                  <span class="asset-config-filter-trigger-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path :d="isStatusMenuOpen() ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+                    </svg>
+                  </span>
                 </button>
 
-                <div v-if="isMenuOpen(FILTER_MENU_KEYS.status)" class="asset-config-filter-menu">
+                <div v-if="isStatusMenuOpen()" class="asset-config-filter-menu">
                   <button
-                    v-for="option in statusFilterOptions"
-                    :key="option.value"
+                    v-for="option in STATUS_OPTIONS"
+                    :key="option.value || 'all'"
                     class="asset-config-filter-option"
-                    :class="{ selected: isStatusFilterSelected(option.value) }"
+                    :class="{ selected: selectedStatus === option.value }"
                     type="button"
-                    @click.stop="selectStatusFilter(option.value)"
+                    @click.stop="selectStatus(option.value)"
                   >
-                    <span class="asset-config-filter-check" :class="{ selected: isStatusFilterSelected(option.value) }"></span>
+                    <span class="asset-config-filter-check" :class="{ selected: selectedStatus === option.value }"></span>
                     <span class="asset-config-filter-option-label">{{ option.label }}</span>
                   </button>
                 </div>
@@ -704,11 +805,11 @@ onBeforeUnmount(() => {
 
               <button
                 v-if="hasFilters"
-                class="asset-config-clear-button"
+                class="vulnerabilities-clear-button"
                 type="button"
                 aria-label="清空筛选"
                 title="清空筛选"
-                @click="clearEntryFilters"
+                @click="clearFilters"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                   <path d="M15.8 8.2 8.2 15.8" />
@@ -716,85 +817,155 @@ onBeforeUnmount(() => {
                   <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
                 </svg>
               </button>
-
-              <button
-                class="asset-config-filter-trigger asset-config-create-trigger"
-                type="button"
-                :disabled="activeGroups.length === 0"
-                @click="openItemDialog('create')"
-              >
-                <span>新增条目</span>
-              </button>
             </div>
 
-            <div class="asset-config-entry-board">
-              <div class="asset-config-entry-head">
-                <span class="asset-config-entry-col is-main">{{ itemFieldMeta.itemLabel }}</span>
-                <span class="asset-config-entry-col">组信息</span>
-                <span class="asset-config-entry-col">状态</span>
-                <span class="asset-config-entry-col">说明</span>
-                <span class="asset-config-entry-col">操作</span>
+            <div v-if="showInlineError || showBlockingError" class="asset-config-alert" :class="{ 'is-blocking': showBlockingError }" role="alert">
+              <div>
+                <strong>资产配置中心加载失败</strong>
+                <p>{{ listError }}</p>
+              </div>
+              <button class="asset-config-panel-link" type="button" @click="retryLoad">重试</button>
+            </div>
+
+            <div class="asset-config-table">
+              <div class="asset-config-table-head">
+                <span class="asset-config-col is-main">项名称</span>
+                <span class="asset-config-col">大分类</span>
+                <span class="asset-config-col">小分类</span>
+                <span class="asset-config-col">状态</span>
+                <span class="asset-config-col">说明</span>
+                <span class="asset-config-col is-actions">操作</span>
               </div>
 
-              <div v-if="filteredEntryRows.length > 0" class="asset-config-entry-list">
-                <div v-for="entry in filteredEntryRows" :key="`${entry.groupId}-${entry.id}`" class="asset-config-entry-row">
-                  <div class="asset-config-entry-main">
-                    <strong>{{ entry.value }}</strong>
-                  </div>
-                  <div class="asset-config-entry-group">
-                    <div class="asset-config-entry-group-top">
-                      <strong>{{ entry.groupName }}</strong>
-                    </div>
-                    <div class="asset-config-entry-group-meta">
-                      <span>{{ entry.groupOwner }}</span>
-                      <span>{{ entry.groupScope }}</span>
-                    </div>
-                  </div>
-                  <div class="asset-config-entry-status">
-                    <span class="asset-config-status-pill" :class="`is-${entry.status}`">
-                      {{ formatStatusLabel(entry.status) }}
-                    </span>
-                  </div>
-                  <div class="asset-config-entry-text">{{ entry.note || '--' }}</div>
-                  <div class="asset-config-entry-actions">
-                    <button
-                      class="asset-config-row-action is-inline"
-                      type="button"
-                      :aria-label="`编辑条目 ${entry.value}`"
-                      @click="openItemDialog('edit', entry)"
-                    >
-                      编辑
-                    </button>
-                  </div>
+              <div v-if="showInitialLoading" class="asset-config-skeleton-list" aria-hidden="true">
+                <div v-for="index in 6" :key="index" class="asset-config-skeleton-row">
+                  <span class="asset-config-skeleton is-main"></span>
+                  <span class="asset-config-skeleton"></span>
+                  <span class="asset-config-skeleton"></span>
+                  <span class="asset-config-skeleton is-status"></span>
+                  <span class="asset-config-skeleton"></span>
+                  <span class="asset-config-skeleton is-actions"></span>
                 </div>
               </div>
 
-              <div v-else class="asset-config-empty-state asset-config-empty-state--detail">
-                <strong>没有匹配的条目</strong>
-                <p>试试换个关键词，或者清空筛选条件。</p>
-              </div>
+              <template v-else>
+                <div v-if="normalizedRows.length" class="asset-config-table-body">
+                  <div v-for="row in normalizedRows" :key="row.id" class="asset-config-table-row">
+                    <div class="asset-config-cell is-main">
+                      <strong>{{ row.item_name }}</strong>
+                    </div>
+
+                    <div class="asset-config-cell">
+                      <strong>{{ row.bigCategoryLabel }}</strong>
+                    </div>
+
+                    <div class="asset-config-cell">
+                      <span>{{ row.small_category || '--' }}</span>
+                    </div>
+
+                    <div class="asset-config-cell asset-config-cell--status">
+                      <span class="asset-config-status-pill" :class="`is-${row.status}`">{{ row.statusLabel }}</span>
+                    </div>
+
+                    <div class="asset-config-cell asset-config-cell--description">
+                      <span>{{ row.description || '--' }}</span>
+                    </div>
+
+                    <div class="asset-config-cell is-actions">
+                      <button
+                        class="asset-config-row-action"
+                        type="button"
+                        :aria-label="`编辑 ${row.item_name}`"
+                        @click="openEditDialog(row)"
+                      >
+                        <span class="asset-config-row-action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M4 20h4" />
+                            <path d="M14.5 5.5 18.5 9.5 9 19H5v-4Z" />
+                            <path d="m13 7 4 4" />
+                          </svg>
+                        </span>
+                      </button>
+
+                      <button
+                        class="asset-config-row-action is-danger"
+                        type="button"
+                        :aria-label="`删除 ${row.item_name}`"
+                        @click="openDeleteDialog(row)"
+                      >
+                        <span class="asset-config-row-action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M5 7h14" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                            <path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7" />
+                            <path d="M7 7l1 12h8l1-12" />
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else-if="showEmptyState" class="asset-config-empty-state">
+                  <strong>没有匹配的资产配置项</strong>
+                  <p>试试调整筛选条件，或者新建一条配置项。</p>
+                </div>
+              </template>
             </div>
+
+            <footer class="asset-config-pagination">
+              <div class="asset-config-pagination-meta">
+                <span>{{ pageSummary }}</span>
+              </div>
+              <div class="asset-config-pagination-actions">
+                <button
+                  class="asset-config-pagination-arrow"
+                  type="button"
+                  :disabled="currentPage <= 1 || isLoading || isRefreshing"
+                  aria-label="上一页"
+                  @click="currentPage = Math.max(1, currentPage - 1)"
+                >
+                  <span class="sr-only">上一页</span>
+                  <span class="asset-config-pagination-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="m15 6-6 6 6 6" />
+                    </svg>
+                  </span>
+                </button>
+
+                <button
+                  class="asset-config-pagination-arrow"
+                  type="button"
+                  :disabled="currentPage >= totalPages || isLoading || isRefreshing"
+                  aria-label="下一页"
+                  @click="currentPage = Math.min(totalPages, currentPage + 1)"
+                >
+                  <span class="sr-only">下一页</span>
+                  <span class="asset-config-pagination-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="m9 6 6 6-6 6" />
+                    </svg>
+                  </span>
+                </button>
+              </div>
+            </footer>
           </section>
         </section>
 
-        <div
-          v-if="isItemDialogOpen"
-          class="asset-config-dialog-overlay"
-          role="presentation"
-          @click.self="closeItemDialog"
-        >
+        <div v-if="isFormDialogOpen" class="asset-config-dialog-overlay" role="presentation" @click.self="closeFormDialog">
           <section
             class="asset-config-dialog"
             role="dialog"
             aria-modal="true"
-            :aria-labelledby="'asset-config-item-dialog-title'"
+            :aria-labelledby="'asset-config-dialog-title'"
           >
             <header class="asset-config-dialog-head">
               <div>
-                <span class="asset-config-panel-kicker">{{ activeCategoryMeta.label }}</span>
-                <h2 id="asset-config-item-dialog-title">{{ activeItemDialogTitle }}</h2>
+                <span class="asset-config-panel-kicker">{{ activeCategoryLabel }}</span>
+                <h2 id="asset-config-dialog-title">{{ formTitle }}</h2>
               </div>
-              <button class="asset-config-dialog-close" type="button" aria-label="关闭" @click="closeItemDialog">
+              <button class="asset-config-dialog-close" type="button" aria-label="关闭" @click="closeFormDialog">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                   <path d="m6 6 12 12" />
                   <path d="m18 6-12 12" />
@@ -802,79 +973,103 @@ onBeforeUnmount(() => {
               </button>
             </header>
 
-            <form class="asset-config-dialog-form" @submit.prevent="handleItemSubmit">
+            <form class="asset-config-dialog-form" @submit.prevent="submitForm">
               <div class="asset-config-dialog-grid">
                 <label>
-                  <span>{{ itemFieldMeta.itemLabel }}</span>
-                  <input v-model="itemForm.value" type="text" :placeholder="itemFieldMeta.itemPlaceholder" />
+                  <span>项名称 *</span>
+                  <input v-model="formState.item_name" type="text" placeholder="例如：登录页配置" autocomplete="off" />
                 </label>
 
                 <label>
-                  <span>组信息</span>
-                  <div class="asset-config-dialog-combobox">
-                    <input
-                      v-model.trim="itemForm.groupInfo"
-                      type="text"
-                      placeholder="输入组名称筛选，或直接手填"
-                      autocomplete="off"
-                      spellcheck="false"
-                      @focus="openGroupInfoMenu"
-                      @input="handleGroupInfoInput"
-                      @blur="handleGroupInfoBlur"
-                    />
-                    <div v-if="groupInfoMenuOpen" class="asset-config-dialog-combobox-menu">
-                      <button
-                        v-for="group in groupInfoSuggestions"
-                        :key="group.id"
-                        class="asset-config-dialog-combobox-option"
-                        type="button"
-                        @mousedown.prevent="selectGroupInfoOption(group)"
-                      >
-                        <span class="asset-config-dialog-combobox-option-main">{{ group.name }}</span>
-                        <span class="asset-config-dialog-combobox-option-sub">{{ group.scope }}</span>
-                      </button>
-                      <div v-if="groupInfoSuggestions.length === 0" class="asset-config-dialog-combobox-empty">
-                        没有匹配项，仍可直接手填
-                      </div>
-                    </div>
-                  </div>
+                  <span>大分类 *</span>
+                  <select v-model="formState.big_category">
+                    <option
+                      v-for="option in CATEGORY_OPTIONS.filter((item) => item.value)"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
                 </label>
 
                 <label>
-                  <span>状态</span>
+                  <span>小分类 *</span>
+                  <input v-model="formState.small_category" type="text" placeholder="例如：页面 / 域名 / URL" autocomplete="off" />
+                </label>
+
+                <label>
+                  <span>状态 *</span>
                   <div class="asset-config-dialog-status" role="radiogroup" aria-label="状态">
                     <button
-                      v-for="option in statusOptions"
+                      v-for="option in FORM_STATUS_OPTIONS"
                       :key="option.value"
                       type="button"
                       class="asset-config-dialog-status-option"
-                      :class="{ active: itemForm.status === option.value }"
-                      :aria-pressed="itemForm.status === option.value"
-                      @click="selectItemStatus(option.value)"
+                      :class="{ active: formState.status === option.value }"
+                      :aria-pressed="formState.status === option.value"
+                      @click="formState.status = option.value"
                     >
                       <span class="asset-config-dialog-status-mark" :class="`is-${option.tone}`" aria-hidden="true"></span>
                       <span class="asset-config-dialog-status-copy">
                         <strong>{{ option.label }}</strong>
-                        <small>{{ option.summary }}</small>
                       </span>
                     </button>
                   </div>
                 </label>
               </div>
+
               <label class="asset-config-dialog-textarea">
                 <span>说明</span>
-                <textarea v-model="itemForm.note" rows="3" placeholder="补充这个条目的说明"></textarea>
+                <textarea v-model="formState.description" rows="4" placeholder="补充配置项说明，可选"></textarea>
               </label>
 
-              <p v-if="itemDialogError" class="asset-config-dialog-error">{{ itemDialogError }}</p>
+              <p v-if="formError" class="asset-config-dialog-error">{{ formError }}</p>
 
               <footer class="asset-config-dialog-actions">
-                <button class="asset-config-dialog-button is-ghost" type="button" @click="closeItemDialog">
+                <button class="asset-config-dialog-button is-ghost" type="button" @click="closeFormDialog">
                   取消
                 </button>
-                <button class="asset-config-dialog-button" type="submit">保存条目</button>
+                <button class="asset-config-dialog-button" type="submit" :disabled="isSaving">
+                  {{ isSaving ? '保存中...' : '保存配置项' }}
+                </button>
               </footer>
             </form>
+          </section>
+        </div>
+
+        <div v-if="isDeleteDialogOpen" class="asset-config-dialog-overlay" role="presentation" @click.self="closeDeleteDialog">
+          <section class="asset-config-dialog asset-config-dialog--compact" role="dialog" aria-modal="true" aria-labelledby="asset-config-delete-title">
+            <header class="asset-config-dialog-head">
+              <div>
+                <span class="asset-config-panel-kicker">删除确认</span>
+                <h2 id="asset-config-delete-title">删除资产配置项</h2>
+              </div>
+              <button class="asset-config-dialog-close" type="button" aria-label="关闭" @click="closeDeleteDialog">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="m6 6 12 12" />
+                  <path d="m18 6-12 12" />
+                </svg>
+              </button>
+            </header>
+
+            <div class="asset-config-dialog-body">
+              <p>
+                确认删除 <strong>{{ deleteTargetLabel }}</strong> 吗？
+              </p>
+              <p class="asset-config-dialog-summary">{{ deleteTargetSummary || '--' }}</p>
+            </div>
+
+            <p v-if="deleteError" class="asset-config-dialog-error">{{ deleteError }}</p>
+
+            <footer class="asset-config-dialog-actions">
+              <button class="asset-config-dialog-button is-ghost" type="button" @click="closeDeleteDialog">
+                取消
+              </button>
+              <button class="asset-config-dialog-button is-danger" type="button" :disabled="isDeleting" @click="confirmDelete">
+                {{ isDeleting ? '删除中...' : '确认删除' }}
+              </button>
+            </footer>
           </section>
         </div>
       </main>

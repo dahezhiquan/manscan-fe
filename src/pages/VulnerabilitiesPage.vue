@@ -366,6 +366,20 @@
           </div>
         </div>
 
+        <button
+          v-if="hasFilters"
+          class="vulnerabilities-clear-button"
+          type="button"
+          aria-label="清空筛选"
+          @click="clearFilters"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M15.8 8.2 8.2 15.8" />
+            <path d="M8.2 8.2 15.8 15.8" />
+            <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
+          </svg>
+        </button>
+
         <div v-if="tableRows.length" class="vulnerabilities-selection-tools">
           <button
             class="vulnerabilities-selection-tool"
@@ -401,19 +415,6 @@
           </button>
         </div>
 
-        <button
-          v-if="hasFilters"
-          class="vulnerabilities-clear-button"
-          type="button"
-          aria-label="清空筛选"
-          @click="clearFilters"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M15.8 8.2 8.2 15.8" />
-            <path d="M8.2 8.2 15.8 15.8" />
-            <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
-          </svg>
-        </button>
       </section>
 
       <div v-if="showInlineError" class="vulnerabilities-page-notice is-error" aria-live="polite">

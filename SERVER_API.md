@@ -1274,7 +1274,39 @@ curl -OJ "http://127.0.0.1:8686/api/v1/scans/1/responses/archive"
 curl "http://127.0.0.1:8686/api/v1/asset-config-centers?page=1&page_size=10&item_name=登录&status=enabled"
 ```
 
-## 25. 新增资产配置项
+## 25. 获取资产配置中心小分类列表
+
+- 请求方法和路径：`GET /api/v1/asset-config-centers/options/small-categories`
+
+- 请求参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `big_category` | `string` / `string[]` | 是 | 大分类，支持逗号分隔和多参数，返回这些大分类下去重后的小分类列表 |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "items": ["api", "web"]
+  }
+}
+```
+
+- 错误码说明：
+  - `40001`：`big_category` 为空或请求参数格式不正确
+  - `50001`：查询资产配置中心小分类列表失败
+
+- 使用示例：
+
+```bash
+curl "http://127.0.0.1:8686/api/v1/asset-config-centers/options/small-categories?big_category=app"
+```
+
+## 26. 新增资产配置项
 
 - 请求方法和路径：`POST /api/v1/asset-config-centers`
 
@@ -1317,7 +1349,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/asset-config-centers" \
   -d '{"item_name":"登录页配置","big_category":"前端","small_category":"页面","status":"enabled","description":"登录页相关配置"}'
 ```
 
-## 26. 编辑资产配置项
+## 27. 编辑资产配置项
 
 - 请求方法和路径：`PUT /api/v1/asset-config-centers/:id`
 
@@ -1362,7 +1394,7 @@ curl -X PUT "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
   -d '{"item_name":"登录页配置","big_category":"前端","small_category":"页面","status":"disabled","description":"暂不启用"}'
 ```
 
-## 27. 删除资产配置项
+## 28. 删除资产配置项
 
 - 请求方法和路径：`DELETE /api/v1/asset-config-centers/:id`
 
