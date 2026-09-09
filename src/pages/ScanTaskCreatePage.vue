@@ -1,6 +1,7 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { createScanTask } from '../api/scans'
+import { getAllAssetConfigCenterItems } from '../api/asset-config'
 import {
   SCAN_ATTACK_TYPE_OPTIONS,
   SCAN_STRATEGY_OPTIONS,
@@ -95,7 +96,7 @@ const stepFields = {
       key: 'exclude_targets',
       label: '排除目标',
       type: 'string[]',
-      placeholder: '每行一个排除项，例如：10.0.0.0/8；支持 URL、域名、IPv4、IPv6、IP:port、CIDR 网段',
+      placeholder: '每行一个排除项，例如：10.0.0.0/8；支持 URL、域名、IPv4、IPv6、IP:port、CIDR 网段（已默认配置【资产配置中心】全部禁扫名单，此处无需额外添加）',
       showMeta: false,
       itemLabel: '排除项'
     }
@@ -382,6 +383,14 @@ const selectAllTemplatesLoading = ref(false)
 const templateListError = ref('')
 const templateAutoLockPulse = ref(false)
 const multiLineDrafts = reactive({})
+const isGlobalScanDisabledEnabled = ref(true)
+const globalScanDisabledTargets = ref([])
+const globalScanDisabledLoading = ref(false)
+const globalScanDisabledError = ref('')
+const globalScanDisabledRequestState = ref('idle')
+const isGlobalScanDisabledConfirmOpen = ref(false)
+const manualExcludeTargets = ref([])
+const globalScanDisabledConfirmCancelButton = ref(null)
 const templateListState = ref({
   page: 1,
   pageSize: 12,
@@ -395,6 +404,8 @@ let templateTagsAbortController = null
 let templateProtocolsAbortController = null
 let templateSearchTimer = null
 let templateAutoLockTimer = null
+let globalScanDisabledAbortController = null
+let globalScanDisabledRequestId = 0
 
 const currentStep = computed(() => stepDefinitions[activeStep.value])
 const currentFields = computed(() => (stepFields[currentStep.value.key] ?? []).filter((field) => isFieldVisible(field)))
@@ -415,6 +426,31 @@ const filledFieldCount = computed(() => {
 })
 
 const targetsSummary = computed(() => (form.targets.length > 0 ? `${form.targets.length} 个目标已准备` : '尚未填写目标'))
+const globalScanDisabledTargetCount = computed(() => globalScanDisabledTargets.value.length)
+const globalScanDisabledStatusText = computed(() => {
+  if (globalScanDisabledLoading.value) {
+    return '正在同步全局禁扫名单...'
+  }
+
+  if (globalScanDisabledError.value) {
+    return '全局禁扫名单同步失败'
+  }
+
+  if (globalScanDisabledRequestState.value === 'success') {
+    return globalScanDisabledTargetCount.value > 0
+      ? `已自动加入 ${globalScanDisabledTargetCount.value} 项`
+      : '当前没有启用中的禁扫资产'
+  }
+
+  return '等待同步'
+})
+const isGlobalScanDisabledSubmissionBlocked = computed(
+  () =>
+    isGlobalScanDisabledEnabled.value &&
+    (globalScanDisabledLoading.value ||
+      globalScanDisabledRequestState.value !== 'success' ||
+      Boolean(globalScanDisabledError.value))
+)
 const normalizedTemplateRows = computed(() => templateListState.value.items.map((item) => normalizeTemplateItem(item)))
 const filteredTagOptions = computed(() => {
   const keyword = templateTagSearch.value.trim().toLowerCase()
@@ -594,6 +630,131 @@ function arrayToLines(value) {
   return Array.isArray(value) ? value.join('\n') : ''
 }
 
+function normalizeStringList(value) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return [...new Set(value.map((item) => String(item ?? '').trim()).filter(Boolean))]
+}
+
+function mergeStringLists(...values) {
+  return normalizeStringList(values.flatMap((value) => (Array.isArray(value) ? value : [])))
+}
+
+function syncExcludeTargets() {
+  form.exclude_targets = isGlobalScanDisabledEnabled.value
+    ? mergeStringLists(manualExcludeTargets.value, globalScanDisabledTargets.value)
+    : normalizeStringList(manualExcludeTargets.value)
+  multiLineDrafts.exclude_targets = arrayToLines(form.exclude_targets)
+}
+
+function updateManualExcludeTargets(rawValue) {
+  const nextTargets = linesToArray(rawValue)
+  const globalTargetSet = new Set(globalScanDisabledTargets.value)
+  manualExcludeTargets.value = nextTargets.filter((target) => !globalTargetSet.has(target))
+  syncExcludeTargets()
+}
+
+function normalizeGlobalScanDisabledTargets(items) {
+  return normalizeStringList(
+    (Array.isArray(items) ? items : [])
+      .filter((item) => String(item?.status ?? 'enabled').trim().toLowerCase() === 'enabled')
+      .map((item) => item?.item_name)
+  )
+}
+
+function cancelGlobalScanDisabledRequest() {
+  globalScanDisabledRequestId += 1
+  globalScanDisabledAbortController?.abort()
+  globalScanDisabledAbortController = null
+  globalScanDisabledLoading.value = false
+}
+
+async function loadGlobalScanDisabledTargets() {
+  cancelGlobalScanDisabledRequest()
+
+  const controller = new AbortController()
+  const requestId = globalScanDisabledRequestId
+  globalScanDisabledAbortController = controller
+  globalScanDisabledLoading.value = true
+  globalScanDisabledError.value = ''
+  globalScanDisabledRequestState.value = 'loading'
+
+  try {
+    const items = await getAllAssetConfigCenterItems(
+      {
+        bigCategory: 'scanDisabled',
+        status: 'enabled',
+        pageSize: 100
+      },
+      controller.signal
+    )
+
+    if (requestId !== globalScanDisabledRequestId || controller.signal.aborted) {
+      return
+    }
+
+    const previousGlobalTargets = new Set(globalScanDisabledTargets.value)
+    const currentExcludeTargets = normalizeStringList(form.exclude_targets)
+
+    globalScanDisabledTargets.value = normalizeGlobalScanDisabledTargets(items)
+    manualExcludeTargets.value = currentExcludeTargets.filter(
+      (target) => !previousGlobalTargets.has(target)
+    )
+    globalScanDisabledRequestState.value = 'success'
+    syncExcludeTargets()
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== globalScanDisabledRequestId) {
+      return
+    }
+
+    globalScanDisabledTargets.value = []
+    globalScanDisabledError.value =
+      error instanceof Error ? error.message : '全局禁扫名单加载失败，请稍后重试。'
+    globalScanDisabledRequestState.value = 'error'
+    syncExcludeTargets()
+  } finally {
+    if (requestId === globalScanDisabledRequestId) {
+      globalScanDisabledLoading.value = false
+      globalScanDisabledAbortController = null
+    }
+  }
+}
+
+function openGlobalScanDisabledConfirm() {
+  isGlobalScanDisabledConfirmOpen.value = true
+  nextTick(() => globalScanDisabledConfirmCancelButton.value?.focus())
+}
+
+function closeGlobalScanDisabledConfirm() {
+  isGlobalScanDisabledConfirmOpen.value = false
+}
+
+function confirmDisableGlobalScanDisabled() {
+  closeGlobalScanDisabledConfirm()
+  isGlobalScanDisabledEnabled.value = false
+  cancelGlobalScanDisabledRequest()
+  globalScanDisabledTargets.value = []
+  syncExcludeTargets()
+}
+
+function toggleGlobalScanDisabled() {
+  if (isGlobalScanDisabledEnabled.value) {
+    openGlobalScanDisabledConfirm()
+    return
+  }
+
+  isGlobalScanDisabledEnabled.value = true
+  void loadGlobalScanDisabledTargets()
+}
+
+function retryGlobalScanDisabledLoad() {
+  if (isGlobalScanDisabledEnabled.value) {
+    void loadGlobalScanDisabledTargets()
+  }
+}
+
 function formatFieldType(type) {
   if (type === 'string[]') {
     return '多行文本 / string[]'
@@ -722,6 +883,11 @@ function updateFieldValue(field, event) {
   const rawValue = event.target.value
 
   if (field.type === 'string[]') {
+    if (field.key === 'exclude_targets') {
+      updateManualExcludeTargets(rawValue)
+      return
+    }
+
     multiLineDrafts[field.key] = rawValue
     form[field.key] = linesToArray(rawValue)
     return
@@ -1072,6 +1238,11 @@ function changeTemplatePage(page) {
 }
 
 function handleGlobalKeydown(event) {
+  if (event.key === 'Escape' && isGlobalScanDisabledConfirmOpen.value) {
+    closeGlobalScanDisabledConfirm()
+    return
+  }
+
   if (event.key === 'Escape' && (activeTemplateFilterMenu.value || activeCustomSelectKey.value)) {
     closeTemplateFilterMenu()
     closeCustomSelect()
@@ -1173,6 +1344,14 @@ async function submitTask() {
     return
   }
 
+  if (isGlobalScanDisabledSubmissionBlocked.value) {
+    errorMessage.value = globalScanDisabledError.value
+      ? '全局禁扫名单加载失败，请重试后再创建扫描任务。'
+      : '全局禁扫名单正在同步，请等待同步完成后再创建扫描任务。'
+    activeStep.value = 1
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -1206,6 +1385,7 @@ watch(
 onMounted(() => {
   fetchTemplateOptions()
   fetchTemplateList(1)
+  loadGlobalScanDisabledTargets()
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('pointerdown', handleGlobalPointerDown)
 })
@@ -1216,6 +1396,7 @@ onBeforeUnmount(() => {
   templateProtocolsAbortController?.abort()
   window.clearTimeout(templateSearchTimer)
   window.clearTimeout(templateAutoLockTimer)
+  cancelGlobalScanDisabledRequest()
   window.removeEventListener('keydown', handleGlobalKeydown)
   window.removeEventListener('pointerdown', handleGlobalPointerDown)
 })
@@ -1688,6 +1869,59 @@ onBeforeUnmount(() => {
                 <span>{{ getArrayFieldMeta(field)?.helper }}</span>
                 <strong>{{ getArrayFieldMeta(field)?.summary }}</strong>
               </div>
+              <div v-if="field.key === 'exclude_targets'" class="scan-global-denylist-control">
+                <div class="scan-global-denylist-control-head">
+                  <div class="scan-global-denylist-copy">
+                    <div class="scan-global-denylist-title-row">
+                      <strong>是否开启全局禁扫名单</strong>
+                      <span class="scan-global-denylist-state" :class="{ 'is-on': isGlobalScanDisabledEnabled }">
+                        {{ isGlobalScanDisabledEnabled ? '默认开启' : '已关闭' }}
+                      </span>
+                    </div>
+                    <p>
+                      非特殊需求，请勿关闭此按钮；对禁扫资产进行扫描的，要提前与对应业务负责人沟通知悉。
+                    </p>
+                  </div>
+
+                  <button
+                    class="scan-create-switch scan-global-denylist-switch"
+                    :class="{ 'is-on': isGlobalScanDisabledEnabled }"
+                    type="button"
+                    role="switch"
+                    :aria-checked="isGlobalScanDisabledEnabled ? 'true' : 'false'"
+                    aria-label="是否开启全局禁扫名单"
+                    @click="toggleGlobalScanDisabled"
+                  >
+                    <span class="scan-create-switch-track">
+                      <span class="scan-create-switch-thumb"></span>
+                    </span>
+                    <span class="scan-create-switch-text">
+                      {{ isGlobalScanDisabledEnabled ? '已开启' : '未开启' }}
+                    </span>
+                  </button>
+                </div>
+
+                <div class="scan-global-denylist-status">
+                  <span
+                    class="scan-global-denylist-status-indicator"
+                    :class="{
+                      'is-loading': globalScanDisabledLoading,
+                      'is-error': globalScanDisabledError,
+                      'is-ready': globalScanDisabledRequestState === 'success'
+                    }"
+                    aria-hidden="true"
+                  ></span>
+                  <span>{{ globalScanDisabledStatusText }}</span>
+                  <button
+                    v-if="globalScanDisabledError"
+                    class="scan-global-denylist-retry"
+                    type="button"
+                    @click="retryGlobalScanDisabledLoad"
+                  >
+                    重试
+                  </button>
+                </div>
+              </div>
             </template>
 
             <div
@@ -1779,5 +2013,47 @@ onBeforeUnmount(() => {
         </footer>
       </section>
     </section>
+
+    <div
+      v-if="isGlobalScanDisabledConfirmOpen"
+      class="scan-global-denylist-dialog-overlay"
+      role="presentation"
+      @click.self="closeGlobalScanDisabledConfirm"
+    >
+      <section
+        class="scan-global-denylist-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="global-denylist-dialog-title"
+        aria-describedby="global-denylist-dialog-description"
+      >
+        <div class="scan-global-denylist-dialog-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 3 4.8 6.2v5.1c0 4.5 2.8 8.2 7.2 9.7 4.4-1.5 7.2-5.2 7.2-9.7V6.2L12 3Z" />
+            <path d="M12 8v4.2M12 16h.01" />
+          </svg>
+        </div>
+        <div class="scan-global-denylist-dialog-copy">
+          <span class="scan-global-denylist-dialog-kicker">SCAN SAFETY CHECK</span>
+          <h2 id="global-denylist-dialog-title">确认关闭全局禁扫名单？</h2>
+          <p id="global-denylist-dialog-description">
+            关闭后，资产配置中心中启用的 scanDisabled 资产将不会自动加入本次任务的排除目标。请确认已与对应业务负责人沟通。
+          </p>
+        </div>
+        <div class="scan-global-denylist-dialog-actions">
+          <button
+            ref="globalScanDisabledConfirmCancelButton"
+            class="scan-create-secondary-button"
+            type="button"
+            @click="closeGlobalScanDisabledConfirm"
+          >
+            保持开启
+          </button>
+          <button class="scan-global-denylist-confirm-button" type="button" @click="confirmDisableGlobalScanDisabled">
+            确认关闭
+          </button>
+        </div>
+      </section>
+    </div>
   </main>
 </template>

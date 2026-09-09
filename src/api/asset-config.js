@@ -53,6 +53,43 @@ export async function getAssetConfigCenterList(filters = {}, signal) {
   })
 }
 
+export async function getAllAssetConfigCenterItems(filters = {}, signal) {
+  const requestedPageSize = Number.parseInt(filters.pageSize ?? filters.page_size, 10)
+  const pageSize = Number.isInteger(requestedPageSize)
+    ? Math.min(100, Math.max(1, requestedPageSize))
+    : 100
+  const items = []
+  let page = 1
+  let totalPages = 1
+
+  while (page <= totalPages) {
+    const payload = await getAssetConfigCenterList(
+      {
+        ...filters,
+        page,
+        pageSize
+      },
+      signal
+    )
+    const pageItems = Array.isArray(payload?.items) ? payload.items : []
+    const total = Number(payload?.total)
+    const responsePageSize = Number(payload?.pageSize ?? payload?.page_size) || pageSize
+
+    items.push(...pageItems)
+    totalPages = Number(payload?.totalPages ?? payload?.total_pages)
+
+    if (!Number.isInteger(totalPages) || totalPages < 1) {
+      totalPages = Number.isFinite(total) && total > 0
+        ? Math.ceil(total / responsePageSize)
+        : 1
+    }
+
+    page += 1
+  }
+
+  return items
+}
+
 export async function getAssetConfigCenterSmallCategoryOptions(filters = {}, signal) {
   return requestJson(buildAssetConfigCenterSmallCategoryOptionsUrl(filters).toString(), {
     method: 'GET',

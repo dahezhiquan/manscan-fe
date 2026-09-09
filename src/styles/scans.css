@@ -2245,6 +2245,147 @@
   white-space: nowrap;
 }
 
+.scan-global-denylist-control {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 170, 112, 0.28);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 250, 237, 0.98), rgba(255, 245, 228, 0.94)),
+    rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 8px 18px rgba(139, 93, 45, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.scan-global-denylist-control-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.scan-global-denylist-copy {
+  min-width: 0;
+}
+
+.scan-global-denylist-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scan-global-denylist-title-row strong {
+  color: #46351e;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.scan-global-denylist-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid rgba(171, 133, 67, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #977544;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.scan-global-denylist-state.is-on {
+  border-color: rgba(82, 159, 101, 0.24);
+  background: rgba(232, 249, 232, 0.82);
+  color: #34764a;
+}
+
+.scan-global-denylist-copy p {
+  max-width: 650px;
+  margin: 6px 0 0;
+  color: #816d50;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.scan-global-denylist-switch {
+  flex: 0 0 auto;
+  min-width: 116px;
+  padding: 8px 11px;
+  border-color: rgba(211, 183, 132, 0.5);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.scan-global-denylist-switch:hover {
+  border-color: rgba(191, 146, 69, 0.5);
+  box-shadow: 0 8px 18px rgba(139, 93, 45, 0.1);
+}
+
+.scan-global-denylist-switch.is-on {
+  border-color: rgba(101, 172, 112, 0.34);
+  background: rgba(239, 252, 238, 0.88);
+  color: #34764a;
+}
+
+.scan-global-denylist-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  color: #816d50;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.scan-global-denylist-status-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #c2b49d;
+  box-shadow: 0 0 0 4px rgba(194, 180, 157, 0.14);
+}
+
+.scan-global-denylist-status-indicator.is-loading {
+  background: #d89236;
+  box-shadow: 0 0 0 4px rgba(216, 146, 54, 0.14);
+  animation: scan-global-denylist-pulse 1.2s ease-in-out infinite;
+}
+
+.scan-global-denylist-status-indicator.is-error {
+  background: #c14d5b;
+  box-shadow: 0 0 0 4px rgba(193, 77, 91, 0.12);
+}
+
+.scan-global-denylist-status-indicator.is-ready {
+  background: #4ba568;
+  box-shadow: 0 0 0 4px rgba(75, 165, 104, 0.12);
+}
+
+.scan-global-denylist-retry {
+  min-height: 26px;
+  margin-left: auto;
+  padding: 0 9px;
+  border: 1px solid rgba(184, 143, 75, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #7a5925;
+  font-size: 11px;
+  font-weight: 800;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.scan-global-denylist-retry:hover {
+  border-color: rgba(168, 122, 44, 0.52);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
 .scan-create-field input:focus,
 .scan-create-field textarea:focus,
 .scan-create-field select:focus {
@@ -2356,6 +2497,152 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.scan-global-denylist-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(26, 28, 35, 0.38);
+  backdrop-filter: blur(4px);
+}
+
+.scan-global-denylist-dialog {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  width: min(520px, 100%);
+  padding: 22px;
+  border: 1px solid rgba(217, 221, 230, 0.98);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 28px 70px rgba(29, 34, 48, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.scan-global-denylist-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(255, 191, 107, 0.2);
+  color: #b56e22;
+}
+
+.scan-global-denylist-dialog-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.scan-global-denylist-dialog-copy {
+  min-width: 0;
+}
+
+.scan-global-denylist-dialog-kicker {
+  color: #a27642;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.scan-global-denylist-dialog h2 {
+  margin: 7px 0 8px;
+  color: #242938;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.scan-global-denylist-dialog p {
+  margin: 0;
+  color: #687287;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+
+.scan-global-denylist-dialog-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.scan-global-denylist-confirm-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid #c14d5b;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #c14d5b, #a9354a);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(193, 77, 91, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.scan-global-denylist-confirm-button:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.05);
+  box-shadow: 0 14px 26px rgba(193, 77, 91, 0.24);
+}
+
+.scan-global-denylist-confirm-button:active {
+  transform: translateY(0);
+}
+
+@keyframes scan-global-denylist-pulse {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+
+@media (max-width: 900px) {
+  .scan-global-denylist-control-head {
+    flex-direction: column;
+  }
+
+  .scan-global-denylist-switch {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .scan-global-denylist-dialog-overlay {
+    padding: 14px;
+  }
+
+  .scan-global-denylist-dialog {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 18px;
+  }
+
+  .scan-global-denylist-dialog-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .scan-global-denylist-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .scan-global-denylist-dialog-actions button {
+    width: 100%;
+  }
 }
 
 .scan-template-picker {

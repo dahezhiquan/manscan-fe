@@ -57,6 +57,7 @@ const STATUS_OPTIONS = [
   { value: 'enabled', label: '启用', tone: 'low' },
   { value: 'disabled', label: '停用', tone: 'medium' }
 ]
+const FORM_CATEGORY_OPTIONS = CATEGORY_OPTIONS.filter((item) => item.value)
 const FORM_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value)
 const DEFAULT_PAGE_SIZE = 10
 const SEARCH_DEBOUNCE = 280
@@ -74,14 +75,17 @@ const selectedSmallCategory = ref('')
 const itemNameInput = ref('')
 const appliedItemName = ref('')
 const smallCategoryOptions = ref([])
+const formSmallCategoryOptions = ref([])
 const tableRows = ref([])
 const total = ref(0)
 const totalPages = ref(1)
 const listError = ref('')
 const smallCategoryOptionsError = ref('')
+const formSmallCategoryOptionsError = ref('')
 const isLoading = ref(true)
 const isRefreshing = ref(false)
 const isSmallCategoryOptionsLoading = ref(false)
+const isFormSmallCategoryOptionsLoading = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
 const formError = ref('')
@@ -91,14 +95,28 @@ const formState = reactive(createEmptyForm())
 
 let listController = null
 let smallCategoryOptionsController = null
+let formSmallCategoryOptionsController = null
 let searchTimer = null
 let listRequestId = 0
 let smallCategoryOptionsRequestId = 0
+let formSmallCategoryOptionsRequestId = 0
 
 const activeCategoryMeta = computed(() => getCategoryMeta(selectedCategory.value))
 const activeCategoryLabel = computed(() => activeCategoryMeta.value.label)
 const selectedStatusLabel = computed(() => getFilterStatusMeta(selectedStatus.value).label)
 const selectedSmallCategoryLabel = computed(() => selectedSmallCategory.value || '小分类')
+const selectedFormCategoryLabel = computed(() => getCategoryLabel(formState.big_category))
+const filteredFormSmallCategoryOptions = computed(() => {
+  const keyword = normalizeText(formState.small_category).toLowerCase()
+
+  return formSmallCategoryOptions.value.filter((option) => {
+    if (!keyword) {
+      return true
+    }
+
+    return option.toLowerCase().includes(keyword)
+  })
+})
 const hasFilters = computed(
   () =>
     selectedCategory.value !== '' ||
@@ -181,6 +199,21 @@ watch(
     void loadSmallCategoryOptions()
   },
   { immediate: true }
+)
+
+watch(
+  [isFormDialogOpen, () => formState.big_category],
+  ([isOpen, nextCategory], [wasOpen, previousCategory] = []) => {
+    if (!isOpen) {
+      return
+    }
+
+    if (wasOpen && nextCategory !== previousCategory) {
+      formState.small_category = ''
+    }
+
+    void loadFormSmallCategoryOptions(nextCategory)
+  }
 )
 
 function getCategoryMeta(value) {
@@ -319,6 +352,12 @@ function buildSmallCategoryOptionFilters() {
   }
 }
 
+function buildFormSmallCategoryOptionFilters(category = formState.big_category) {
+  return {
+    bigCategory: normalizeCategory(category) || CATEGORY_OPTIONS[1]?.value || ''
+  }
+}
+
 function scheduleSearchCommit() {
   window.clearTimeout(searchTimer)
   searchTimer = window.setTimeout(() => {
@@ -363,6 +402,10 @@ function toggleStatusMenu() {
   activeFilterMenu.value = activeFilterMenu.value === 'status' ? '' : 'status'
 }
 
+function toggleFormCategoryMenu() {
+  activeFilterMenu.value = activeFilterMenu.value === 'formCategory' ? '' : 'formCategory'
+}
+
 function closeFilterMenu() {
   activeFilterMenu.value = ''
 }
@@ -375,10 +418,38 @@ function isStatusMenuOpen() {
   return activeFilterMenu.value === 'status'
 }
 
+function isFormCategoryMenuOpen() {
+  return activeFilterMenu.value === 'formCategory'
+}
+
+function isFormSmallCategoryMenuOpen() {
+  return activeFilterMenu.value === 'formSmallCategory'
+}
+
+function selectFormCategory(value) {
+  const nextCategory = normalizeCategory(value) || CATEGORY_OPTIONS[1]?.value || ''
+  formState.big_category = nextCategory
+  closeFilterMenu()
+}
+
+function openFormSmallCategoryMenu() {
+  activeFilterMenu.value = 'formSmallCategory'
+}
+
+function handleFormSmallCategoryInput() {
+  openFormSmallCategoryMenu()
+}
+
+function selectFormSmallCategoryOption(value) {
+  formState.small_category = normalizeText(value)
+  closeFilterMenu()
+}
+
 function openCreateDialog() {
   formMode.value = 'create'
   formError.value = ''
   resetForm(selectedCategory.value)
+  closeFilterMenu()
   isFormDialogOpen.value = true
 }
 
@@ -390,12 +461,14 @@ function openEditDialog(row) {
   formMode.value = 'edit'
   formError.value = ''
   populateForm(row)
+  closeFilterMenu()
   isFormDialogOpen.value = true
 }
 
 function closeFormDialog() {
   isFormDialogOpen.value = false
   formError.value = ''
+  closeFilterMenu()
 }
 
 function openDeleteDialog(row) {
@@ -592,6 +665,47 @@ async function loadSmallCategoryOptions() {
   }
 }
 
+async function loadFormSmallCategoryOptions(category = formState.big_category) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (formSmallCategoryOptionsController) {
+    formSmallCategoryOptionsController.abort()
+  }
+
+  const controller = new AbortController()
+  formSmallCategoryOptionsController = controller
+  const requestId = ++formSmallCategoryOptionsRequestId
+
+  isFormSmallCategoryOptionsLoading.value = true
+  formSmallCategoryOptionsError.value = ''
+
+  try {
+    const payload = await getAssetConfigCenterSmallCategoryOptions(
+      buildFormSmallCategoryOptionFilters(category),
+      controller.signal
+    )
+
+    if (requestId !== formSmallCategoryOptionsRequestId || controller.signal.aborted) {
+      return
+    }
+
+    formSmallCategoryOptions.value = normalizeSmallCategoryOptionsResponse(payload)
+  } catch (error) {
+    if (controller.signal.aborted || requestId !== formSmallCategoryOptionsRequestId) {
+      return
+    }
+
+    formSmallCategoryOptions.value = []
+    formSmallCategoryOptionsError.value = error instanceof Error ? error.message : '小分类选项加载失败，请稍后重试。'
+  } finally {
+    if (requestId === formSmallCategoryOptionsRequestId) {
+      isFormSmallCategoryOptionsLoading.value = false
+    }
+  }
+}
+
 function handleDocumentClick(event) {
   if (!filtersRef.value?.contains(event.target)) {
     closeFilterMenu()
@@ -600,6 +714,11 @@ function handleDocumentClick(event) {
 
 function handleGlobalKeydown(event) {
   if (event.key !== 'Escape') {
+    return
+  }
+
+  if (activeFilterMenu.value) {
+    closeFilterMenu()
     return
   }
 
@@ -633,6 +752,9 @@ onBeforeUnmount(() => {
   }
   if (smallCategoryOptionsController) {
     smallCategoryOptionsController.abort()
+  }
+  if (formSmallCategoryOptionsController) {
+    formSmallCategoryOptionsController.abort()
   }
   window.clearTimeout(searchTimer)
 })
@@ -977,25 +1099,108 @@ onBeforeUnmount(() => {
               <div class="asset-config-dialog-grid">
                 <label>
                   <span>项名称 *</span>
-                  <input v-model="formState.item_name" type="text" placeholder="例如：登录页配置" autocomplete="off" />
+                  <input v-model="formState.item_name" type="text" placeholder="例如：10.12.0.0/17" autocomplete="off" />
                 </label>
 
                 <label>
                   <span>大分类 *</span>
-                  <select v-model="formState.big_category">
-                    <option
-                      v-for="option in CATEGORY_OPTIONS.filter((item) => item.value)"
-                      :key="option.value"
-                      :value="option.value"
+                  <div
+                    class="asset-config-dialog-select"
+                    :class="{ 'is-open': isFormCategoryMenuOpen() }"
+                    @click.stop
+                  >
+                    <button
+                      class="asset-config-dialog-select-button"
+                      type="button"
+                      @click.stop="toggleFormCategoryMenu"
                     >
-                      {{ option.label }}
-                    </option>
-                  </select>
+                      <span>{{ selectedFormCategoryLabel }}</span>
+                      <svg class="asset-config-dialog-select-caret" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path d="M3.5 6 8 10.5 12.5 6" />
+                      </svg>
+                    </button>
+
+                    <div v-if="isFormCategoryMenuOpen()" class="asset-config-dialog-select-menu">
+                      <button
+                        v-for="option in FORM_CATEGORY_OPTIONS"
+                        :key="option.value"
+                        class="asset-config-dialog-select-option"
+                        :class="{ 'is-selected': formState.big_category === option.value }"
+                        type="button"
+                        @click.stop="selectFormCategory(option.value)"
+                      >
+                        <span class="asset-config-dialog-select-check" :class="{ 'is-selected': formState.big_category === option.value }" aria-hidden="true"></span>
+                        <span class="asset-config-dialog-select-option-copy">
+                          <strong>{{ option.label }}</strong>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </label>
 
                 <label>
                   <span>小分类 *</span>
-                  <input v-model="formState.small_category" type="text" placeholder="例如：页面 / 域名 / URL" autocomplete="off" />
+                  <div
+                    class="asset-config-dialog-combobox"
+                    :class="{ 'is-open': isFormSmallCategoryMenuOpen() }"
+                    @click.stop
+                  >
+                    <input
+                      v-model="formState.small_category"
+                      type="text"
+                      placeholder="例如：BFE 资产 / 办公接入区"
+                      autocomplete="off"
+                      role="combobox"
+                      :aria-expanded="isFormSmallCategoryMenuOpen() ? 'true' : 'false'"
+                      aria-controls="asset-config-small-category-options"
+                      @focus="openFormSmallCategoryMenu"
+                      @input="handleFormSmallCategoryInput"
+                      @keydown.escape.stop="closeFilterMenu"
+                    />
+                    <span class="asset-config-dialog-combobox-icon" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                        <path d="M3.5 6 8 10.5 12.5 6" />
+                      </svg>
+                    </span>
+
+                    <div
+                      v-if="isFormSmallCategoryMenuOpen()"
+                      id="asset-config-small-category-options"
+                      class="asset-config-dialog-combobox-menu"
+                      role="listbox"
+                    >
+                      <div v-if="isFormSmallCategoryOptionsLoading" class="asset-config-dialog-combobox-message">加载中...</div>
+
+                      <template v-else-if="filteredFormSmallCategoryOptions.length">
+                        <button
+                          v-for="option in filteredFormSmallCategoryOptions"
+                          :key="option"
+                          class="asset-config-dialog-combobox-option"
+                          :class="{ 'is-selected': formState.small_category === option }"
+                          type="button"
+                          role="option"
+                          :aria-selected="formState.small_category === option ? 'true' : 'false'"
+                          @click.stop="selectFormSmallCategoryOption(option)"
+                        >
+                          <span class="asset-config-dialog-combobox-check" :class="{ 'is-selected': formState.small_category === option }" aria-hidden="true"></span>
+                          <span class="asset-config-dialog-combobox-option-copy">
+                            <strong>{{ option }}</strong>
+                          </span>
+                        </button>
+                      </template>
+
+                      <div v-else class="asset-config-dialog-combobox-message">
+                        <span>{{ formSmallCategoryOptionsError || '暂无匹配小类，可直接输入' }}</span>
+                        <button
+                          v-if="formSmallCategoryOptionsError"
+                          type="button"
+                          @click.stop="loadFormSmallCategoryOptions(formState.big_category)"
+                        >
+                          重试
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </label>
 
                 <label>
