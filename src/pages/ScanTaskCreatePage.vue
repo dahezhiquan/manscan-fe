@@ -311,6 +311,12 @@ const stepFields = {
   ],
   advanced: [
     {
+      key: 'dast',
+      label: '启用 DAST',
+      type: 'boolean',
+      tooltip: '启用 DAST 模板。因可能触发大量请求，所以这类模版只有此开关开启才会被使用。请注意：启用此开关后，非 DAST 模版将会被屏蔽。'
+    },
+    {
       key: 'headless',
       label: '启用 Headless',
       type: 'boolean',
@@ -346,6 +352,29 @@ const stepFields = {
     },
     { key: 'proxy', label: '代理列表', type: 'string[]', placeholder: '每行一个代理地址' },
     { key: 'proxy_internal', label: '内部请求也走代理', type: 'boolean' },
+    {
+      key: 'interactsh_server',
+      label: '自定义 Interactsh 服务地址',
+      type: 'string',
+      placeholder: '例如：https://oast.example.internal',
+      tooltip: '当前任务使用的自定义 Interactsh 服务根地址，可填写主机名或 http:// / https:// 根地址。'
+    },
+    {
+      key: 'interactsh_token',
+      label: '自定义 Interactsh Token',
+      type: 'string',
+      inputType: 'password',
+      maxLength: 255,
+      autocomplete: 'off',
+      placeholder: '最长 255 个字符',
+      tooltip: '如果自定义 Interactsh 服务开启了鉴权，在此处配置鉴权 Token。'
+    },
+    {
+      key: 'no_interactsh',
+      label: '禁用 Interactsh',
+      type: 'boolean',
+      tooltip: '禁用当前任务的 Interactsh 请求，需要 Interactsh 请求的模版将会无法被检测。'
+    },
     { key: 'http_stats', label: '开启 HTTP 状态码统计', type: 'boolean' },
     {
       key: 'enable_global_matchers_templates',
@@ -600,6 +629,7 @@ function createInitialForm() {
     project_path: '',
     scan_strategy: 'auto',
     disable_http_probe: false,
+    dast: false,
     headless: false,
     page_timeout: null,
     show_browser: false,
@@ -609,6 +639,9 @@ function createInitialForm() {
     show_actions: false,
     proxy: [],
     proxy_internal: false,
+    interactsh_server: '',
+    interactsh_token: '',
+    no_interactsh: false,
     enable_progress_bar: false,
     stats_interval: null,
     metrics_port: null,
@@ -1317,6 +1350,21 @@ function buildPayload() {
   return payload
 }
 
+function validateAdvancedCapabilityConfig() {
+  const hasInteractshServer = Boolean(form.interactsh_server.trim())
+  const hasInteractshToken = Boolean(form.interactsh_token.trim())
+
+  if (form.interactsh_token.trim().length > 255) {
+    return 'Interactsh Token 最长 255 个字符。'
+  }
+
+  if (form.no_interactsh && (hasInteractshServer || hasInteractshToken)) {
+    return '禁用 Interactsh/OOB 后，不能同时填写 Interactsh 服务地址或 Token。'
+  }
+
+  return ''
+}
+
 function resolveCreatedTaskDetailPath(payload) {
   const taskId = payload?.task?.id
 
@@ -1349,6 +1397,13 @@ async function submitTask() {
       ? '全局禁扫名单加载失败，请重试后再创建扫描任务。'
       : '全局禁扫名单正在同步，请等待同步完成后再创建扫描任务。'
     activeStep.value = 1
+    return
+  }
+
+  const advancedCapabilityError = validateAdvancedCapabilityConfig()
+  if (advancedCapabilityError) {
+    errorMessage.value = advancedCapabilityError
+    activeStep.value = stepDefinitions.findIndex((step) => step.key === 'advanced')
     return
   }
 
@@ -1964,9 +2019,11 @@ onBeforeUnmount(() => {
             <input
               v-else
               :value="getFieldValue(field)"
-              :type="field.type === 'number' ? 'number' : 'text'"
+              :type="field.inputType ?? (field.type === 'number' ? 'number' : 'text')"
               :min="field.min"
               :step="field.step"
+              :maxlength="field.maxLength"
+              :autocomplete="field.autocomplete"
               :placeholder="field.placeholder"
               @input="updateFieldValue(field, $event)"
               @wheel="field.type === 'number' ? handleNumberFieldWheel($event) : undefined"

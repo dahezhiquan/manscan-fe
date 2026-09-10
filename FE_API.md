@@ -188,8 +188,15 @@
   - 请求体为 JSON
   - 前端会按表单仅提交已填写字段
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
+  - 高级能力字段：
+    - `dast`: `boolean`，启用 DAST/fuzzable 模板
+    - `interactsh_server`: `string`，当前任务使用的 Interactsh 服务根地址
+    - `interactsh_token`: `string`，当前任务使用的 Interactsh 鉴权 Token，前端按密码输入处理，最长 255 个字符
+    - `no_interactsh`: `boolean`，禁用当前任务的 Interactsh/OOB 请求
 - 联调注意事项：
   - 当前后端不限制单次任务的目标数量上限
+  - `no_interactsh=true` 时，前端会阻止同时填写 `interactsh_server` 或 `interactsh_token`，与后端互斥约定保持一致
+  - `interactsh_token` 仅在创建请求中提交，前端不会在任务查询页面展示该字段
 - 返回结构：前端使用 `data.task.id`、`data.task.task_no`、`data.task.status`、`data.task_api`
 - 异常分支：
   - 非 2xx 或业务错误时，在页面顶部展示错误文案
