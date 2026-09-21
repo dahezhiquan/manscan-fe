@@ -983,7 +983,7 @@ function triggerTemplateAutoLockPulse() {
   templateAutoLockPulse.value = true
   templateAutoLockTimer = window.setTimeout(() => {
     templateAutoLockPulse.value = false
-  }, 1400)
+  }, 760)
 }
 
 function toggleAutomaticScanMode() {
@@ -1532,14 +1532,6 @@ onBeforeUnmount(() => {
             }"
             aria-label="选择扫描模板"
           >
-            <div v-if="templateAutoLockPulse" class="scan-template-auto-lock-overlay" aria-hidden="true">
-              <div class="scan-template-auto-lock-core">
-                <span class="scan-template-auto-lock-kicker">AUTO MAPPING</span>
-                <strong>手动模板选择已锁定</strong>
-                <span>自动模板映射扫描已接管模板调度</span>
-              </div>
-            </div>
-
             <section class="scan-template-library-panel">
               <div class="scan-template-library-toolbar">
                 <div class="scan-template-library-filters">
@@ -1709,11 +1701,15 @@ onBeforeUnmount(() => {
                   <div class="scan-template-inline-actions">
                     <button
                       class="scan-create-secondary-button scan-template-auto-toggle"
-                      :class="{ 'is-active': isAutomaticScanEnabled }"
+                      :class="{ 'is-active': isAutomaticScanEnabled, 'is-pulse': templateAutoLockPulse }"
                       type="button"
+                      :aria-pressed="isAutomaticScanEnabled"
                       @click="toggleAutomaticScanMode"
                     >
-                      {{ isAutomaticScanEnabled ? '自动模板映射扫描 · 已开启' : '自动模板映射扫描' }}
+                      <span class="scan-template-auto-toggle-dot" aria-hidden="true"></span>
+                      <span class="scan-template-auto-toggle-label">
+                        {{ isAutomaticScanEnabled ? '自动模板映射扫描 · 已开启' : '自动模板映射扫描' }}
+                      </span>
                     </button>
                     <button
                       class="scan-create-secondary-button"

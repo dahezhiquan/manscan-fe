@@ -310,6 +310,33 @@
   display: none;
 }
 
+.scan-create-page .scan-template-auto-toggle {
+  border-color: var(--line) !important;
+  background: var(--surface-2) !important;
+  color: var(--line) !important;
+}
+
+.scan-create-page .scan-template-auto-toggle.is-active {
+  background: var(--surface-3) !important;
+  box-shadow:
+    1px 1px 0 rgba(31, 26, 23, 0.55),
+    0 0 0 3px rgba(132, 215, 255, 0.3) !important;
+}
+
+.scan-create-page .scan-template-auto-toggle-dot {
+  background: var(--accent-orange);
+  box-shadow: 0 0 0 3px rgba(255, 177, 94, 0.24);
+}
+
+.scan-create-page .scan-template-auto-toggle.is-active .scan-template-auto-toggle-dot {
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(132, 215, 255, 0.26);
+}
+
+.scan-create-page .scan-template-inline-shell.is-automatic-scan-pulse::after {
+  border-color: rgba(31, 26, 23, 0.4);
+}
+
 .templates-row:hover,
 .scans-table-row:hover,
 .vuln-result-row:hover,
@@ -612,8 +639,16 @@
   .scan-create-step,
   .scan-create-ghost-button,
   .scan-create-primary-button,
-  .scan-create-secondary-button {
+  .scan-create-secondary-button,
+  .scan-template-auto-toggle,
+  .scan-template-auto-toggle-dot {
     transition: none;
+    animation: none !important;
+  }
+
+  .scan-template-inline-shell.is-automatic-scan-pulse::after {
+    animation: none !important;
+    opacity: 0;
   }
 }
 
