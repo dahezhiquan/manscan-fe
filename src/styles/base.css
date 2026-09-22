@@ -152,6 +152,7 @@ h6,
 .vuln-page,
 .scans-page,
 .asset-config-page,
+.domain-assets-page,
 .scan-create-page,
 .scan-task-detail-page {
   position: relative;
@@ -163,6 +164,7 @@ h6,
 .vuln-page::before,
 .scans-page::before,
 .asset-config-page::before,
+.domain-assets-page::before,
 .scan-create-page::before,
 .scan-task-detail-page::before {
   content: '';
@@ -184,6 +186,7 @@ h6,
 .vuln-page > *,
 .scans-page > *,
 .asset-config-page > *,
+.domain-assets-page > *,
 .scan-create-page > *,
 .scan-task-detail-page > * {
   position: relative;

@@ -29,6 +29,8 @@ const props = defineProps({
   }
 })
 
+const SCAN_LIST_VISIBLE_SEVERITY_ORDER = SCAN_SEVERITY_ORDER.filter((severityKey) => severityKey !== 'info')
+
 const keywordInput = ref('')
 const appliedKeyword = ref('')
 const selectedStatus = ref('')
@@ -901,7 +903,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="scans-loading-status"></div>
                 <div class="scans-loading-severity">
-                  <span v-for="severityKey in SCAN_SEVERITY_ORDER" :key="severityKey" class="scans-loading-severity-dot"></span>
+                  <span v-for="severityKey in SCAN_LIST_VISIBLE_SEVERITY_ORDER" :key="severityKey" class="scans-loading-severity-dot"></span>
                 </div>
                 <span class="scans-loading-box"></span>
                 <span class="scans-loading-box"></span>
@@ -979,7 +981,7 @@ onBeforeUnmount(() => {
                 <div class="scans-severity-cell">
                   <div class="scans-severity-group">
                     <span
-                      v-for="severityKey in SCAN_SEVERITY_ORDER"
+                      v-for="severityKey in SCAN_LIST_VISIBLE_SEVERITY_ORDER"
                       :key="severityKey"
                       class="scans-severity-badge"
                       :class="`is-${severityKey}`"

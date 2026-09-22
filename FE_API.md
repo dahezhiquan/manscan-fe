@@ -450,6 +450,8 @@
   - `items[].name`
   - `items[].severity`
   - `items[].template_id`
+  - `items[].asset_path`
+  - `items[].asset_domain`
   - `items[].asset_host`
   - `items[].status`
   - `items[].tags`
@@ -473,7 +475,8 @@
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
   - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
-  - `asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
+  - 列表资产地址优先展示 `asset_domain`；缺失时兼容回退到 `asset_host`，`asset_host` 仍用于 Host 筛选和资产信息补充
+  - `asset_domain`、`asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
 
 ### 18. 更新漏洞状态
 
@@ -566,6 +569,7 @@
   - `data.last_found_at`
   - `data.fixed_at`
   - `data.status`
+  - `data.asset_path`
   - `data.asset_domain`
   - `data.asset_host`
   - `data.asset_port`
@@ -634,3 +638,41 @@
 - 联调注意事项：
   - 该接口不是 JSON 接口，前端会以 `fetch + blob` 方式处理成功响应
   - 下载成功后由浏览器直接保存为 zip 文件，不会跳转页面
+
+### 24. 获取域名资产清单
+
+- 用途：`/assets/domains` 域名资产清单页首屏加载、域名模糊搜索、展开式筛选和分页展示
+- 请求方式：`GET`
+- 路径：`/api/v1/domain-assets`
+- 请求参数：
+  - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
+  - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
+  - `keyword`: 顶部搜索框输入值，用于按域名或资产地址模糊搜索
+  - `organization`: “所属组织单位”筛选
+  - `include_sub_organization`: “所属组织单位”筛选存在时提交，当前默认 `true`
+  - `owner`: “内部负责人”筛选
+  - `scan_task`: “相关扫描任务”筛选
+  - `region`: “网络区域”筛选
+  - `asset_address`: “资产地址”筛选
+  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`、`unknown`
+  - `business_system`: “业务系统”筛选
+  - `is_alive`: “存活状态”筛选，前端提交 `true` 或 `false`
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].id`
+  - `items[].domain` 或 `items[].asset_address`
+  - `items[].title`
+  - `items[].risk_level`
+  - `items[].vulnerability_count`
+  - `items[].component_count`
+  - `items[].components`
+- 异常分支：
+  - 首屏失败时展示错误态和重新加载按钮
+  - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
+  - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
+- 联调注意事项：
+  - 进入页面默认请求 `page=1&page_size=10`
+  - 顶部搜索框防抖提交 `keyword`
+  - “添加筛选条件”弹窗一次保存一个筛选项，已保存条件以 chip 展示，支持单项移除和清空全部
+  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级
+  - `components` 可返回字符串数组、逗号分隔字符串或为空；为空时仅展示组件数量
+  - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容

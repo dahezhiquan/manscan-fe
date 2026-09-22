@@ -37,16 +37,16 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #5f6572;
+  color: var(--ink-soft);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
   line-height: 1;
 }
 
 .scans-page-crumb-separator {
-  color: rgba(95, 101, 114, 0.5);
+  color: rgba(31, 26, 23, 0.42);
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 700;
   line-height: 1;
 }
 
@@ -241,55 +241,26 @@
 }
 
 .scans-search {
-  --search-magnet-x: 0px;
-  --search-magnet-y: 0px;
-  --search-glow-x: 82%;
-  --search-glow-y: 50%;
   position: relative;
   display: flex;
   align-items: center;
   flex: 1 1 0;
   width: 100%;
   min-width: 0;
+  height: 46px;
   border: 2px solid #2f2925;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 253, 247, 0.96);
   box-shadow: 0 2px 0 #2f2925;
-  transform: translate3d(var(--search-magnet-x), var(--search-magnet-y), 0);
   transition:
-    transform 0.24s ease,
-    box-shadow 0.24s ease,
-    border-color 0.24s ease;
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .scans-search::before,
 .scans-search::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.scans-search::before {
-  padding: 0;
-  background: transparent;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-.scans-search::after {
-  background: radial-gradient(
-    circle at var(--search-glow-x) var(--search-glow-y),
-    rgba(255, 255, 255, 0.82),
-    rgba(255, 255, 255, 0.12) 28%,
-    rgba(255, 255, 255, 0) 56%
-  );
-  opacity: 0.5;
-  transition: opacity 0.22s ease, transform 0.24s ease;
+  display: none;
 }
 
 .scans-search input,
@@ -305,19 +276,17 @@
 
 .scans-search input {
   width: 100%;
-  padding: 0 44px 0 14px;
-  font-size: 14px;
-  font-weight: 500;
+  height: 100%;
+  padding: 0 42px 0 14px;
+  border-radius: 16px;
+  color: #25211e;
+  font-size: 13px;
+  font-weight: 700;
   outline: none;
-  transition:
-    box-shadow 0.24s ease,
-    background 0.24s ease,
-    color 0.24s ease;
 }
 
 .scans-search input::placeholder {
-  color: #c3c0c7;
-  transition: color 0.24s ease, transform 0.24s ease;
+  color: #beb8b0;
 }
 
 .scans-toolbar-actions {
@@ -531,8 +500,11 @@
   box-shadow: none;
 }
 
-.scans-search:hover {
-  box-shadow: 0 3px 0 #2f2925;
+.scans-search:hover,
+.scans-search:focus-within {
+  background: #fffaf1;
+  box-shadow: 0 4px 0 #2f2925;
+  transform: translateY(-1px);
 }
 
 .scans-search:focus-within::before {
@@ -555,18 +527,16 @@
 
 .scans-search:focus-within {
   border-color: #2f2925;
-  box-shadow: 0 4px 0 #2f2925;
 }
 
 .scans-search:focus-within input::placeholder {
-  color: #b4b0b8;
-  transform: translateX(2px);
+  color: #beb8b0;
 }
 
 .scans-search-icon {
   position: absolute;
   top: 50%;
-  right: 16px;
+  right: 14px;
   width: 18px;
   height: 18px;
   display: inline-flex;
@@ -578,13 +548,13 @@
 }
 
 .scans-search:hover .scans-search-icon {
-  transform: translateY(-50%) translateX(1px) scale(1.04);
-  color: #171310;
+  transform: translateY(-50%);
+  color: #2f2925;
 }
 
 .scans-search:focus-within .scans-search-icon {
-  transform: translateY(-50%) translateX(1px) scale(1.08);
-  color: #171310;
+  transform: translateY(-50%);
+  color: #2f2925;
 }
 
 .scans-filter-chip svg,
@@ -825,19 +795,25 @@
     box-shadow 0.18s ease;
 }
 
-.scans-table-row:hover,
-.scans-table-row:focus-visible {
-  background: rgba(255, 255, 255, 0.94);
-  outline: none;
-  box-shadow: inset 0 0 0 3px rgba(132, 215, 255, 0.55);
+.scans-table-row:hover {
+  background: #fff5d9;
 }
 
 .scans-table-row.selected {
   background: #eef8ff;
+  box-shadow: none;
 }
 
 .scans-table-row.selected:hover {
   background: #e1f3ff;
+  box-shadow: none;
+}
+
+.scans-table-row:focus-visible {
+  outline: 3px solid rgba(47, 111, 255, 0.38);
+  outline-offset: -5px;
+  background: #fff5d9;
+  box-shadow: none;
 }
 
 .scans-row-select-cell {
@@ -908,7 +884,7 @@
 
 .scans-severity-group {
   display: inline-grid;
-  grid-template-columns: repeat(5, minmax(36px, 1fr));
+  grid-template-columns: repeat(4, minmax(36px, 1fr));
   border: var(--border-strong);
   border-radius: 14px;
   overflow: visible;

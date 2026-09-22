@@ -12,6 +12,7 @@ export const SCAN_TASK_CREATE_API = `${API_PREFIX}/scans`
 export const SCAN_TASK_STATS_API = `${API_PREFIX}/scans/stats`
 export const SCAN_TASK_NAME_OPTIONS_API = `${API_PREFIX}/scans/options/names`
 export const SCAN_TASK_DELETE_API = SCAN_TASK_CREATE_API
+export const DOMAIN_ASSET_LIST_API = `${API_PREFIX}/domain-assets`
 export const ASSET_CONFIG_CENTER_API = `${API_PREFIX}/asset-config-centers`
 export const ASSET_CONFIG_CENTER_LIST_API = ASSET_CONFIG_CENTER_API
 export const ASSET_CONFIG_CENTER_SMALL_CATEGORY_OPTIONS_API = `${ASSET_CONFIG_CENTER_API}/options/small-categories`

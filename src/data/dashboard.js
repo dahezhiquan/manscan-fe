@@ -2,7 +2,7 @@ export const primaryNav = [
   { label: '仪表盘', active: true, count: null, icon: 'grid', route: '/' },
   { label: '漏洞', active: false, count: 1, icon: 'shield', route: '/vulnerabilities' },
   { label: '扫描', active: false, count: 0, icon: 'scan', route: '/scans' },
-  { label: '资产清单', active: false, count: 0, icon: 'stack' },
+  { label: '域名资产清单', active: false, count: null, icon: 'stack', route: '/assets/domains' },
   { label: '资产配置中心', active: false, count: null, icon: 'server', route: '/assets/config' }
 ]
 
@@ -41,6 +41,10 @@ export function getNavigationState(path = '/', options = {}) {
 
     if (route === '/assets/config') {
       return path === '/assets/config' || path.startsWith('/assets/config')
+    }
+
+    if (route === '/assets/domains') {
+      return path === '/assets/domains' || path.startsWith('/assets/domains')
     }
 
     return path === route
