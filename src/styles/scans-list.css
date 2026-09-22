@@ -885,11 +885,11 @@
 .scans-severity-group {
   display: inline-grid;
   grid-template-columns: repeat(4, minmax(36px, 1fr));
-  border: var(--border-strong);
-  border-radius: 14px;
+  border: 1px solid rgba(31, 26, 23, 0.1);
+  border-radius: 12px;
   overflow: visible;
-  box-shadow: var(--shadow-flat);
   background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
 }
 
 .scans-severity-badge {
@@ -902,6 +902,7 @@
   font-size: 12px;
   font-weight: 800;
   color: var(--line);
+  box-shadow: none;
 }
 
 .scans-severity-badge + .scans-severity-badge {
@@ -950,6 +951,14 @@
   transform: translateX(-50%) translateY(8px);
   transition: opacity 0.18s ease, transform 0.18s ease;
   z-index: 3;
+  box-shadow: none;
+}
+
+.scans-severity-cell .scans-severity-group,
+.scans-severity-cell .scans-severity-badge,
+.scans-severity-cell .scans-severity-value,
+.scans-severity-cell .scans-severity-tooltip {
+  box-shadow: none;
 }
 
 .scans-severity-badge:hover .scans-severity-tooltip,

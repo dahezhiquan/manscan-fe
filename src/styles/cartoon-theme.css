@@ -1628,3 +1628,24 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+/* Scan task risk distribution should stay flat like the domain asset severity cells. */
+.scans-page .scans-severity-group {
+  border: 1px solid rgba(31, 26, 23, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
+}
+
+.scans-page .scans-severity-badge {
+  box-shadow: none;
+}
+
+.scans-page .scans-severity-badge + .scans-severity-badge {
+  border-left: 1px solid rgba(31, 26, 23, 0.1);
+}
+
+.scans-page .scans-severity-tooltip,
+.scans-page .scans-severity-value {
+  box-shadow: none;
+}

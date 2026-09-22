@@ -605,14 +605,25 @@ onBeforeUnmount(() => {
                       </div>
 
                       <div class="domain-assets-vuln-cell">
-                        <span class="domain-assets-vuln-count" :class="{ active: row.vulnerabilityCount > 0 }">
-                          {{ row.vulnerabilityCountDisplay }}
-                        </span>
+                        <div class="domain-assets-severity-group" :aria-label="row.vulnerabilityTooltip">
+                          <span
+                            v-for="item in row.vulnerabilitySeverityItems"
+                            :key="item.key"
+                            class="domain-assets-severity-badge"
+                            :class="`is-${item.key}`"
+                            tabindex="0"
+                            :aria-label="`${item.label}: ${item.countDisplay}`"
+                          >
+                            <span class="domain-assets-severity-value">{{ item.countDisplay }}</span>
+                            <span class="domain-assets-severity-tooltip" role="tooltip">
+                              {{ item.label }}
+                            </span>
+                          </span>
+                        </div>
                       </div>
 
                       <div class="domain-assets-component-cell">
                         <span>{{ row.componentCountDisplay }}</span>
-                        <small v-if="row.componentPreview">{{ row.componentPreview }}</small>
                       </div>
                     </article>
                   </div>

@@ -1,5 +1,6 @@
 export const DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export const DOMAIN_ASSET_SEARCH_DEBOUNCE = 300
+export const DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER = ['critical', 'high', 'medium', 'low']
 
 export const DOMAIN_ASSET_RISK_OPTIONS = [
   { value: '', label: '全部风险等级', shortLabel: '风险等级' },

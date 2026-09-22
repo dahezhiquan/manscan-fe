@@ -305,6 +305,13 @@
   font-weight: 900;
 }
 
+.domain-assets-table-head > div,
+.domain-assets-table-row > div {
+  min-width: 0;
+  justify-self: stretch;
+  text-align: center;
+}
+
 .domain-assets-table-body {
   display: grid;
 }
@@ -356,21 +363,20 @@
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 800;
+  text-align: center;
 }
 
 .domain-assets-component-cell {
   display: grid;
   gap: 4px;
+  justify-items: center;
 }
 
-.domain-assets-component-cell small {
-  min-width: 0;
-  overflow: hidden;
-  color: #8b94a3;
-  font-size: 11px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.domain-assets-risk-cell,
+.domain-assets-vuln-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .domain-assets-risk-pill {
@@ -418,24 +424,103 @@
   background: #edf1f6;
 }
 
-.domain-assets-vuln-count {
+.domain-assets-severity-group {
   display: inline-grid;
-  place-items: center;
-  min-width: 38px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 8px;
-  background: #eef2f7;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 900;
+  grid-template-columns: repeat(4, minmax(34px, 1fr));
+  border: 1px solid rgba(31, 26, 23, 0.1);
+  border-radius: 12px;
+  overflow: visible;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: none;
 }
 
-.domain-assets-vuln-count.active {
-  border: 2px solid #2f2925;
-  background: #ffe3b8;
-  color: #a24605;
-  box-shadow: 2px 2px 0 rgba(31, 26, 23, 0.78);
+.domain-assets-severity-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  min-height: 36px;
+  color: var(--line);
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.domain-assets-severity-badge + .domain-assets-severity-badge {
+  border-left: 1px solid rgba(31, 26, 23, 0.1);
+}
+
+.domain-assets-severity-badge.is-critical {
+  background: #ffe6e8;
+  color: #9f3642;
+}
+
+.domain-assets-severity-badge.is-high {
+  background: #ffedd8;
+  color: #b35b07;
+}
+
+.domain-assets-severity-badge.is-medium {
+  background: #fff3d8;
+  color: #9b7400;
+}
+
+.domain-assets-severity-badge.is-low {
+  background: #e9f1ff;
+  color: #325fcb;
+}
+
+.domain-assets-severity-badge:focus-visible {
+  outline: 3px solid rgba(47, 111, 255, 0.38);
+  outline-offset: 2px;
+}
+
+.domain-assets-severity-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  padding: 7px 10px;
+  border: 1px solid rgba(31, 26, 23, 0.12);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: none;
+  color: #2f2925;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+}
+
+.domain-assets-vuln-cell .domain-assets-severity-group,
+.domain-assets-vuln-cell .domain-assets-severity-badge,
+.domain-assets-vuln-cell .domain-assets-severity-value,
+.domain-assets-vuln-cell .domain-assets-severity-tooltip {
+  box-shadow: none;
+}
+
+.domain-assets-severity-tooltip::after {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(31, 26, 23, 0.12);
+  border-bottom: 1px solid rgba(31, 26, 23, 0.12);
+  background: #ffffff;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.domain-assets-severity-badge:hover .domain-assets-severity-tooltip,
+.domain-assets-severity-badge:focus-visible .domain-assets-severity-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .domain-assets-skeleton-list {
@@ -953,13 +1038,13 @@
 }
 
 .domain-assets-table-row.selected {
-  background: #eef8ff;
-  box-shadow: none;
+  background: #fff5d9;
+  box-shadow: inset 4px 0 0 #f2b84b;
 }
 
 .domain-assets-table-row.selected:hover {
-  background: #e1f3ff;
-  box-shadow: none;
+  background: #fff1c2;
+  box-shadow: inset 4px 0 0 #f2b84b;
 }
 
 .domain-assets-table-row:focus-visible {
@@ -982,8 +1067,7 @@
   font-weight: 800;
 }
 
-.domain-assets-component-cell > span,
-.domain-assets-vuln-count {
+.domain-assets-component-cell > span {
   display: inline-grid;
   place-items: center;
   width: fit-content;
@@ -997,12 +1081,6 @@
   color: var(--line);
   font-size: 12px;
   font-weight: 900;
-}
-
-.domain-assets-component-cell small {
-  color: #6c635a;
-  font-size: 11px;
-  font-weight: 800;
 }
 
 .domain-assets-risk-pill {

@@ -1,5 +1,8 @@
-import { DOMAIN_ASSET_RISK_META } from '../constants/domainAssets'
-import { formatCount, firstDefined } from './scanTask'
+import {
+  DOMAIN_ASSET_RISK_META,
+  DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER
+} from '../constants/domainAssets'
+import { formatCount, firstDefined, severityLabel } from './scanTask'
 
 export function normalizeDomainAssetListResponse(payload, fallbackPage = 1, fallbackPageSize = 10) {
   const pageSize = normalizePositiveInteger(firstDefined(payload?.pageSize, payload?.page_size), fallbackPageSize)
@@ -30,6 +33,17 @@ export function normalizeDomainAsset(record) {
     firstDefined(record?.vulnerability_count, record?.vulnerabilityCount, record?.vuln_count, record?.vulnCount),
     0
   )
+  const vulnerabilitySeverity = normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount)
+  const vulnerabilitySeverityItems = DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.map((key) => {
+    const count = vulnerabilitySeverity[key] ?? 0
+
+    return {
+      key,
+      label: severityLabel(key),
+      count,
+      countDisplay: formatCount(count)
+    }
+  })
   const componentCount = normalizeNonNegativeInteger(firstDefined(record?.component_count, record?.componentCount), 0)
   const components = normalizeComponents(record?.components)
 
@@ -41,12 +55,59 @@ export function normalizeDomainAsset(record) {
     riskMeta,
     vulnerabilityCount,
     vulnerabilityCountDisplay: formatCount(vulnerabilityCount),
+    vulnerabilitySeverity,
+    vulnerabilitySeverityItems,
+    vulnerabilityTooltip: vulnerabilitySeverityItems
+      .map((item) => `${item.label}: ${item.countDisplay}`)
+      .join('，'),
     componentCount,
     componentCountDisplay: formatCount(componentCount),
     components,
-    componentPreview: components.slice(0, 3).join(' / '),
-    memoKey: [id, assetAddress, title, riskLevel, vulnerabilityCount, componentCount, components.join('|')].join('|')
+    memoKey: [
+      id,
+      assetAddress,
+      title,
+      riskLevel,
+      vulnerabilityCount,
+      DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.map((key) => vulnerabilitySeverity[key]).join(','),
+      componentCount,
+      components.join('|')
+    ].join('|')
   }
+}
+
+function normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount) {
+  const source = firstDefined(
+    record?.vulnerability_counts,
+    record?.vulnerabilityCounts,
+    record?.severity_counts,
+    record?.severityCounts,
+    record?.vuln_counts,
+    record?.vulnCounts
+  )
+  const result = DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.reduce((nextResult, key) => {
+    nextResult[key] = normalizeNonNegativeInteger(
+      firstDefined(
+        source?.[key],
+        source?.[`${key}_count`],
+        source?.[`${key}Count`],
+        record?.[`${key}_count`],
+        record?.[`${key}Count`],
+        record?.[`vulnerability_${key}_count`],
+        record?.[`${key}_vulnerability_count`]
+      ),
+      0
+    )
+    return nextResult
+  }, {})
+
+  const severityTotal = Object.values(result).reduce((total, count) => total + count, 0)
+
+  if (severityTotal === 0 && vulnerabilityCount > 0 && DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.includes(riskLevel)) {
+    result[riskLevel] = vulnerabilityCount
+  }
+
+  return result
 }
 
 function normalizeComponents(value) {
