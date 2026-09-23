@@ -27,6 +27,7 @@ export function normalizeDomainAsset(record) {
   const id = String(firstDefined(record?.id, record?.domain, record?.asset_address, '') ?? '').trim()
   const assetAddress = formatText(firstDefined(record?.asset_address, record?.assetAddress, record?.domain))
   const title = formatText(firstDefined(record?.title, record?.site_title, record?.siteTitle))
+  const region = formatText(firstDefined(record?.region, record?.network_region, record?.networkRegion, record?.area))
   const riskLevel = normalizeRiskLevel(firstDefined(record?.risk_level, record?.riskLevel, record?.severity))
   const riskMeta = DOMAIN_ASSET_RISK_META[riskLevel] ?? DOMAIN_ASSET_RISK_META.unknown
   const vulnerabilityCount = normalizeNonNegativeInteger(
@@ -51,6 +52,7 @@ export function normalizeDomainAsset(record) {
     id,
     assetAddress,
     title,
+    region,
     riskLevel,
     riskMeta,
     vulnerabilityCount,
@@ -67,6 +69,7 @@ export function normalizeDomainAsset(record) {
       id,
       assetAddress,
       title,
+      region,
       riskLevel,
       vulnerabilityCount,
       DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.map((key) => vulnerabilitySeverity[key]).join(','),

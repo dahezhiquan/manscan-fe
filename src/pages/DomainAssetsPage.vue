@@ -10,7 +10,6 @@ import {
   DOMAIN_ASSET_RISK_OPTIONS,
   DOMAIN_ASSET_SEARCH_DEBOUNCE
 } from '../constants/domainAssets'
-import { sampleDomainAssets } from '../data/domain-assets'
 import { normalizeDomainAssetListResponse } from '../utils/domainAsset'
 import { formatCount } from '../utils/scanTask'
 import { iconPath } from '../utils/icons'
@@ -39,7 +38,6 @@ const isFilterDialogOpen = ref(false)
 const filterDialogRef = ref(null)
 const draftFilterKey = ref(DOMAIN_ASSET_FILTER_OPTIONS[0].key)
 const draftFilterValue = ref('')
-const includeSubOrganization = ref(true)
 const draftError = ref('')
 const tableRows = ref([])
 const selectedDomainAssetId = ref('')
@@ -120,7 +118,6 @@ function buildDomainAssetListParams() {
     page_size: pageSize.value,
     keyword: appliedKeyword.value,
     organization: activeFilters.organization,
-    include_sub_organization: activeFilters.organization ? includeSubOrganization.value : undefined,
     owner: activeFilters.owner,
     scan_task: activeFilters.scanTask,
     region: activeFilters.region,
@@ -173,8 +170,18 @@ function handleDocumentClick() {
   closePageSizeMenu()
 }
 
-function handleDraftFilterKeyChange() {
-  draftFilterValue.value = activeFilters[draftFilterKey.value] || ''
+function selectDraftFilterKey(filterKey) {
+  if (draftFilterKey.value === filterKey) {
+    return
+  }
+
+  draftFilterKey.value = filterKey
+  draftFilterValue.value = activeFilters[filterKey] || ''
+  draftError.value = ''
+}
+
+function selectDraftFilterValue(value) {
+  draftFilterValue.value = value
   draftError.value = ''
 }
 
@@ -205,7 +212,6 @@ function clearFilters() {
   keywordInput.value = ''
   appliedKeyword.value = ''
   Object.assign(activeFilters, createEmptyFilters())
-  includeSubOrganization.value = true
   currentPage.value = 1
   closeFilterDialog()
   closePageSizeMenu()
@@ -313,14 +319,7 @@ async function loadDomainAssets(options = {}) {
       return
     }
 
-    const normalized = buildSampleDomainAssetListResponse()
-    tableRows.value = normalized.items
-    syncSelectedDomainAsset()
-    total.value = normalized.total
-    currentPage.value = normalized.page
-    pageSize.value = normalized.pageSize
-    totalPages.value = normalized.totalPages
-    pageError.value = ''
+    pageError.value = error instanceof Error ? error.message : '域名资产加载失败，请稍后重试。'
   } finally {
     if (requestId === currentRequestId) {
       isLoading.value = false
@@ -328,27 +327,6 @@ async function loadDomainAssets(options = {}) {
       fetchController = null
     }
   }
-}
-
-function buildSampleDomainAssetListResponse() {
-  const params = buildDomainAssetListParams()
-  const matchedItems = sampleDomainAssets.filter((item) => matchSampleDomainAsset(item, params))
-  const normalizedPageSize = Math.max(1, Number(params.page_size) || DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
-  const normalizedTotalPages = Math.max(1, Math.ceil(matchedItems.length / normalizedPageSize))
-  const normalizedPage = Math.min(Math.max(1, Number(params.page) || 1), normalizedTotalPages)
-  const start = (normalizedPage - 1) * normalizedPageSize
-
-  return normalizeDomainAssetListResponse(
-    {
-      page: normalizedPage,
-      pageSize: normalizedPageSize,
-      total: matchedItems.length,
-      totalPages: normalizedTotalPages,
-      items: matchedItems.slice(start, start + normalizedPageSize)
-    },
-    normalizedPage,
-    normalizedPageSize
-  )
 }
 
 function syncSelectedDomainAsset() {
@@ -361,64 +339,6 @@ function syncSelectedDomainAsset() {
   if (!selectedStillVisible) {
     selectedDomainAssetId.value = ''
   }
-}
-
-function matchSampleDomainAsset(item, params) {
-  return (
-    matchLooseText([item.domain, item.asset_address, item.title], params.keyword) &&
-    matchOrganization(item, params.organization, params.include_sub_organization) &&
-    matchLooseText([item.owner], params.owner) &&
-    matchLooseText([item.scan_task], params.scan_task) &&
-    matchLooseText([item.region], params.region) &&
-    matchLooseText([item.domain, item.asset_address], params.asset_address) &&
-    matchExactText(item.risk_level, params.risk_level) &&
-    matchLooseText([item.business_system], params.business_system) &&
-    matchAliveState(item.is_alive, params.is_alive)
-  )
-}
-
-function matchOrganization(item, value, includeSubOrganizationValue) {
-  if (!value) {
-    return true
-  }
-
-  if (includeSubOrganizationValue === false) {
-    return matchExactText(item.organization, value)
-  }
-
-  return matchLooseText([item.organization], value)
-}
-
-function matchLooseText(values, keyword) {
-  const normalizedKeyword = normalizeSearchText(keyword)
-
-  if (!normalizedKeyword) {
-    return true
-  }
-
-  return values.some((value) => normalizeSearchText(value).includes(normalizedKeyword))
-}
-
-function matchExactText(value, expectedValue) {
-  const normalizedExpectedValue = normalizeSearchText(expectedValue)
-
-  if (!normalizedExpectedValue) {
-    return true
-  }
-
-  return normalizeSearchText(value) === normalizedExpectedValue
-}
-
-function matchAliveState(value, expectedValue) {
-  if (!expectedValue) {
-    return true
-  }
-
-  return String(Boolean(value)) === String(expectedValue)
-}
-
-function normalizeSearchText(value) {
-  return String(value ?? '').trim().toLowerCase()
 }
 
 function formatFilterValue(key, value) {
@@ -552,6 +472,7 @@ onBeforeUnmount(() => {
                   <header class="domain-assets-table-head">
                     <div>资产地址</div>
                     <div>站点标题</div>
+                    <div>区域</div>
                     <div>风险等级</div>
                     <div>漏洞数量</div>
                     <div>组件数量</div>
@@ -561,6 +482,7 @@ onBeforeUnmount(() => {
                     <div v-for="index in 6" :key="index" class="domain-assets-skeleton-row">
                       <span class="domain-assets-skeleton is-main"></span>
                       <span class="domain-assets-skeleton"></span>
+                      <span class="domain-assets-skeleton is-pill"></span>
                       <span class="domain-assets-skeleton is-pill"></span>
                       <span class="domain-assets-skeleton is-count"></span>
                       <span class="domain-assets-skeleton is-count"></span>
@@ -597,6 +519,10 @@ onBeforeUnmount(() => {
                       </div>
 
                       <div class="domain-assets-title-cell">{{ row.title }}</div>
+
+                      <div class="domain-assets-region-cell">
+                        <span>{{ row.region }}</span>
+                      </div>
 
                       <div class="domain-assets-risk-cell">
                         <span class="domain-assets-risk-pill" :class="`is-${row.riskMeta.tone}`">
@@ -726,41 +652,59 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="domain-assets-dialog-body">
-                <label class="domain-assets-dialog-field is-filter-type">
+                <section class="domain-assets-dialog-field is-filter-type">
                   <span>筛选字段</span>
-                  <select v-model="draftFilterKey" @change="handleDraftFilterKeyChange">
-                    <option v-for="option in DOMAIN_ASSET_FILTER_OPTIONS" :key="option.key" :value="option.key">
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
+                  <div class="domain-assets-filter-option-grid" role="radiogroup" aria-label="筛选字段">
+                    <button
+                      v-for="option in DOMAIN_ASSET_FILTER_OPTIONS"
+                      :key="option.key"
+                      class="domain-assets-filter-option"
+                      :class="{ selected: draftFilterKey === option.key }"
+                      type="button"
+                      :aria-checked="draftFilterKey === option.key ? 'true' : 'false'"
+                      role="radio"
+                      @click="selectDraftFilterKey(option.key)"
+                    >
+                      <span class="domain-assets-filter-option-check" :class="{ selected: draftFilterKey === option.key }"></span>
+                      <span>{{ option.label }}</span>
+                    </button>
+                  </div>
+                </section>
 
-                <label class="domain-assets-dialog-field is-filter-value">
+                <section class="domain-assets-dialog-field is-filter-value">
                   <span>{{ selectedDraftFilter.label }}</span>
-                  <select v-if="selectedDraftFilter.type === 'select'" v-model="draftFilterValue">
-                    <option value="">请选择{{ selectedDraftFilter.label }}</option>
-                    <option
+                  <div
+                    v-if="selectedDraftFilter.type === 'select'"
+                    class="domain-assets-value-option-grid"
+                    role="radiogroup"
+                    :aria-label="selectedDraftFilter.label"
+                  >
+                    <button
                       v-for="option in selectedDraftOptions.filter((item) => item.value)"
                       :key="option.value"
-                      :value="option.value"
+                      class="domain-assets-value-option"
+                      :class="{ selected: draftFilterValue === option.value }"
+                      type="button"
+                      :aria-checked="draftFilterValue === option.value ? 'true' : 'false'"
+                      role="radio"
+                      @click="selectDraftFilterValue(option.value)"
                     >
-                      {{ option.label }}
-                    </option>
-                  </select>
+                      <span class="domain-assets-filter-option-check" :class="{ selected: draftFilterValue === option.value }"></span>
+                      <span>
+                        {{ option.label }}
+                      </span>
+                    </button>
+                  </div>
                   <input
                     v-else
                     v-model="draftFilterValue"
                     type="text"
+                    :aria-label="selectedDraftFilter.label"
                     :placeholder="selectedDraftFilter.placeholder"
                     autocomplete="off"
                   />
                   <small v-if="draftError">{{ draftError }}</small>
-                </label>
-
-                <label v-if="draftFilterKey === 'organization'" class="domain-assets-checkbox-field">
-                  <input v-model="includeSubOrganization" type="checkbox" />
-                  <span>包含下级组织单位</span>
-                </label>
+                </section>
               </div>
 
               <footer class="domain-assets-dialog-actions">

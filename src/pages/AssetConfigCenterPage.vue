@@ -986,7 +986,14 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="asset-config-cell asset-config-cell--status">
-                      <span class="asset-config-status-pill" :class="`is-${row.status}`">{{ row.statusLabel }}</span>
+                      <span
+                        class="asset-config-status-pill"
+                        :class="`is-${row.status}`"
+                        :aria-label="row.statusLabel"
+                        :title="row.statusLabel"
+                      >
+                        <span class="asset-config-status-dot" aria-hidden="true"></span>
+                      </span>
                     </div>
 
                     <div class="asset-config-cell asset-config-cell--description">

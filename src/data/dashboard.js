@@ -8,15 +8,12 @@ export const primaryNav = [
 
 export const secondaryNav = [
   { label: '报告', icon: 'chart' },
-  { label: '漏洞模板', icon: 'doc', route: '/templates/all' },
-  { label: '凭证监控', icon: 'lock' },
-  { label: '集成', icon: 'plug' }
+  { label: '漏洞模板', icon: 'doc', route: '/templates/all' }
 ]
 
 export const footerNav = [
   { label: '设置', icon: 'gear' },
-  { label: '文档中心', icon: 'help' },
-  { label: '退出登录', icon: 'logout' }
+  { label: '文档中心', icon: 'help' }
 ]
 
 export function getNavigationState(path = '/', options = {}) {
@@ -80,7 +77,6 @@ export const vulnerabilityStats = [
   { key: 'critical', label: '严重', value: 0, tone: 'critical' },
   { key: 'high', label: '高危', value: 0, tone: 'high' },
   { key: 'medium', label: '中危', value: 0, tone: 'medium' },
-  { key: 'info', label: 'INFO', value: 0, tone: 'info' },
   { key: 'low', label: '低危', value: 0, tone: 'low' }
 ]
 

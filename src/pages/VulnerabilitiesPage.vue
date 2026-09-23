@@ -505,7 +505,7 @@
                 </div>
 
                 <div class="vulnerabilities-asset-line">
-                  <span class="vulnerabilities-asset-domain">{{ row.assetDomain }}</span>
+                  <span class="vulnerabilities-asset-domain">{{ row.assetEndpoint }}</span>
                   <span class="vulnerabilities-muted-text">最近任务 {{ row.latestScanTaskName }}</span>
                   <span class="vulnerabilities-muted-text">最近发现时间 {{ row.lastFoundAtDisplay }}</span>
                 </div>

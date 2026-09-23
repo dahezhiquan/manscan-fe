@@ -1766,11 +1766,6 @@ onBeforeUnmount(() => {
                 </div>
               </header>
 
-              <div v-if="isAutomaticScanEnabled" class="scan-template-auto-lock-banner">
-                <strong>自动模板映射扫描已开启</strong>
-                <span>当前模板筛选、批量选择、分页与手动选择列表已禁用。</span>
-              </div>
-
               <p v-if="templateListError" class="scan-create-status is-error">{{ templateListError }}</p>
 
               <div v-if="templateListLoading" class="scan-template-library-table">

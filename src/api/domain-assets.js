@@ -8,11 +8,6 @@ export async function getDomainAssetList(params = {}, signal) {
   appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
   appendQueryParam(searchParams, 'keyword', params.keyword)
   appendQueryParam(searchParams, 'organization', params.organization)
-  appendQueryParam(
-    searchParams,
-    'include_sub_organization',
-    params.include_sub_organization ?? params.includeSubOrganization
-  )
   appendQueryParam(searchParams, 'owner', params.owner)
   appendQueryParam(searchParams, 'scan_task', params.scan_task ?? params.scanTask)
   appendQueryParam(searchParams, 'region', params.region)

@@ -218,18 +218,6 @@ const infoItems = computed(() => [
   {
     label: '无响应主机数量',
     value: formatCount(pickFirstValue(task.value, ['unresponsive_hosts', 'no_response_hosts', 'dead_hosts', 'timeout_hosts']))
-  },
-  {
-    label: '指定扫描时段',
-    value: formatWindowValue(
-      pickFirstValue(task.value, ['scan_time_window', 'scan_time_windows', 'allowed_time_ranges', 'allow_time_ranges', 'schedule_window'])
-    )
-  },
-  {
-    label: '指定禁扫时段',
-    value: formatWindowValue(
-      pickFirstValue(task.value, ['blackout_windows', 'forbid_time_ranges', 'disable_time_ranges', 'blocked_time_ranges'])
-    )
   }
 ])
 
@@ -1477,7 +1465,6 @@ onBeforeUnmount(() => {
             {{ taskStatusMeta.label }}
           </span>
           <span class="scan-task-detail-chip">任务号：{{ task?.task_no || taskId }}</span>
-          <span class="scan-task-detail-chip">创建人：{{ task?.created_by || '--' }}</span>
           <span class="scan-task-detail-chip is-accent">扫描策略：{{ scanStrategyLabel }}</span>
         </div>
       </div>

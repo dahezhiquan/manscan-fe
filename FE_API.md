@@ -451,7 +451,7 @@
   - `items[].severity`
   - `items[].template_id`
   - `items[].asset_path`
-  - `items[].asset_domain`
+  - `items[].asset_endpoint`
   - `items[].asset_host`
   - `items[].status`
   - `items[].tags`
@@ -475,8 +475,8 @@
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
   - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
-  - 列表资产地址优先展示 `asset_domain`；缺失时兼容回退到 `asset_host`，`asset_host` 仍用于 Host 筛选和资产信息补充
-  - `asset_domain`、`asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
+  - 列表资产地址优先展示 `asset_endpoint`；缺失时兼容回退到历史字段 `asset_domain` 和 `asset_host`，`asset_host` 仍用于 Host 筛选和资产信息补充
+  - `asset_endpoint`、`asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
 
 ### 18. 更新漏洞状态
 
@@ -570,7 +570,7 @@
   - `data.fixed_at`
   - `data.status`
   - `data.asset_path`
-  - `data.asset_domain`
+  - `data.asset_endpoint`
   - `data.asset_host`
   - `data.asset_port`
   - `data.tags`
@@ -649,7 +649,6 @@
   - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
   - `keyword`: 顶部搜索框输入值，用于按域名或资产地址模糊搜索
   - `organization`: “所属组织单位”筛选
-  - `include_sub_organization`: “所属组织单位”筛选存在时提交，当前默认 `true`
   - `owner`: “内部负责人”筛选
   - `scan_task`: “相关扫描任务”筛选
   - `region`: “网络区域”筛选
@@ -661,8 +660,13 @@
   - `items[].id`
   - `items[].domain` 或 `items[].asset_address`
   - `items[].title`
+  - `items[].region`，用于表格“区域”列展示
   - `items[].risk_level`
   - `items[].vulnerability_count`
+  - `items[].critical_count`
+  - `items[].high_count`
+  - `items[].medium_count`
+  - `items[].low_count`
   - `items[].component_count`
   - `items[].components`
 - 异常分支：
@@ -673,6 +677,8 @@
   - 进入页面默认请求 `page=1&page_size=10`
   - 顶部搜索框防抖提交 `keyword`
   - “添加筛选条件”弹窗一次保存一个筛选项，已保存条件以 chip 展示，支持单项移除和清空全部
+  - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端保留原有“风险等级”和“漏洞数量”展示
   - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级
+  - `component_count` 和 `components` 由后端从组件等关联数据聚合返回；前端保留原有“组件数量”展示
   - `components` 可返回字符串数组、逗号分隔字符串或为空；为空时仅展示组件数量
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
