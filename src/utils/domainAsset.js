@@ -30,11 +30,15 @@ export function normalizeDomainAsset(record) {
   const region = formatText(firstDefined(record?.region, record?.network_region, record?.networkRegion, record?.area))
   const riskLevel = normalizeRiskLevel(firstDefined(record?.risk_level, record?.riskLevel, record?.severity))
   const riskMeta = DOMAIN_ASSET_RISK_META[riskLevel] ?? DOMAIN_ASSET_RISK_META.unknown
-  const vulnerabilityCount = normalizeNonNegativeInteger(
-    firstDefined(record?.vulnerability_count, record?.vulnerabilityCount, record?.vuln_count, record?.vulnCount),
-    0
+  const rawVulnerabilityCount = firstDefined(
+    record?.vulnerability_count,
+    record?.vulnerabilityCount,
+    record?.vuln_count,
+    record?.vulnCount
   )
-  const vulnerabilitySeverity = normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount)
+  const vulnerabilitySeverity = normalizeVulnerabilitySeverity(record, riskLevel, rawVulnerabilityCount)
+  const severityTotal = Object.values(vulnerabilitySeverity).reduce((total, count) => total + count, 0)
+  const vulnerabilityCount = normalizeNonNegativeInteger(rawVulnerabilityCount, severityTotal)
   const vulnerabilitySeverityItems = DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.map((key) => {
     const count = vulnerabilitySeverity[key] ?? 0
 
@@ -83,24 +87,19 @@ function normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount) {
   const source = firstDefined(
     record?.vulnerability_counts,
     record?.vulnerabilityCounts,
+    record?.vulnerability_severity_counts,
+    record?.vulnerabilitySeverityCounts,
+    record?.vulnerability_level_counts,
+    record?.vulnerabilityLevelCounts,
     record?.severity_counts,
     record?.severityCounts,
+    record?.risk_counts,
+    record?.riskCounts,
     record?.vuln_counts,
     record?.vulnCounts
   )
   const result = DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER.reduce((nextResult, key) => {
-    nextResult[key] = normalizeNonNegativeInteger(
-      firstDefined(
-        source?.[key],
-        source?.[`${key}_count`],
-        source?.[`${key}Count`],
-        record?.[`${key}_count`],
-        record?.[`${key}Count`],
-        record?.[`vulnerability_${key}_count`],
-        record?.[`${key}_vulnerability_count`]
-      ),
-      0
-    )
+    nextResult[key] = normalizeSeverityCount(record, source, key)
     return nextResult
   }, {})
 
@@ -111,6 +110,29 @@ function normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount) {
   }
 
   return result
+}
+
+function normalizeSeverityCount(record, source, key) {
+  const pascalKey = `${key.charAt(0).toUpperCase()}${key.slice(1)}`
+
+  return normalizeNonNegativeInteger(
+    firstDefined(
+      source?.[key],
+      source?.[`${key}_count`],
+      source?.[`${key}Count`],
+      source?.[`vulnerability_${key}_count`],
+      source?.[`${key}_vulnerability_count`],
+      source?.[`vulnerability${pascalKey}Count`],
+      source?.[`${key}VulnerabilityCount`],
+      record?.[`${key}_count`],
+      record?.[`${key}Count`],
+      record?.[`vulnerability_${key}_count`],
+      record?.[`${key}_vulnerability_count`],
+      record?.[`vulnerability${pascalKey}Count`],
+      record?.[`${key}VulnerabilityCount`]
+    ),
+    0
+  )
 }
 
 function normalizeComponents(value) {

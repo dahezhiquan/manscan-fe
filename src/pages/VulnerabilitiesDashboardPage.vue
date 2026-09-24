@@ -14,19 +14,25 @@ const props = defineProps({
   isSidebarCollapsed: {
     type: Boolean,
     default: false
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
   }
 })
 
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-sidebar', 'logout'])
 </script>
 
 <template>
   <AppShell
     :current-path="props.currentPath"
     :is-sidebar-collapsed="props.isSidebarCollapsed"
+    :current-user-name="props.currentUserName"
     main-class="templates-shell-main"
     @toggle-sidebar="emit('toggle-sidebar')"
     @navigate="props.navigateTo"
+    @logout="emit('logout')"
   >
     <template #default>
       <VulnerabilitiesPage />

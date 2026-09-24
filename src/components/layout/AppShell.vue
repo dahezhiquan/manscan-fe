@@ -13,13 +13,17 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  currentUserName: {
+    type: String,
+    default: 'admin'
+  },
   mainClass: {
     type: String,
     default: 'templates-shell-main'
   }
 })
 
-const emit = defineEmits(['toggle-sidebar', 'navigate'])
+const emit = defineEmits(['toggle-sidebar', 'navigate', 'logout'])
 
 const { navigationState } = useSidebarNavigation(toRef(props, 'currentPath'))
 </script>
@@ -28,11 +32,13 @@ const { navigationState } = useSidebarNavigation(toRef(props, 'currentPath'))
   <div class="dashboard-shell" :class="{ 'sidebar-collapsed': props.isSidebarCollapsed }">
     <AppSidebar
       :is-collapsed="props.isSidebarCollapsed"
+      :current-user-name="props.currentUserName"
       :primary-nav="navigationState.primaryNav"
       :secondary-nav="navigationState.secondaryNav"
       :footer-nav="footerNav"
       @toggle="emit('toggle-sidebar')"
       @navigate="emit('navigate', $event)"
+      @logout="emit('logout')"
     />
 
     <div :class="mainClass">

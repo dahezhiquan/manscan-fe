@@ -1,26 +1,34 @@
 export const ROUTE_PATHS = {
   HOME: '/',
+  LOGIN: '/login',
   VULNERABILITIES: '/vulnerabilities',
   SCANS: '/scans',
   SCAN_CREATE: '/scans/create',
   TEMPLATES: '/templates/all',
   DOMAIN_ASSETS: '/assets/domains',
+  HOST_ASSETS: '/assets/hosts',
   ASSET_CONFIG: '/assets/config'
 }
 
 export const ROUTE_TITLES = {
   [ROUTE_PATHS.HOME]: 'ManScan',
+  [ROUTE_PATHS.LOGIN]: 'ManScan - 登录',
   [ROUTE_PATHS.TEMPLATES]: 'ManScan - 漏洞模版',
   [ROUTE_PATHS.VULNERABILITIES]: 'ManScan - 漏洞',
   [ROUTE_PATHS.SCANS]: 'ManScan - 扫描',
   [ROUTE_PATHS.SCAN_CREATE]: 'ManScan - 创建扫描任务',
   [ROUTE_PATHS.DOMAIN_ASSETS]: 'ManScan - 域名资产清单',
+  [ROUTE_PATHS.HOST_ASSETS]: 'ManScan - 主机资产清单',
   [ROUTE_PATHS.ASSET_CONFIG]: 'ManScan - 资产配置中心'
 }
 
 export function normalizePath(path) {
   if (!path || path === '/') {
     return ROUTE_PATHS.HOME
+  }
+
+  if (path === ROUTE_PATHS.LOGIN) {
+    return ROUTE_PATHS.LOGIN
   }
 
   if (path === '/templates' || path === ROUTE_PATHS.TEMPLATES) {
@@ -51,6 +59,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.DOMAIN_ASSETS
   }
 
+  if (path === ROUTE_PATHS.HOST_ASSETS) {
+    return ROUTE_PATHS.HOST_ASSETS
+  }
+
   if (/^\/scan\/[^/]+$/.test(path)) {
     const scanId = path.split('/').filter(Boolean).pop()
     return `${ROUTE_PATHS.SCANS}/${scanId}`
@@ -72,10 +84,18 @@ export function normalizePath(path) {
     return ROUTE_PATHS.DOMAIN_ASSETS
   }
 
+  if (path.startsWith('/assets/hosts')) {
+    return ROUTE_PATHS.HOST_ASSETS
+  }
+
   return ROUTE_PATHS.HOME
 }
 
 export function resolveDocumentTitle(path) {
+  if (path === ROUTE_PATHS.LOGIN) {
+    return ROUTE_TITLES[ROUTE_PATHS.LOGIN]
+  }
+
   if (path.startsWith('/vulnerabilities/')) {
     return 'ManScan - 漏洞详情'
   }
@@ -94,6 +114,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/assets/domains')) {
     return 'ManScan - 域名资产清单'
+  }
+
+  if (path.startsWith('/assets/hosts')) {
+    return 'ManScan - 主机资产清单'
   }
 
   return ROUTE_TITLES[path] || ROUTE_TITLES[ROUTE_PATHS.HOME]

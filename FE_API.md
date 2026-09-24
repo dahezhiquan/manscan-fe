@@ -652,14 +652,11 @@
   - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
   - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
   - `keyword`: 顶部搜索框输入值，用于按域名或资产地址模糊搜索
-  - `organization`: “所属组织单位”筛选
-  - `owner`: “内部负责人”筛选
-  - `scan_task`: “相关扫描任务”筛选
-  - `region`: “网络区域”筛选
-  - `asset_address`: “资产地址”筛选
-  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`、`unknown`
-  - `business_system`: “业务系统”筛选
-  - `is_alive`: “存活状态”筛选，前端提交 `true` 或 `false`
+  - `title`: “站点标题”筛选
+  - `region`: “区域”筛选
+  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`
+  - `vulnerability_count`: “漏洞数量”筛选
+  - `component_count`: “组件数量”筛选
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
   - `items[].id`
   - `items[].domain` 或 `items[].asset_address`
@@ -667,10 +664,10 @@
   - `items[].region`，用于表格“区域”列展示
   - `items[].risk_level`
   - `items[].vulnerability_count`
-  - `items[].critical_count`
-  - `items[].high_count`
-  - `items[].medium_count`
-  - `items[].low_count`
+  - `items[].critical_count`，用于“漏洞数量”列严重等级计数展示
+  - `items[].high_count`，用于“漏洞数量”列高危等级计数展示
+  - `items[].medium_count`，用于“漏洞数量”列中危等级计数展示
+  - `items[].low_count`，用于“漏洞数量”列低危等级计数展示
   - `items[].component_count`
   - `items[].components`
 - 异常分支：
@@ -680,9 +677,10 @@
 - 联调注意事项：
   - 进入页面默认请求 `page=1&page_size=10`
   - 顶部搜索框防抖提交 `keyword`
-  - “添加筛选条件”弹窗一次保存一个筛选项，已保存条件以 chip 展示，支持单项移除和清空全部
-  - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端保留原有“风险等级”和“漏洞数量”展示
-  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级
+  - “添加筛选条件”弹窗一次保存一个筛选项，筛选字段与表格展示列保持一致，已保存条件以 chip 展示，支持单项移除和清空全部
+  - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端保留原有“风险等级”和“漏洞数量”展示样式，并在“漏洞数量”列按严重、高危、中危、低危四格展示不同等级数量
+  - 不同等级漏洞数量也兼容 `vulnerability_counts`、`severity_counts`、`vuln_counts` 等对象结构，以及常见驼峰字段名；`vulnerability_count` 缺失时前端会用四个等级数量求和兜底
+  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；筛选项不提供 `unknown`，但展示层保留未知风险兜底
   - `component_count` 和 `components` 由后端从组件等关联数据聚合返回；前端保留原有“组件数量”展示
   - `components` 可返回字符串数组、逗号分隔字符串或为空；为空时仅展示组件数量
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容

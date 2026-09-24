@@ -13,6 +13,10 @@ const props = defineProps({
   currentPath: {
     type: [String, Object],
     default: '/templates/all'
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
   }
 })
 

@@ -356,6 +356,9 @@ const stepFields = {
       key: 'interactsh_server',
       label: '自定义 Interactsh 服务地址',
       type: 'string',
+      name: 'scan_interactsh_server',
+      autocomplete: 'url',
+      preventCredentialAutofill: true,
       placeholder: '例如：https://oast.example.internal',
       tooltip: '当前任务使用的自定义 Interactsh 服务根地址，可填写主机名或 http:// / https:// 根地址。'
     },
@@ -365,7 +368,9 @@ const stepFields = {
       type: 'string',
       inputType: 'password',
       maxLength: 255,
-      autocomplete: 'off',
+      name: 'scan_interactsh_token',
+      autocomplete: 'new-password',
+      preventCredentialAutofill: true,
       placeholder: '最长 255 个字符',
       tooltip: '如果自定义 Interactsh 服务开启了鉴权，在此处配置鉴权 Token。'
     },
@@ -932,6 +937,21 @@ function updateFieldValue(field, event) {
   }
 
   form[field.key] = rawValue
+}
+
+function getFieldInputAttrs(field) {
+  const attrs = {
+    name: field.name ?? `scan_${field.key}`,
+    autocomplete: field.autocomplete ?? 'off'
+  }
+
+  if (field.preventCredentialAutofill) {
+    attrs['data-lpignore'] = 'true'
+    attrs['data-1p-ignore'] = 'true'
+    attrs['data-bwignore'] = 'true'
+  }
+
+  return attrs
 }
 
 function handleNumberFieldWheel(event) {
@@ -2014,7 +2034,7 @@ onBeforeUnmount(() => {
               :min="field.min"
               :step="field.step"
               :maxlength="field.maxLength"
-              :autocomplete="field.autocomplete"
+              v-bind="getFieldInputAttrs(field)"
               :placeholder="field.placeholder"
               @input="updateFieldValue(field, $event)"
               @wheel="field.type === 'number' ? handleNumberFieldWheel($event) : undefined"

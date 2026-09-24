@@ -17,10 +17,14 @@ const props = defineProps({
   isSidebarCollapsed: {
     type: Boolean,
     default: false
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
   }
 })
 
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-sidebar', 'logout'])
 
 const isCreatePage = computed(() => props.currentPath === '/scans/create')
 const taskDetailId = computed(() => {
@@ -33,9 +37,11 @@ const taskDetailId = computed(() => {
   <AppShell
     :current-path="props.currentPath"
     :is-sidebar-collapsed="props.isSidebarCollapsed"
+    :current-user-name="props.currentUserName"
     main-class="templates-shell-main"
     @toggle-sidebar="emit('toggle-sidebar')"
     @navigate="props.navigateTo"
+    @logout="emit('logout')"
   >
     <template #default>
       <ScanTaskCreatePage v-if="isCreatePage" :key="props.currentPath" :navigate-to="props.navigateTo" />

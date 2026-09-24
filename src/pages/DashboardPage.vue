@@ -39,6 +39,10 @@ const props = defineProps({
   isSidebarCollapsed: {
     type: Boolean,
     default: false
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
   }
 })
 const leftColumnRef = ref(null)
@@ -48,7 +52,7 @@ const newestCardMinHeight = ref(null)
 const unreviewedVulnerabilityCounts = ref({})
 const unreviewedVulnerabilityCountStatus = ref('idle')
 
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-sidebar', 'logout'])
 
 let resizeObserver = null
 let unreviewedVulnerabilityController = null
@@ -212,11 +216,13 @@ watch(
   <div class="dashboard-shell" :class="{ 'sidebar-collapsed': props.isSidebarCollapsed }">
     <AppSidebar
       :is-collapsed="props.isSidebarCollapsed"
+      :current-user-name="props.currentUserName"
       :primary-nav="navigationState.primaryNav"
       :secondary-nav="navigationState.secondaryNav"
       :footer-nav="footerNav"
       @toggle="emit('toggle-sidebar')"
       @navigate="props.navigateTo"
+      @logout="emit('logout')"
     />
 
     <main class="main-content">
