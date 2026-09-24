@@ -1077,7 +1077,7 @@
 .scans-pagination {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
   border-top: 3px solid var(--line);

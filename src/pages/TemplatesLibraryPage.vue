@@ -3,6 +3,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getTemplateList, getTemplateProtocols, getTemplateStats, getTemplateTags } from '../api/templates'
 import { useSearchMagnetism } from '../composables/useSearchMagnetism'
 import {
+  TEMPLATE_LIST_DEFAULT_PAGE_SIZE,
+  TEMPLATE_LIST_PAGE_SIZE_OPTIONS
+} from '../constants/templates'
+import {
   booleanFilterOptions,
   protocolFilterOptions,
   severityFilterOptions,
@@ -34,7 +38,9 @@ const selectedTags = ref([])
 const selectedKev = ref('')
 const selectedCve = ref('')
 const currentPage = ref(1)
-const pageSize = 20
+const pageSize = ref(TEMPLATE_LIST_DEFAULT_PAGE_SIZE)
+const isPageSizeMenuOpen = ref(false)
+const templateBackendPageSize = 20
 const tagOptionDefaultLimit = 12
 const tagOptionSearchLimit = 18
 const tagOptionBatchSize = 18
@@ -47,7 +53,7 @@ const statsData = ref({
 })
 const listState = ref({
   page: 1,
-  pageSize,
+  pageSize: pageSize.value,
   total: 0,
   totalPages: 0,
   items: []
@@ -227,7 +233,33 @@ function isMenuOpen(name) {
 }
 
 function toggleFilterMenu(name) {
+  closePageSizeMenu()
   activeFilterMenu.value = activeFilterMenu.value === name ? '' : name
+}
+
+function closePageSizeMenu() {
+  isPageSizeMenuOpen.value = false
+}
+
+function togglePageSizeMenu() {
+  if (listLoading.value) {
+    return
+  }
+
+  activeFilterMenu.value = ''
+  isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
+}
+
+function selectPageSize(nextPageSize) {
+  if (pageSize.value === nextPageSize) {
+    closePageSizeMenu()
+    return
+  }
+
+  pageSize.value = nextPageSize
+  currentPage.value = 1
+  closePageSizeMenu()
+  void fetchTemplateList(1)
 }
 
 function selectFilterValue(key, value) {
@@ -335,41 +367,83 @@ async function fetchTemplateStats() {
   }
 }
 
+function buildTemplateListFilters(page, nextPageSize = pageSize.value) {
+  return {
+    page,
+    pageSize: nextPageSize,
+    keyword: keyword.value,
+    tags: selectedTags.value,
+    severity: selectedSeverity.value,
+    protocol: selectedProtocol.value,
+    kev: selectedKev.value,
+    cve: selectedCve.value
+  }
+}
+
+function buildComposedTemplateListState(payloads, targetPage, targetPageSize) {
+  const pages = payloads.filter(Boolean)
+  const firstPage = pages[0] ?? {}
+  const total = Number(firstPage.total) || 0
+  const totalPages = total > 0 ? Math.ceil(total / targetPageSize) : 0
+  const pageStartIndex = (targetPage - 1) * targetPageSize
+  const backendStartPage = Number(firstPage.page) || Math.floor(pageStartIndex / templateBackendPageSize) + 1
+  const backendStartIndex = (backendStartPage - 1) * templateBackendPageSize
+  const items = pages.flatMap((item) => (Array.isArray(item.items) ? item.items : []))
+  const sliceStart = Math.max(0, pageStartIndex - backendStartIndex)
+
+  return {
+    page: targetPage,
+    pageSize: targetPageSize,
+    total,
+    totalPages,
+    items: items.slice(sliceStart, sliceStart + targetPageSize)
+  }
+}
+
 async function fetchTemplateList(page = 1) {
   listAbortController?.abort()
   listAbortController = new AbortController()
   listLoading.value = true
 
   try {
-    const data = await getTemplateList(
-      {
-        page,
-        pageSize,
-        keyword: keyword.value,
-        tags: selectedTags.value,
-        severity: selectedSeverity.value,
-        protocol: selectedProtocol.value,
-        kev: selectedKev.value,
-        cve: selectedCve.value
-      },
+    const targetPageSize = pageSize.value
+    const pageStartIndex = (page - 1) * targetPageSize
+    const backendStartPage = Math.floor(pageStartIndex / templateBackendPageSize) + 1
+    const firstPayload = await getTemplateList(
+      buildTemplateListFilters(backendStartPage, templateBackendPageSize),
       listAbortController.signal
     )
+    const total = Number(firstPayload.total) || 0
+    const pageEndIndex = total > 0
+      ? Math.min(pageStartIndex + targetPageSize, total)
+      : pageStartIndex + targetPageSize
+    const backendEndPage = Math.max(
+      backendStartPage,
+      Math.ceil(pageEndIndex / templateBackendPageSize)
+    )
+    const restPayloads = await Promise.all(
+      Array.from({ length: backendEndPage - backendStartPage }, (_, index) =>
+        getTemplateList(
+          buildTemplateListFilters(backendStartPage + index + 1, templateBackendPageSize),
+          listAbortController.signal
+        )
+      )
+    )
 
-    listState.value = {
-      page: Number(data.page) || page,
-      pageSize: Number(data.pageSize) || pageSize,
-      total: Number(data.total) || 0,
-      totalPages: Number(data.totalPages) || 0,
-      items: Array.isArray(data.items) ? data.items : []
-    }
+    listState.value = buildComposedTemplateListState(
+      [firstPayload, ...restPayloads],
+      page,
+      targetPageSize
+    )
 
     currentPage.value = listState.value.page
+    pageSize.value = targetPageSize
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error('加载模板列表失败:', error)
       listState.value = {
         page,
-        pageSize,
+        pageSize: pageSize.value,
         total: 0,
         totalPages: 0,
         items: []
@@ -409,6 +483,8 @@ function handleDocumentClick(event) {
   if (!filtersRef.value?.contains(event.target)) {
     activeFilterMenu.value = ''
   }
+
+  closePageSizeMenu()
 }
 
 async function setupFilterMagnetism() {
@@ -512,6 +588,7 @@ onBeforeUnmount(() => {
   protocolAbortController?.abort()
   window.clearTimeout(searchTimer)
   window.clearTimeout(copyFeedbackTimer)
+  closePageSizeMenu()
   document.removeEventListener('click', handleDocumentClick)
   filterMagnetCleanup.splice(0).forEach((cleanup) => cleanup())
 })
@@ -752,7 +829,7 @@ onBeforeUnmount(() => {
             </svg>
           </button>
 
-          <div v-if="isMenuOpen('cve')" class="severity-menu boolean-menu">
+          <div v-if="isMenuOpen('cve')" class="severity-menu boolean-menu templates-cve-menu">
             <button
               v-for="item in booleanFilterOptions"
               :key="item.value"
@@ -893,27 +970,66 @@ onBeforeUnmount(() => {
         </div>
 
         <footer class="templates-pagination">
-          <button
-            class="templates-page-arrow"
-            :disabled="currentPage <= 1"
-            aria-label="上一页"
-            @click="changePage(currentPage - 1)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="m14.5 6.5-5 5 5 5" />
-            </svg>
-          </button>
-          <span>显示 {{ paginationStart }} - {{ paginationEnd }}，共 {{ paginationTotal }} 条</span>
-          <button
-            class="templates-page-arrow"
-            :disabled="currentPage >= listState.totalPages"
-            aria-label="下一页"
-            @click="changePage(currentPage + 1)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="m9.5 6.5 5 5-5 5" />
-            </svg>
-          </button>
+          <div class="vulnerabilities-page-size" @click.stop>
+            <span>每页</span>
+            <button
+              class="vulnerabilities-page-size-trigger"
+              :class="{ active: isPageSizeMenuOpen }"
+              type="button"
+              :disabled="listLoading"
+              aria-label="选择每页数量"
+              @click="togglePageSizeMenu"
+            >
+              <span>{{ pageSize }}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path :d="isPageSizeMenuOpen ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+              </svg>
+            </button>
+
+            <div v-if="isPageSizeMenuOpen" class="vulnerabilities-page-size-menu">
+              <button
+                v-for="item in TEMPLATE_LIST_PAGE_SIZE_OPTIONS"
+                :key="item"
+                class="vulnerabilities-page-size-option"
+                :class="{ selected: pageSize === item }"
+                type="button"
+                @click="selectPageSize(item)"
+              >
+                <span
+                  class="vulnerabilities-page-size-check"
+                  :class="{ selected: pageSize === item }"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ item }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="templates-pagination-meta">
+            <button
+              class="templates-page-arrow"
+              type="button"
+              :disabled="currentPage <= 1 || listLoading"
+              aria-label="上一页"
+              @click="changePage(currentPage - 1)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="m14.5 6.5-5 5 5 5" />
+              </svg>
+            </button>
+            <span>显示 {{ paginationStart }} - {{ paginationEnd }}，共 {{ paginationTotal }} 条</span>
+            <button
+              class="templates-page-arrow"
+              type="button"
+              :disabled="currentPage >= listState.totalPages || listLoading"
+              aria-label="下一页"
+              @click="changePage(currentPage + 1)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="m9.5 6.5 5 5-5 5" />
+              </svg>
+            </button>
+          </div>
         </footer>
       </section>
     </section>

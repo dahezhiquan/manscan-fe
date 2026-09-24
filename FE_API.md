@@ -45,7 +45,7 @@
 - 路径：`/api/v1/templates`
 - 请求参数：
   - `page`: 页码
-  - `pageSize`: 前端当前会传 `20` 或 `12`
+  - `pageSize`: 创建扫描任务页会按场景传 `12`；模板库页 UI 支持 `10`、`20`、`50`、`100`，由于当前后端模板列表固定每页返回 `20` 条，模板库页会按所选数量自动拉取所需后端页并在前端聚合展示
   - `name`: 模板名称或模板 ID 模糊搜索
   - `tag`: 多选标签
   - `severity`: 多选风险等级
@@ -63,6 +63,7 @@
   - `totalPages` 若后端未返回，前端会基于 `total/pageSize` 兜底计算
   - `severity` 支持英文和中文，前端会做映射展示
   - `protocols` 推荐返回字符串数组；模板库列表页会按大写协议标签展示，缺失时显示 `--`
+  - 模板库页修改每页数量后会将 `page` 重置为 `1`，并按所选数量重新请求/聚合列表
 
 ### 3. 获取模板详情
 
@@ -151,6 +152,7 @@
 - 路径：`/api/v1/scans`
 - 请求参数：
   - 列表页当前实际使用：`page`、`page_size`、`keyword`、`status`、`has_high_risk`
+  - 列表页每页数量支持：`10`、`20`、`50`、`100`，默认使用 `10`
   - 侧边栏运行中数量当前实际使用：`page=1`、`page_size=1`、`status=running`
   - 后端额外支持 `scan_strategy`、`created_by`，但当前前端扫描列表页未启用
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
@@ -178,6 +180,7 @@
   - 列表页默认展示 `started_at` 作为时间列
   - 风险分布直接使用后端严重级别计数
   - `has_high_risk=true` 时，前端将其解释为 `critical_count > 0 OR high_count > 0`
+  - 修改每页数量后，前端会将 `page` 重置为 `1` 并重新请求列表
 
 ### 9. 创建扫描任务
 
@@ -275,7 +278,7 @@
 - 路径：`/api/v1/asset-config-centers`
 - 请求参数：
   - `page`: 页码
-  - `page_size`: 每页条数，前端当前使用 `10` / `20` / `50`
+  - `page_size`: 每页条数，资产配置中心页支持 `10`、`20`、`50`、`100`，默认使用 `10`
   - `item_name`: 项名称模糊搜索
   - `big_category`: 大分类过滤，前端固定支持 `scanDisabled`、`network`、`passive_traffic_addresses`
   - `small_category`: 小分类筛选，筛选值来自 `/api/v1/asset-config-centers/options/small-categories`
@@ -295,6 +298,7 @@
   - 资产配置中心页顶部 4 个分类标签分别对应 `全部配置`、`scanDisabled`、`network`、`passive_traffic_addresses`
   - 前端小类筛选使用选项菜单，不再提供手输小分类搜索框
   - 返回项建议保持 `item_name` 全局唯一
+  - 资产配置中心页修改每页数量后会将 `page` 重置为 `1` 并重新请求列表
   - 创建扫描任务页开启“全局禁扫名单”时，会以 `big_category=scanDisabled`、`status=enabled`、`page_size=100` 拉取全部分页，并将返回项的 `item_name` 去重后合并到 `exclude_targets`
   - 全局禁扫名单接口请求失败时，创建扫描任务页会提示重试，并阻止在名单未同步完成前提交任务
 

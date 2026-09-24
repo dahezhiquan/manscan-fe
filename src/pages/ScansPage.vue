@@ -52,6 +52,7 @@ const tableRows = ref([])
 const total = ref(null)
 const currentPage = ref(1)
 const pageSize = ref(SCAN_LIST_PAGE_SIZE_OPTIONS[0])
+const isPageSizeMenuOpen = ref(false)
 const totalPages = ref(1)
 const pageError = ref('')
 const isLoading = ref(true)
@@ -231,6 +232,7 @@ function isMenuOpen(name) {
 }
 
 function toggleFilterMenu(name) {
+  closePageSizeMenu()
   closeBatchActionMenu()
   activeFilterMenu.value = activeFilterMenu.value === name ? '' : name
 }
@@ -239,11 +241,17 @@ function closeFilterMenus() {
   activeFilterMenu.value = ''
 }
 
+function closePageSizeMenu() {
+  isPageSizeMenuOpen.value = false
+}
+
 function handleDocumentClick(event) {
   if (!filtersRef.value?.contains(event.target)) {
     closeFilterMenus()
     closeBatchActionMenu()
   }
+
+  closePageSizeMenu()
 }
 
 function goToScanDetail(taskId) {
@@ -325,11 +333,34 @@ function clearPolling() {
 
 function toggleBatchActionMenu() {
   closeFilterMenus()
+  closePageSizeMenu()
   isBulkActionMenuOpen.value = !isBulkActionMenuOpen.value
 }
 
 function closeBatchActionMenu() {
   isBulkActionMenuOpen.value = false
+}
+
+function togglePageSizeMenu() {
+  if (isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  closeFilterMenus()
+  closeBatchActionMenu()
+  isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
+}
+
+function selectPageSize(nextPageSize) {
+  if (pageSize.value === nextPageSize) {
+    closePageSizeMenu()
+    return
+  }
+
+  pageSize.value = nextPageSize
+  currentPage.value = 1
+  closePageSizeMenu()
+  void loadScanTasks()
 }
 
 function toggleScanTaskSelection(taskId) {
@@ -623,6 +654,7 @@ onBeforeUnmount(() => {
   clearPolling()
   stopRequest()
   window.clearTimeout(keywordTimer)
+  closePageSizeMenu()
   selectAllController?.abort()
   batchDeleteController?.abort()
 })
@@ -1004,6 +1036,41 @@ onBeforeUnmount(() => {
         </div>
 
         <footer v-if="!showInitialLoading && !showBlockingError" class="scans-pagination">
+          <div class="vulnerabilities-page-size" @click.stop>
+            <span>每页</span>
+            <button
+              class="vulnerabilities-page-size-trigger"
+              :class="{ active: isPageSizeMenuOpen }"
+              type="button"
+              :disabled="isLoading || isRefreshing"
+              aria-label="选择每页数量"
+              @click="togglePageSizeMenu"
+            >
+              <span>{{ pageSize }}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path :d="isPageSizeMenuOpen ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+              </svg>
+            </button>
+
+            <div v-if="isPageSizeMenuOpen" class="vulnerabilities-page-size-menu">
+              <button
+                v-for="item in SCAN_LIST_PAGE_SIZE_OPTIONS"
+                :key="item"
+                class="vulnerabilities-page-size-option"
+                :class="{ selected: pageSize === item }"
+                type="button"
+                @click="selectPageSize(item)"
+              >
+                <span
+                  class="vulnerabilities-page-size-check"
+                  :class="{ selected: pageSize === item }"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ item }}</span>
+              </button>
+            </div>
+          </div>
+
           <div class="scans-pagination-meta">
             <span>显示 {{ pageStart }} - {{ pageEnd }}，共 {{ formatCount(total) }} 条</span>
             <span>第 {{ currentPage }} / {{ totalPages }} 页</span>

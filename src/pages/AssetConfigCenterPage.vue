@@ -8,6 +8,7 @@ import {
   updateAssetConfigCenter
 } from '../api/asset-config'
 import AppShell from '../components/layout/AppShell.vue'
+import { ASSET_CONFIG_LIST_PAGE_SIZE_OPTIONS } from '../constants/assetConfig'
 import { formatCount } from '../utils/scanTask'
 import { iconPath } from '../utils/icons'
 
@@ -59,7 +60,6 @@ const STATUS_OPTIONS = [
 ]
 const FORM_CATEGORY_OPTIONS = CATEGORY_OPTIONS.filter((item) => item.value)
 const FORM_STATUS_OPTIONS = STATUS_OPTIONS.filter((item) => item.value)
-const DEFAULT_PAGE_SIZE = 10
 const SEARCH_DEBOUNCE = 280
 
 const filtersRef = ref(null)
@@ -68,7 +68,8 @@ const isFormDialogOpen = ref(false)
 const isDeleteDialogOpen = ref(false)
 const formMode = ref('create')
 const currentPage = ref(1)
-const pageSize = ref(DEFAULT_PAGE_SIZE)
+const pageSize = ref(ASSET_CONFIG_LIST_PAGE_SIZE_OPTIONS[0])
+const isPageSizeMenuOpen = ref(false)
 const selectedCategory = ref('')
 const selectedStatus = ref('')
 const selectedSmallCategory = ref('')
@@ -395,19 +396,46 @@ function clearFilters() {
 }
 
 function toggleSmallCategoryMenu() {
+  closePageSizeMenu()
   activeFilterMenu.value = activeFilterMenu.value === 'smallCategory' ? '' : 'smallCategory'
 }
 
 function toggleStatusMenu() {
+  closePageSizeMenu()
   activeFilterMenu.value = activeFilterMenu.value === 'status' ? '' : 'status'
 }
 
 function toggleFormCategoryMenu() {
+  closePageSizeMenu()
   activeFilterMenu.value = activeFilterMenu.value === 'formCategory' ? '' : 'formCategory'
 }
 
 function closeFilterMenu() {
   activeFilterMenu.value = ''
+}
+
+function closePageSizeMenu() {
+  isPageSizeMenuOpen.value = false
+}
+
+function togglePageSizeMenu() {
+  if (isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  closeFilterMenu()
+  isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
+}
+
+function selectPageSize(nextPageSize) {
+  if (pageSize.value === nextPageSize) {
+    closePageSizeMenu()
+    return
+  }
+
+  pageSize.value = nextPageSize
+  currentPage.value = 1
+  closePageSizeMenu()
 }
 
 function isSmallCategoryMenuOpen() {
@@ -710,6 +738,8 @@ function handleDocumentClick(event) {
   if (!filtersRef.value?.contains(event.target)) {
     closeFilterMenu()
   }
+
+  closePageSizeMenu()
 }
 
 function handleGlobalKeydown(event) {
@@ -719,6 +749,11 @@ function handleGlobalKeydown(event) {
 
   if (activeFilterMenu.value) {
     closeFilterMenu()
+    return
+  }
+
+  if (isPageSizeMenuOpen.value) {
+    closePageSizeMenu()
     return
   }
 
@@ -747,6 +782,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
   document.removeEventListener('keydown', handleGlobalKeydown)
+  closePageSizeMenu()
   if (listController) {
     listController.abort()
   }
@@ -1044,10 +1080,45 @@ onBeforeUnmount(() => {
             </div>
 
             <footer class="asset-config-pagination">
-              <div class="asset-config-pagination-meta">
-                <span>{{ pageSummary }}</span>
+              <div class="vulnerabilities-page-size" @click.stop>
+                <span>每页</span>
+                <button
+                  class="vulnerabilities-page-size-trigger"
+                  :class="{ active: isPageSizeMenuOpen }"
+                  type="button"
+                  :disabled="isLoading || isRefreshing"
+                  aria-label="选择每页数量"
+                  @click="togglePageSizeMenu"
+                >
+                  <span>{{ pageSize }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path :d="isPageSizeMenuOpen ? 'm7 14 5-5 5 5' : 'm7 10 5 5 5-5'" />
+                  </svg>
+                </button>
+
+                <div v-if="isPageSizeMenuOpen" class="vulnerabilities-page-size-menu">
+                  <button
+                    v-for="item in ASSET_CONFIG_LIST_PAGE_SIZE_OPTIONS"
+                    :key="item"
+                    class="vulnerabilities-page-size-option"
+                    :class="{ selected: pageSize === item }"
+                    type="button"
+                    @click="selectPageSize(item)"
+                  >
+                    <span
+                      class="vulnerabilities-page-size-check"
+                      :class="{ selected: pageSize === item }"
+                      aria-hidden="true"
+                    ></span>
+                    <span>{{ item }}</span>
+                  </button>
+                </div>
               </div>
+
               <div class="asset-config-pagination-actions">
+                <div class="asset-config-pagination-meta">
+                  <span>{{ pageSummary }}</span>
+                </div>
                 <button
                   class="asset-config-pagination-arrow"
                   type="button"
