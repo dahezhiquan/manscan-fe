@@ -11,12 +11,24 @@ export const DOMAIN_ASSET_RISK_OPTIONS = [
   { value: 'info', label: '无风险', shortLabel: '无风险' }
 ]
 
+export const DOMAIN_ASSET_VULNERABILITY_EXISTENCE_OPTIONS = [
+  { value: '', label: '全部漏洞状态', shortLabel: '是否存在漏洞' },
+  { value: 'true', label: '存在漏洞', shortLabel: '存在漏洞' },
+  { value: 'false', label: '不存在漏洞', shortLabel: '不存在漏洞' }
+]
+
+export const DOMAIN_ASSET_COMPONENT_EXISTENCE_OPTIONS = [
+  { value: '', label: '全部组件状态', shortLabel: '是否存在组件' },
+  { value: 'true', label: '存在组件', shortLabel: '存在组件' },
+  { value: 'false', label: '不存在组件', shortLabel: '不存在组件' }
+]
+
 export const DOMAIN_ASSET_FILTER_OPTIONS = [
   { key: 'title', label: '站点标题', placeholder: '输入站点标题' },
   { key: 'region', label: '区域', placeholder: '输入区域' },
   { key: 'riskLevel', label: '风险等级', type: 'select', options: DOMAIN_ASSET_RISK_OPTIONS },
-  { key: 'vulnerabilityCount', label: '漏洞数量', placeholder: '输入漏洞数量' },
-  { key: 'componentCount', label: '组件数量', placeholder: '输入组件数量' }
+  { key: 'hasVulnerability', label: '是否存在漏洞', type: 'select', options: DOMAIN_ASSET_VULNERABILITY_EXISTENCE_OPTIONS },
+  { key: 'hasComponent', label: '是否存在组件', type: 'select', options: DOMAIN_ASSET_COMPONENT_EXISTENCE_OPTIONS }
 ]
 
 export const DOMAIN_ASSET_FILTER_LABELS = DOMAIN_ASSET_FILTER_OPTIONS.reduce((result, item) => {

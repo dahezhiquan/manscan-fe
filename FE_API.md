@@ -655,8 +655,8 @@
   - `title`: “站点标题”筛选
   - `region`: “区域”筛选
   - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`
-  - `vulnerability_count`: “漏洞数量”筛选
-  - `component_count`: “组件数量”筛选
+  - `has_vulnerability`: “是否存在漏洞”筛选，前端提交 `true` 或 `false`
+  - `has_component`: “是否存在组件”筛选，前端提交 `true` 或 `false`
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
   - `items[].id`
   - `items[].domain` 或 `items[].asset_address`
@@ -678,9 +678,11 @@
   - 进入页面默认请求 `page=1&page_size=10`
   - 顶部搜索框防抖提交 `keyword`
   - “添加筛选条件”弹窗一次保存一个筛选项，筛选字段与表格展示列保持一致，已保存条件以 chip 展示，支持单项移除和清空全部
+  - “是否存在漏洞”按 `vulnerability_count > 0` 语义筛选；“是否存在组件”按 `component_count > 0` 语义筛选
   - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端保留原有“风险等级”和“漏洞数量”展示样式，并在“漏洞数量”列按严重、高危、中危、低危四格展示不同等级数量
   - 不同等级漏洞数量也兼容 `vulnerability_counts`、`severity_counts`、`vuln_counts` 等对象结构，以及常见驼峰字段名；`vulnerability_count` 缺失时前端会用四个等级数量求和兜底
   - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；筛选项不提供 `unknown`，但展示层保留未知风险兜底
   - `component_count` 和 `components` 由后端从组件等关联数据聚合返回；前端保留原有“组件数量”展示
   - `components` 可返回字符串数组、逗号分隔字符串或为空；为空时仅展示组件数量
+  - 后端 handler 已接收 `title`、`risk_level`、`has_vulnerability`、`has_component`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容

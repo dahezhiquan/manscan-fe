@@ -6,7 +6,6 @@ import {
   DOMAIN_ASSET_FILTER_LABELS,
   DOMAIN_ASSET_FILTER_OPTIONS,
   DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS,
-  DOMAIN_ASSET_RISK_OPTIONS,
   DOMAIN_ASSET_SEARCH_DEBOUNCE
 } from '../constants/domainAssets'
 import { normalizeDomainAssetListResponse } from '../utils/domainAsset'
@@ -107,8 +106,8 @@ function createEmptyFilters() {
     title: '',
     region: '',
     riskLevel: '',
-    vulnerabilityCount: '',
-    componentCount: ''
+    hasVulnerability: '',
+    hasComponent: ''
   }
 }
 
@@ -120,8 +119,8 @@ function buildDomainAssetListParams() {
     title: activeFilters.title,
     region: activeFilters.region,
     risk_level: activeFilters.riskLevel,
-    vulnerability_count: activeFilters.vulnerabilityCount,
-    component_count: activeFilters.componentCount
+    has_vulnerability: activeFilters.hasVulnerability,
+    has_component: activeFilters.hasComponent
   }
 }
 
@@ -339,11 +338,10 @@ function syncSelectedDomainAsset() {
 }
 
 function formatFilterValue(key, value) {
-  if (key === 'riskLevel') {
-    return DOMAIN_ASSET_RISK_OPTIONS.find((item) => item.value === value)?.shortLabel ?? value
-  }
+  const filterOption = DOMAIN_ASSET_FILTER_OPTIONS.find((item) => item.key === key)
+  const selectedOption = filterOption?.options?.find((item) => item.value === value)
 
-  return value
+  return selectedOption?.shortLabel ?? selectedOption?.label ?? value
 }
 
 watch(keywordInput, scheduleKeywordCommit)
