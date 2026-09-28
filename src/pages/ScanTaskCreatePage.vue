@@ -301,12 +301,6 @@ const stepFields = {
       options: SCAN_STRATEGY_OPTIONS.filter((option) => option.value),
       tooltip:
         '决定“模板”和“目标”这两个维度，优先按什么顺序调度扫描。1. auto：让程序自己根据场景做适配。2. host-spray：对一个 host，尽量把相关模板都跑掉，再切下一个 host。3. template-spray：先拿一个模板批量扫很多 host，再换下一个模板。'
-    },
-    {
-      key: 'disable_http_probe',
-      label: '禁用 httpx 探测',
-      type: 'boolean',
-      tooltip: '对“不是完整 URL 的输入”，系统会先做一层 httpx 探测 / 存活探测，此处可以禁用（不推荐禁用此项）。'
     }
   ],
   advanced: [
@@ -633,7 +627,6 @@ function createInitialForm() {
     project: false,
     project_path: '',
     scan_strategy: 'auto',
-    disable_http_probe: false,
     dast: false,
     headless: false,
     page_timeout: null,
