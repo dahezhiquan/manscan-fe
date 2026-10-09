@@ -163,7 +163,7 @@ const progressCards = computed(() => [
   },
   {
     label: '漏洞命中',
-    value: formatCount(resolveVulnerabilityMatchCount(task.value, progress.value)),
+    value: formatCount(resolveVulnerabilityMatchCount(task.value)),
     tone: 'pink'
   },
   {
@@ -173,12 +173,12 @@ const progressCards = computed(() => [
   },
   {
     label: '扫描目标数量',
-    value: formatCount(resolveTargetCount(task.value, progress.value)),
+    value: formatCount(resolveTargetCount(task.value)),
     tone: 'green'
   },
   {
     label: '实际漏洞插件数量',
-    value: formatCount(firstDefined(task.value?.template_count, task.value?.plugin_count, progress.value?.templates)),
+    value: formatCount(firstDefined(task.value?.plugin_count, progress.value?.templates)),
     tone: 'paper'
   }
 ])
@@ -209,14 +209,14 @@ const infoItems = computed(() => [
   },
   {
     label: '扫描目标数量',
-    value: formatCount(resolveTargetCount(task.value, progress.value))
+    value: formatCount(resolveTargetCount(task.value))
   },
   {
-    label: '存活主机数量',
+    label: '存活目标数量',
     value: formatCount(pickFirstValue(task.value, ['alive_hosts', 'live_hosts', 'up_hosts']) ?? progress.value?.hosts)
   },
   {
-    label: '无响应主机数量',
+    label: '无响应目标数量',
     value: formatCount(pickFirstValue(task.value, ['unresponsive_hosts', 'no_response_hosts', 'dead_hosts', 'timeout_hosts']))
   }
 ])
@@ -464,7 +464,7 @@ function formatWindowValue(value) {
   return String(value)
 }
 
-function resolveTargetCount(taskRecord, progressRecord) {
+function resolveTargetCount(taskRecord) {
   const directCount = pickFirstValue(taskRecord, ['target_count', 'targets_count', 'total_targets', 'hosts_total'])
 
   if (directCount !== null) {
@@ -482,18 +482,18 @@ function resolveTargetCount(taskRecord, progressRecord) {
       .filter(Boolean).length
   }
 
-  return progressRecord?.hosts ?? null
+  return null
 }
 
-function resolveVulnerabilityMatchCount(taskRecord, progressRecord) {
-  const severityKeys = ['critical_count', 'high_count', 'medium_count', 'low_count', 'info_count']
+function resolveVulnerabilityMatchCount(taskRecord) {
+  const severityKeys = ['critical_count', 'high_count', 'medium_count', 'low_count']
   const hasSeverityBreakdown = severityKeys.some((key) => taskRecord?.[key] !== null && taskRecord?.[key] !== undefined && taskRecord?.[key] !== '')
 
   if (hasSeverityBreakdown) {
     return severityKeys.reduce((total, key) => total + normalizeCountValue(taskRecord?.[key]), 0)
   }
 
-  return progressRecord?.matched ?? null
+  return null
 }
 
 function normalizeCountValue(value) {

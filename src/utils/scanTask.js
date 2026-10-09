@@ -196,7 +196,7 @@ export function normalizeScanTask(record) {
   }, {})
 
   const severityTotal = Object.values(severity).reduce((total, count) => total + count, 0)
-  const pluginCount = normalizeNullableNumber(firstDefined(record?.plugin_count, record?.template_count, record?.plugin))
+  const pluginCount = normalizeNullableNumber(firstDefined(record?.plugin_count, record?.plugin))
   const techCount = normalizeNullableNumber(firstDefined(record?.tech_count, record?.tech))
   const targetCount = normalizeNullableNumber(firstDefined(record?.target_count, record?.targets_count))
   const totalRequests = normalizeNullableNumber(record?.total_requests)

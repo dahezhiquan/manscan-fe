@@ -599,6 +599,7 @@
   - `latest_scan_task_id` 会在右侧以 URL 跳转标记展示，点击后在新标签页打开 `/scan/:id`，前端会兼容映射到现有扫描任务详情页
   - `detail` 如果是对象，前端会读取 `request`、`response`、`curl-command` 并拆成代码面板展示
   - 当 `detail.request` / `detail.response` 是按步骤编号的对象时，前端会按编号升序展示为 `请求 1 / 响应 1 / 请求 2 / 响应 2` 的顺序
+  - 当 `detail.request` / `detail.response` 是普通业务对象时，前端会将对象整体格式化为 JSON 代码块展示，不会把对象字段误拆为多步请求/响应
   - `detail` 如果是合法 JSON 字符串，前端会先解析再读取以上字段；无法解析时会按原始文本兜底展示
 
 ### 22. 批量删除扫描任务
