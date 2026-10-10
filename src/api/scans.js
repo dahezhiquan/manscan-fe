@@ -13,7 +13,8 @@ import {
   buildScanTaskResumeApi,
   buildScanTaskStreamApi
 } from '../constants/api'
-import { requestJson } from '../utils/http'
+import { notifyAuthSessionExpired } from '../utils/authSession'
+import { createAuthorizedRequestOptions, requestJson } from '../utils/http'
 
 export async function getScanTaskStats(signal) {
   return requestJson(SCAN_TASK_STATS_API, {
@@ -105,11 +106,15 @@ export async function downloadScanTaskRawLogsArchive(taskId) {
 }
 
 async function downloadScanTaskArchive(requestUrl, fallbackName) {
-  const response = await fetch(requestUrl, {
+  const response = await fetch(requestUrl, createAuthorizedRequestOptions({
     method: 'GET'
-  })
+  }))
 
   if (!response.ok) {
+    if (response.status === 401) {
+      notifyAuthSessionExpired()
+    }
+
     throw new Error(await readDownloadErrorMessage(response))
   }
 
@@ -138,7 +143,7 @@ export async function getScanTaskLogs(taskId, offset, limit, direction = '') {
 }
 
 export function createScanTaskStream(taskId, offset) {
-  return new EventSource(buildScanTaskStreamApi(taskId, offset))
+  return createAuthorizedEventStream(buildScanTaskStreamApi(taskId, offset))
 }
 
 function appendSingleQueryParam(searchParams, key, value) {
@@ -222,4 +227,176 @@ function triggerBrowserDownload(blob, filename) {
   window.setTimeout(() => {
     URL.revokeObjectURL(objectUrl)
   }, 1000)
+}
+
+function createAuthorizedEventStream(requestUrl) {
+  const controller = new AbortController()
+  const listeners = new Map()
+  let isClosed = false
+
+  const source = {
+    onopen: null,
+    onerror: null,
+    addEventListener(type, listener) {
+      if (!listeners.has(type)) {
+        listeners.set(type, new Set())
+      }
+
+      listeners.get(type).add(listener)
+    },
+    removeEventListener(type, listener) {
+      listeners.get(type)?.delete(listener)
+    },
+    close() {
+      isClosed = true
+      controller.abort()
+    }
+  }
+
+  function dispatchEvent(type, data) {
+    const event = {
+      type,
+      data,
+      target: source,
+      currentTarget: source
+    }
+
+    listeners.get(type)?.forEach((listener) => {
+      listener(event)
+    })
+  }
+
+  function dispatchError(error) {
+    if (!isClosed && typeof source.onerror === 'function') {
+      source.onerror(error)
+    }
+  }
+
+  async function connect() {
+    try {
+      const response = await fetch(requestUrl, createAuthorizedRequestOptions({
+        method: 'GET',
+        headers: {
+          Accept: 'text/event-stream'
+        },
+        signal: controller.signal
+      }))
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          notifyAuthSessionExpired()
+        }
+
+        throw new Error(await readDownloadErrorMessage(response))
+      }
+
+      if (!response.body) {
+        throw new Error('实时订阅连接不可用。')
+      }
+
+      if (typeof source.onopen === 'function') {
+        source.onopen({ type: 'open', target: source, currentTarget: source })
+      }
+
+      await readEventStream(response.body, dispatchEvent, () => isClosed)
+
+      if (!isClosed) {
+        dispatchError(new Error('实时订阅连接已关闭。'))
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError' || isClosed) {
+        return
+      }
+
+      dispatchError(error)
+    }
+  }
+
+  void connect()
+
+  return source
+}
+
+async function readEventStream(body, dispatchEvent, isClosed) {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (!isClosed()) {
+    const { done, value } = await reader.read()
+
+    if (done) {
+      break
+    }
+
+    buffer += decoder.decode(value, { stream: true })
+    buffer = flushEventStreamBuffer(buffer, dispatchEvent)
+  }
+
+  buffer += decoder.decode()
+
+  if (buffer.trim()) {
+    emitEventStreamBlock(buffer, dispatchEvent)
+  }
+}
+
+function flushEventStreamBuffer(buffer, dispatchEvent) {
+  let nextBuffer = buffer
+  let separatorIndex = findEventSeparatorIndex(nextBuffer)
+
+  while (separatorIndex >= 0) {
+    const block = nextBuffer.slice(0, separatorIndex)
+    nextBuffer = nextBuffer.slice(separatorIndex + resolveSeparatorLength(nextBuffer, separatorIndex))
+    emitEventStreamBlock(block, dispatchEvent)
+    separatorIndex = findEventSeparatorIndex(nextBuffer)
+  }
+
+  return nextBuffer
+}
+
+function findEventSeparatorIndex(buffer) {
+  const normalizedSeparatorIndex = buffer.indexOf('\n\n')
+
+  if (normalizedSeparatorIndex >= 0) {
+    return normalizedSeparatorIndex
+  }
+
+  return buffer.indexOf('\r\n\r\n')
+}
+
+function resolveSeparatorLength(buffer, index) {
+  return buffer.slice(index, index + 4) === '\r\n\r\n' ? 4 : 2
+}
+
+function emitEventStreamBlock(block, dispatchEvent) {
+  const event = parseEventStreamBlock(block)
+
+  if (!event.data) {
+    return
+  }
+
+  dispatchEvent(event.type || 'message', event.data)
+}
+
+function parseEventStreamBlock(block) {
+  return block.split(/\r?\n/).reduce((event, line) => {
+    if (!line || line.startsWith(':')) {
+      return event
+    }
+
+    const separatorIndex = line.indexOf(':')
+    const field = separatorIndex >= 0 ? line.slice(0, separatorIndex) : line
+    const rawValue = separatorIndex >= 0 ? line.slice(separatorIndex + 1) : ''
+    const value = rawValue.startsWith(' ') ? rawValue.slice(1) : rawValue
+
+    if (field === 'event') {
+      event.type = value
+    }
+
+    if (field === 'data') {
+      event.data = event.data ? `${event.data}\n${value}` : value
+    }
+
+    return event
+  }, { type: 'message', data: '' })
 }

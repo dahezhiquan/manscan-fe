@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getCurrentUser, logoutCurrentUser } from './api/auth'
 import DashboardPage from './pages/DashboardPage.vue'
 import AssetConfigCenterPage from './pages/AssetConfigCenterPage.vue'
 import DomainAssetDetailPage from './pages/DomainAssetDetailPage.vue'
@@ -14,43 +15,121 @@ import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
 import { useAppRouter } from './composables/useAppRouter'
 import { ROUTE_PATHS } from './router/routes'
-
-const LOGIN_STORAGE_KEY = 'manscan-login-session'
-const LOGIN_USERNAME_STORAGE_KEY = 'manscan-login-username'
-const DEFAULT_LOGIN_USERNAME = 'admin'
+import {
+  AUTH_SESSION_EXPIRED_EVENT,
+  clearAuthSession,
+  getAuthToken,
+  getStoredUser,
+  setAuthSession,
+  updateStoredUser
+} from './utils/authSession'
 
 const isSidebarCollapsed = ref(false)
 const { currentPath, navigateTo } = useAppRouter()
-const isAuthenticated = ref(window.localStorage.getItem(LOGIN_STORAGE_KEY) === 'authenticated')
-const currentUserName = ref(window.localStorage.getItem(LOGIN_USERNAME_STORAGE_KEY) || DEFAULT_LOGIN_USERNAME)
+const isAuthReady = ref(false)
+const isAuthenticated = ref(Boolean(getAuthToken()))
+const currentUser = ref(getStoredUser())
+const redirectAfterLogin = ref('')
+
+const currentUserName = computed(() => {
+  const user = currentUser.value
+  return user?.display_name || user?.username || 'admin'
+})
+
+function rememberRedirectPath() {
+  if (currentPath.value !== ROUTE_PATHS.LOGIN) {
+    redirectAfterLogin.value = currentPath.value
+  }
+}
+
+function redirectToLogin() {
+  rememberRedirectPath()
+
+  if (currentPath.value !== ROUTE_PATHS.LOGIN) {
+    navigateTo(ROUTE_PATHS.LOGIN)
+  }
+}
 
 function redirectAuthenticatedLogin() {
   if (currentPath.value === ROUTE_PATHS.LOGIN) {
-    navigateTo(ROUTE_PATHS.HOME)
+    navigateTo(redirectAfterLogin.value || ROUTE_PATHS.HOME)
+    redirectAfterLogin.value = ''
   }
 }
 
 function handleLoginSuccess(payload) {
-  const username = String(payload?.username ?? '').trim() || DEFAULT_LOGIN_USERNAME
-  window.localStorage.setItem(LOGIN_STORAGE_KEY, 'authenticated')
-  window.localStorage.setItem(LOGIN_USERNAME_STORAGE_KEY, username)
-  currentUserName.value = username
+  setAuthSession(payload)
+  currentUser.value = updateStoredUser(payload?.user)
   isAuthenticated.value = true
+  isAuthReady.value = true
   redirectAuthenticatedLogin()
 }
 
-function handleLogout() {
-  window.localStorage.removeItem(LOGIN_STORAGE_KEY)
-  window.localStorage.removeItem(LOGIN_USERNAME_STORAGE_KEY)
-  currentUserName.value = DEFAULT_LOGIN_USERNAME
+function resetAuthState() {
+  clearAuthSession()
+  currentUser.value = null
   isAuthenticated.value = false
   isSidebarCollapsed.value = false
-  navigateTo(ROUTE_PATHS.LOGIN)
 }
 
-if (isAuthenticated.value) {
-  redirectAuthenticatedLogin()
+async function handleLogout() {
+  try {
+    await logoutCurrentUser()
+  } catch {
+    // Local session cleanup is still required if the server already expired the token.
+  } finally {
+    resetAuthState()
+    navigateTo(ROUTE_PATHS.LOGIN)
+  }
 }
+
+async function initializeAuth() {
+  if (!getAuthToken()) {
+    resetAuthState()
+    redirectToLogin()
+    isAuthReady.value = true
+    return
+  }
+
+  try {
+    const user = await getCurrentUser()
+    currentUser.value = updateStoredUser(user)
+    isAuthenticated.value = true
+    redirectAuthenticatedLogin()
+  } catch {
+    resetAuthState()
+    redirectToLogin()
+  } finally {
+    isAuthReady.value = true
+  }
+}
+
+function handleSessionExpired() {
+  resetAuthState()
+  redirectToLogin()
+}
+
+onMounted(() => {
+  window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired)
+  void initializeAuth()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired)
+})
+
+watch(currentPath, () => {
+  if (!isAuthReady.value) {
+    return
+  }
+
+  if (!isAuthenticated.value) {
+    redirectToLogin()
+    return
+  }
+
+  redirectAuthenticatedLogin()
+})
 
 const currentView = computed(() => {
   if (currentPath.value === '/assets/config') {
@@ -98,7 +177,14 @@ const currentView = computed(() => {
 </script>
 
 <template>
-  <LoginPage v-if="!isAuthenticated" @login-success="handleLoginSuccess" />
+  <main v-if="!isAuthReady" class="auth-loading-page" aria-label="正在校验登录状态">
+    <div class="auth-loading-card">
+      <span class="auth-loading-mark" aria-hidden="true"></span>
+      <span>正在校验登录状态</span>
+    </div>
+  </main>
+
+  <LoginPage v-else-if="!isAuthenticated" @login-success="handleLoginSuccess" />
 
   <component
     v-else

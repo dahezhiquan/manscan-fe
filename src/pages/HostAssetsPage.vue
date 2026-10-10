@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
                 <input
                   v-model="keywordInput"
                   type="text"
-                  placeholder="模糊搜索 IP、操作系统或关联域名"
+                  placeholder="模糊搜索 IP"
                   autocomplete="off"
                 />
                 <span class="domain-assets-search-icon" aria-hidden="true">
