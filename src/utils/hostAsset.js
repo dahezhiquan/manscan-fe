@@ -2,7 +2,7 @@ import {
   DOMAIN_ASSET_RISK_META,
   DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER
 } from '../constants/domainAssets'
-import { formatCount, firstDefined, severityLabel } from './scanTask'
+import { formatCount, firstDefined, formatDateTime, severityLabel } from './scanTask'
 
 export function normalizeHostAssetListResponse(payload, fallbackPage = 1, fallbackPageSize = 10) {
   const pageSize = normalizePositiveInteger(firstDefined(payload?.pageSize, payload?.page_size), fallbackPageSize)
@@ -78,6 +78,120 @@ export function normalizeHostAsset(record) {
       portCount
     ].join('|')
   }
+}
+
+export function normalizeHostAssetDetail(payload) {
+  const rawDetail = payload?.host_asset && typeof payload.host_asset === 'object'
+    ? payload.host_asset
+    : payload
+  const ipAddress = formatText(
+    firstDefined(rawDetail?.ip_address, rawDetail?.ipAddress, rawDetail?.asset_address, rawDetail?.assetAddress, rawDetail?.ip)
+  )
+  const osType = formatText(firstDefined(rawDetail?.os_type, rawDetail?.osType))
+  const osVersion = formatText(firstDefined(rawDetail?.os_version, rawDetail?.osVersion), '')
+  const isAlive = normalizeBoolean(firstDefined(rawDetail?.is_alive, rawDetail?.isAlive))
+  const riskLevel = normalizeRiskLevel(firstDefined(rawDetail?.risk_level, rawDetail?.riskLevel, rawDetail?.severity))
+  const riskMeta = DOMAIN_ASSET_RISK_META[riskLevel] ?? DOMAIN_ASSET_RISK_META.unknown
+  const vulnerabilityCount = normalizeNonNegativeInteger(
+    firstDefined(rawDetail?.vulnerability_count, rawDetail?.vulnerabilityCount, rawDetail?.vuln_count, rawDetail?.vulnCount),
+    0
+  )
+  const ports = normalizeHostAssetPorts(firstDefined(rawDetail?.ports, rawDetail?.port_details, rawDetail?.portDetails))
+
+  return {
+    ipAddress,
+    region: formatText(firstDefined(rawDetail?.region, rawDetail?.network_region, rawDetail?.networkRegion, rawDetail?.area)),
+    owner: formatText(rawDetail?.owner),
+    osType,
+    osVersion,
+    osDisplay: formatOsType(osType, osVersion),
+    scanCreatedAtDisplay: formatDateTime(firstDefined(rawDetail?.scan_created_at, rawDetail?.scanCreatedAt)),
+    lastAliveAtDisplay: formatDateTime(firstDefined(rawDetail?.last_alive_at, rawDetail?.lastAliveAt)),
+    manualNote: formatText(firstDefined(rawDetail?.manual_note, rawDetail?.manualNote), '暂无备注'),
+    isAlive,
+    isAliveMeta: getAliveMeta(isAlive),
+    relatedDomains: normalizeRelatedDomains(firstDefined(rawDetail?.related_domains, rawDetail?.relatedDomains)),
+    riskLevel,
+    riskMeta,
+    vulnerabilityCount,
+    vulnerabilityCountDisplay: formatCount(vulnerabilityCount),
+    ports,
+    portCountDisplay: formatCount(ports.length),
+    alivePortCountDisplay: formatCount(ports.filter((port) => port.isAlive === true).length)
+  }
+}
+
+function normalizeHostAssetPorts(value) {
+  const items = Array.isArray(value) ? value : []
+
+  return items.map((item, index) => {
+    const portProtocol = formatText(firstDefined(item?.port_protocol, item?.portProtocol), '--').toUpperCase()
+    const portNumber = normalizeNonNegativeInteger(firstDefined(item?.port_number, item?.portNumber), 0)
+    const serviceName = formatText(firstDefined(item?.service_name, item?.serviceName))
+    const appName = formatText(firstDefined(item?.app_name, item?.appName))
+    const appVersion = formatText(firstDefined(item?.app_version, item?.appVersion), '')
+    const isAlive = normalizeBoolean(firstDefined(item?.is_alive, item?.isAlive))
+    const isHighRiskPort = normalizeBoolean(firstDefined(item?.is_high_risk_port, item?.isHighRiskPort))
+
+    return {
+      key: [portProtocol, portNumber, serviceName, appName, index].join('|'),
+      portProtocol,
+      portNumber,
+      portNumberDisplay: portNumber > 0 ? String(portNumber) : '--',
+      serviceName,
+      appName,
+      appVersion,
+      appDisplay: appVersion && appName !== '--' ? `${appName} ${appVersion}` : appName,
+      isAlive,
+      isAliveMeta: getAliveMeta(isAlive),
+      isHighRiskPort,
+      highRiskMeta: isHighRiskPort === true
+        ? { label: '高危端口', tone: 'danger' }
+        : { label: '普通端口', tone: 'neutral' },
+      lastAliveAtDisplay: formatDateTime(firstDefined(item?.last_alive_at, item?.lastAliveAt)),
+      portCreatedAtDisplay: formatDateTime(firstDefined(item?.port_created_at, item?.portCreatedAt))
+    }
+  })
+}
+
+function normalizeRelatedDomains(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean)
+  }
+
+  return String(value ?? '')
+    .split(/[,，\n\r；;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function getAliveMeta(value) {
+  if (value === true) {
+    return { label: '存活', tone: 'alive' }
+  }
+
+  if (value === false) {
+    return { label: '不存活', tone: 'inactive' }
+  }
+
+  return { label: '未知', tone: 'unknown' }
+}
+
+function normalizeBoolean(value) {
+  if (value === true || value === false) {
+    return value
+  }
+
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (['true', '1', 'yes', 'y', '是', '有'].includes(normalized)) {
+    return true
+  }
+
+  if (['false', '0', 'no', 'n', '否', '无'].includes(normalized)) {
+    return false
+  }
+
+  return null
 }
 
 function normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount) {

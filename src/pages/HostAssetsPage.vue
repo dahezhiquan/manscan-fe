@@ -51,7 +51,6 @@ const draftFilterKey = ref(HOST_ASSET_FILTER_OPTIONS[0].key)
 const draftFilterValue = ref('')
 const draftError = ref('')
 const tableRows = ref([])
-const selectedHostAssetId = ref('')
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
@@ -270,14 +269,19 @@ function goToNextPage() {
   void loadHostAssets()
 }
 
-function selectHostAsset(assetId) {
-  selectedHostAssetId.value = selectedHostAssetId.value === assetId ? '' : assetId
+function openHostAssetDetail(row) {
+  const ipAddress = row?.ip && row.ip !== '--' ? row.ip : row?.id
+  if (!ipAddress) {
+    return
+  }
+
+  window.open(`/assets/hosts/${encodeURIComponent(ipAddress)}`, '_blank', 'noopener,noreferrer')
 }
 
-function handleHostAssetKeydown(event, assetId) {
+function handleHostAssetKeydown(event, row) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    selectHostAsset(assetId)
+    openHostAssetDetail(row)
   }
 }
 
@@ -315,7 +319,6 @@ async function loadHostAssets(options = {}) {
 
     const normalized = normalizeHostAssetListResponse(data, currentPage.value, pageSize.value)
     tableRows.value = normalized.items
-    syncSelectedHostAsset()
     total.value = normalized.total
     currentPage.value = normalized.page
     pageSize.value = normalized.pageSize
@@ -332,18 +335,6 @@ async function loadHostAssets(options = {}) {
       isRefreshing.value = false
       fetchController = null
     }
-  }
-}
-
-function syncSelectedHostAsset() {
-  if (!selectedHostAssetId.value) {
-    return
-  }
-
-  const selectedStillVisible = tableRows.value.some((row) => row.id === selectedHostAssetId.value)
-
-  if (!selectedStillVisible) {
-    selectedHostAssetId.value = ''
   }
 }
 
@@ -501,14 +492,13 @@ onBeforeUnmount(() => {
                     <article
                       v-for="row in tableRows"
                       :key="row.id"
-                      v-memo="[row.memoKey, selectedHostAssetId === row.id]"
+                      v-memo="[row.memoKey]"
                       class="domain-assets-table-row host-assets-table-grid"
-                      :class="{ selected: selectedHostAssetId === row.id }"
                       tabindex="0"
-                      role="button"
-                      :aria-pressed="selectedHostAssetId === row.id ? 'true' : 'false'"
-                      @click="selectHostAsset(row.id)"
-                      @keydown="handleHostAssetKeydown($event, row.id)"
+                      role="link"
+                      :aria-label="`查看主机资产详情：${row.ip}`"
+                      @click="openHostAssetDetail(row)"
+                      @keydown="handleHostAssetKeydown($event, row)"
                     >
                       <div class="domain-assets-address-cell">
                         <strong>{{ row.ip }}</strong>

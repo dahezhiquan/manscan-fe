@@ -15,6 +15,7 @@ export const SCAN_TASK_DELETE_API = SCAN_TASK_CREATE_API
 export const DOMAIN_ASSET_LIST_API = `${API_PREFIX}/domain-assets`
 export const DOMAIN_ASSET_DETAIL_API = `${DOMAIN_ASSET_LIST_API}/detail`
 export const HOST_ASSET_LIST_API = `${API_PREFIX}/host-assets`
+export const HOST_ASSET_DETAIL_API = `${HOST_ASSET_LIST_API}/detail`
 export const ASSET_CONFIG_CENTER_API = `${API_PREFIX}/asset-config-centers`
 export const ASSET_CONFIG_CENTER_LIST_API = ASSET_CONFIG_CENTER_API
 export const ASSET_CONFIG_CENTER_SMALL_CATEGORY_OPTIONS_API = `${ASSET_CONFIG_CENTER_API}/options/small-categories`
@@ -51,6 +52,10 @@ export function buildScanTaskRescanApi(taskId) {
 
 export function buildScanTaskResponsesArchiveApi(taskId) {
   return `${buildScanTaskApi(taskId)}/responses/archive`
+}
+
+export function buildScanTaskRawLogsArchiveApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/raw-logs/archive`
 }
 
 export function buildScanTaskLogsApi(taskId, offset = 0, limit = 200, direction = '') {

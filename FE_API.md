@@ -644,7 +644,26 @@
   - 该接口不是 JSON 接口，前端会以 `fetch + blob` 方式处理成功响应
   - 下载成功后由浏览器直接保存为 zip 文件，不会跳转页面
 
-### 24. 获取域名资产清单
+### 24. 下载扫描任务原始日志压缩包
+
+- 用途：扫描任务详情页“扫描日志”区域的“下载原始日志”按钮；当任务状态为 `success`、`failed` 或 `cancelled` 时展示
+- 请求方式：`GET`
+- 路径：`/api/v1/scans/:id/raw-logs/archive`
+- 请求参数：
+  - 路径参数 `id`: 扫描任务 ID
+- 返回结构：
+  - 成功时直接返回 zip 文件流，文件名为 `<任务ID>.zip`
+  - 失败时返回 JSON 错误，前端当前会优先读取 `message`
+- 异常分支：
+  - `40001`：任务 ID 非法
+  - `40401`：任务不存在，或扫描原始日志目录不存在
+  - `50001`：压缩或下载扫描原始日志失败
+- 联调注意事项：
+  - 该接口不是 JSON 接口，前端会以 `fetch + blob` 方式处理成功响应
+  - 后端会实时压缩 `data/runtime/<任务ID>` 为 zip 并返回，zip 内保留 `<任务ID>/` 根目录
+  - 下载成功后由浏览器直接保存为 zip 文件，不会跳转页面
+
+### 25. 获取域名资产清单
 
 - 用途：`/assets/domains` 域名资产清单页首屏加载、域名模糊搜索、展开式筛选和分页展示
 - 请求方式：`GET`
@@ -688,7 +707,7 @@
   - 后端 handler 已接收 `title`、`risk_level`、`has_vulnerability`、`has_component`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
 
-### 25. 获取域名资产详情
+### 26. 获取域名资产详情
 
 - 用途：`/assets/domains/:domain` 域名资产详情页加载指定域名资产的基础信息、服务资产、标题历史、截图和请求/响应证据
 - 请求方式：`GET`
@@ -702,6 +721,8 @@
   - `first_alive_at`
   - `last_alive_at`
   - `region`
+  - `risk_level`
+  - `vulnerability_count`
   - `has_form`
   - `has_upload`
   - `has_admin`
@@ -727,12 +748,14 @@
   - 接口失败或域名不存在时展示后端错误信息；详情数据清空时展示空态
   - 请求被新请求或页面卸载取消时不展示错误
 - 联调注意事项：
-  - 域名清单行点击后跳转到 `/assets/domains/${encodeURIComponent(domain)}`，支持键盘 `Enter` 和空格进入详情
+  - 域名清单行点击后在新标签页打开 `/assets/domains/${encodeURIComponent(domain)}`，支持键盘 `Enter` 和空格进入详情
+  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；缺失时展示为未知
+  - `vulnerability_count` 缺失时按 `0` 兜底，并在“资产概览”中展示
   - 详情页会把请求和响应分别展示为 `request.http`、`response.http`，并提供复制按钮
   - 截图路径只展示 `http://`、`https://` 或站内绝对路径，避免把异常协议或相对脏数据写入图片地址
   - 可空字符串、可空时间和状态码缺失时前端以 `--`、`暂无备注` 或 `未提供` 兜底
 
-### 26. 获取主机资产清单
+### 27. 获取主机资产清单
 
 - 用途：`/assets/hosts` 主机资产清单页首屏加载、主机模糊搜索、展开式筛选和分页展示
 - 请求方式：`GET`
@@ -770,5 +793,46 @@
   - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；筛选项不提供 `unknown`，但展示层保留未知风险兜底
   - `os_type` 与 `os_version` 同时存在时，前端会展示为“操作系统类型 / 操作系统版本”；缺失时以 `--` 兜底
   - `port_count` 表示存活端口数量，前端展示列文案为“端口数量”
+  - 主机清单行点击后在新标签页打开 `/assets/hosts/${encodeURIComponent(ip_address)}`，支持键盘 `Enter` 和空格进入详情
   - 后端 handler 已接收 `keyword`、`os_type`、`region`、`risk_level`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
+
+### 28. 获取主机资产详情
+
+- 用途：`/assets/hosts/:ip` 主机资产详情页加载指定主机的基础信息、风险概览、关联域名、端口资产和备注
+- 请求方式：`GET`
+- 路径：`/api/v1/host-assets/detail`
+- 请求参数：
+  - `ip_address`: 必填，主机资产 IP 地址；前端从路由 `/assets/hosts/:ip` 中 `decodeURIComponent` 后传递，需与后端资产 IP 完全一致
+- 返回结构：前端使用接口返回的 `data`
+  - `ip_address`
+  - `region`
+  - `owner`
+  - `os_type`
+  - `os_version`
+  - `scan_created_at`
+  - `last_alive_at`
+  - `manual_note`
+  - `is_alive`
+  - `related_domains`
+  - `risk_level`
+  - `vulnerability_count`
+  - `ports[].port_protocol`
+  - `ports[].port_number`
+  - `ports[].service_name`
+  - `ports[].app_name`
+  - `ports[].app_version`
+  - `ports[].is_alive`
+  - `ports[].is_high_risk_port`
+  - `ports[].last_alive_at`
+  - `ports[].port_created_at`
+- 异常分支：
+  - 缺少路由 IP 参数时展示错误提示和重新加载按钮
+  - 接口失败或主机不存在时展示后端错误信息；详情数据清空时展示空态
+  - 请求被新请求或页面卸载取消时不展示错误
+- 联调注意事项：
+  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；缺失时展示为未知
+  - `vulnerability_count` 缺失时按 `0` 兜底，并在“资产概览”中展示
+  - `ports` 缺失时按空数组兜底；端口资产展示协议、端口号、服务、应用、存活状态、高危端口标记和时间
+  - `related_domains` 支持逗号、分号或换行分隔字符串；为空时展示暂无关联域名
+  - 可空字符串和可空时间缺失时前端以 `--` 或 `暂无备注` 兜底

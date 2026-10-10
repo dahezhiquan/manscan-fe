@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage.vue'
 import AssetConfigCenterPage from './pages/AssetConfigCenterPage.vue'
 import DomainAssetDetailPage from './pages/DomainAssetDetailPage.vue'
 import DomainAssetsPage from './pages/DomainAssetsPage.vue'
+import HostAssetDetailPage from './pages/HostAssetDetailPage.vue'
 import HostAssetsPage from './pages/HostAssetsPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import ScansDashboardPage from './pages/ScansDashboardPage.vue'
@@ -62,6 +63,10 @@ const currentView = computed(() => {
 
   if (currentPath.value === '/assets/domains') {
     return DomainAssetsPage
+  }
+
+  if (currentPath.value.startsWith('/assets/hosts/')) {
+    return HostAssetDetailPage
   }
 
   if (currentPath.value === '/assets/hosts') {

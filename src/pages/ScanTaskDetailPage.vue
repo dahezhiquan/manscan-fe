@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import {
   cancelScanTask,
   createScanTaskStream,
+  downloadScanTaskRawLogsArchive,
   downloadScanTaskResponsesArchive,
   getScanTask,
   getScanTaskLogs,
@@ -49,7 +50,9 @@ const isCancelling = ref(false)
 const isPauseActionLoading = ref(false)
 const isRescanning = ref(false)
 const isDownloadingResponsesArchive = ref(false)
+const isDownloadingRawLogsArchive = ref(false)
 const downloadArchiveError = ref('')
+const downloadRawLogsArchiveError = ref('')
 const streamOffset = ref(0)
 const olderLogsOffset = ref(null)
 const isInitializing = ref(false)
@@ -104,6 +107,13 @@ const isTaskFinished = computed(() => {
   return Boolean(progress.value?.finished)
 })
 const isTaskInactive = computed(() => isTaskFinished.value || isTaskPaused.value)
+const canDownloadRawLogsArchive = computed(() => {
+  if (TERMINAL_STATUSES.has(taskStatus.value)) {
+    return true
+  }
+
+  return TERMINAL_STATUSES.has(normalizeStatusValue(progress.value?.finished_status))
+})
 
 const taskTitle = computed(() => {
   const name = String(task.value?.name ?? '').trim()
@@ -1093,6 +1103,23 @@ async function handleDownloadResponsesArchive() {
   }
 }
 
+async function handleDownloadRawLogsArchive() {
+  if (!taskId.value || isDownloadingRawLogsArchive.value) {
+    return
+  }
+
+  isDownloadingRawLogsArchive.value = true
+  downloadRawLogsArchiveError.value = ''
+
+  try {
+    await downloadScanTaskRawLogsArchive(taskId.value)
+  } catch (error) {
+    downloadRawLogsArchiveError.value = error instanceof Error ? error.message : '下载扫描原始日志失败，请稍后重试。'
+  } finally {
+    isDownloadingRawLogsArchive.value = false
+  }
+}
+
 async function handleCancelTask() {
   if (!taskId.value || isCancelling.value || isRescanning.value || !canCancelTask.value) {
     return
@@ -1565,6 +1592,21 @@ onBeforeUnmount(() => {
               <span>{{ isDownloadingResponsesArchive ? '下载中...' : '下载请求/响应' }}</span>
             </button>
             <button
+              v-if="canDownloadRawLogsArchive"
+              class="scan-task-detail-download-button"
+              type="button"
+              :disabled="isDownloadingRawLogsArchive"
+              :aria-busy="isDownloadingRawLogsArchive ? 'true' : 'false'"
+              @click="handleDownloadRawLogsArchive"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 3v11" />
+                <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
+                <path d="M5 18.5h14" />
+              </svg>
+              <span>{{ isDownloadingRawLogsArchive ? '下载中...' : '下载原始日志' }}</span>
+            </button>
+            <button
               v-if="showReconnectButton"
               class="scan-task-detail-inline-button"
               type="button"
@@ -1581,6 +1623,10 @@ onBeforeUnmount(() => {
 
         <div v-if="downloadArchiveError" class="scan-task-detail-stream-tip is-warning">
           {{ downloadArchiveError }}
+        </div>
+
+        <div v-if="downloadRawLogsArchiveError" class="scan-task-detail-stream-tip is-warning">
+          {{ downloadRawLogsArchiveError }}
         </div>
 
         <div ref="logViewport" class="scan-task-detail-log-viewport" @scroll="handleLogScroll">

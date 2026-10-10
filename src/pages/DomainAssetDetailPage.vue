@@ -50,6 +50,8 @@ const overviewItems = computed(() => {
     { label: '站点标题', value: detail.value.title },
     { label: '资产归属', value: detail.value.owner },
     { label: '区域', value: detail.value.region },
+    { label: '风险等级', value: detail.value.riskMeta.label, riskTone: detail.value.riskMeta.tone },
+    { label: '漏洞数量', value: detail.value.vulnerabilityCountDisplay },
     { label: 'HTTP 状态码', value: detail.value.httpStatusCode },
     {
       label: '存活状态',
@@ -339,6 +341,13 @@ onBeforeUnmount(() => {
                   v-if="item.statusTone"
                   class="template-detail-info-pill"
                   :class="getAlivePillClass(item.statusTone)"
+                >
+                  {{ item.value }}
+                </span>
+                <span
+                  v-else-if="item.riskTone"
+                  class="domain-assets-risk-pill template-detail-info-pill"
+                  :class="`is-${item.riskTone}`"
                 >
                   {{ item.value }}
                 </span>

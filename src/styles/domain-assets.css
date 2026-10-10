@@ -1310,23 +1310,37 @@
   gap: 10px;
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid #d8dde6;
+  border: 1px solid #f0c7c7;
   border-radius: 12px;
-  background: #f8fafc;
-  color: #606776;
+  background: #fff7f7;
+  color: #7f4b4b;
   font-size: 12px;
   font-weight: 800;
 }
 
 .domain-asset-detail-flag.enabled {
-  border-color: rgba(47, 111, 255, 0.28);
-  background: #edf4ff;
-  color: #244b9b;
+  border-color: #b9dfc5;
+  background: #f3fbf5;
+  color: #356b45;
 }
 
 .domain-asset-detail-flag strong {
-  color: #242834;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #9f3a3a;
   font-size: 13px;
+  font-weight: 900;
+}
+
+.domain-asset-detail-flag.enabled strong {
+  background: rgba(22, 163, 74, 0.1);
+  color: #287a45;
 }
 
 .domain-asset-detail-alive-pill {
@@ -1423,6 +1437,86 @@
   margin-top: 0;
 }
 
+.host-asset-detail-port-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.host-asset-detail-port-item {
+  margin-top: 0;
+}
+
+.host-asset-detail-port-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.host-asset-detail-port-head > div:first-child {
+  min-width: 0;
+}
+
+.host-asset-detail-port-title {
+  display: block;
+  margin: 0 0 6px;
+  color: #232832;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.host-asset-detail-port-head span {
+  color: #687080;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.host-asset-detail-port-badges {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.host-asset-detail-port-risk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.host-asset-detail-port-risk.is-danger {
+  background: #fff2f2;
+  color: #9f3a3a;
+}
+
+.host-asset-detail-port-risk.is-neutral {
+  background: #edf1f6;
+  color: #5f6572;
+}
+
+.host-asset-detail-port-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.host-asset-detail-port-meta span {
+  min-width: 0;
+  color: #687080;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 @keyframes domain-assets-loading-shimmer {
   0% {
     background-position: 200% 0;
@@ -1459,6 +1553,18 @@
 
   .domain-asset-detail-flags {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .host-asset-detail-port-head {
+    flex-direction: column;
+  }
+
+  .host-asset-detail-port-badges {
+    justify-content: flex-start;
+  }
+
+  .host-asset-detail-port-meta {
+    grid-template-columns: 1fr;
   }
 
 }

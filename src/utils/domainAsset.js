@@ -96,6 +96,12 @@ export function normalizeDomainAssetDetail(payload) {
   const domain = formatText(firstDefined(rawDetail?.domain, rawDetail?.asset_address, rawDetail?.assetAddress))
   const title = formatText(firstDefined(rawDetail?.title, rawDetail?.site_title, rawDetail?.siteTitle))
   const isAlive = normalizeBoolean(firstDefined(rawDetail?.is_alive, rawDetail?.isAlive))
+  const riskLevel = normalizeRiskLevel(firstDefined(rawDetail?.risk_level, rawDetail?.riskLevel, rawDetail?.severity))
+  const riskMeta = DOMAIN_ASSET_RISK_META[riskLevel] ?? DOMAIN_ASSET_RISK_META.unknown
+  const vulnerabilityCount = normalizeNonNegativeInteger(
+    firstDefined(rawDetail?.vulnerability_count, rawDetail?.vulnerabilityCount, rawDetail?.vuln_count, rawDetail?.vulnCount),
+    0
+  )
   const screenshotPath = normalizeScreenshotPath(
     firstDefined(rawDetail?.screenshot_path, rawDetail?.screenshotPath)
   )
@@ -119,6 +125,10 @@ export function normalizeDomainAssetDetail(payload) {
     response: formatCodeText(rawDetail?.response),
     isAlive,
     isAliveMeta: getAliveMeta(isAlive),
+    riskLevel,
+    riskMeta,
+    vulnerabilityCount,
+    vulnerabilityCountDisplay: formatCount(vulnerabilityCount),
     serviceAssets,
     titleHistories,
     serviceAssetCountDisplay: formatCount(serviceAssets.length),

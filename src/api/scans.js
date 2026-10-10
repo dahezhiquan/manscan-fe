@@ -6,6 +6,7 @@ import {
   buildScanTaskApi,
   buildScanTaskCancelApi,
   buildScanTaskLogsApi,
+  buildScanTaskRawLogsArchiveApi,
   buildScanTaskResponsesArchiveApi,
   buildScanTaskPauseApi,
   buildScanTaskRescanApi,
@@ -96,7 +97,15 @@ export async function rescanScanTask(taskId, signal) {
 }
 
 export async function downloadScanTaskResponsesArchive(taskId) {
-  const response = await fetch(buildScanTaskResponsesArchiveApi(taskId), {
+  await downloadScanTaskArchive(buildScanTaskResponsesArchiveApi(taskId), `${taskId}.zip`)
+}
+
+export async function downloadScanTaskRawLogsArchive(taskId) {
+  await downloadScanTaskArchive(buildScanTaskRawLogsArchiveApi(taskId), `${taskId}.zip`)
+}
+
+async function downloadScanTaskArchive(requestUrl, fallbackName) {
+  const response = await fetch(requestUrl, {
     method: 'GET'
   })
 
@@ -107,7 +116,7 @@ export async function downloadScanTaskResponsesArchive(taskId) {
   const blob = await response.blob()
   const filename = resolveDownloadFilename(
     response.headers.get('content-disposition'),
-    `${taskId}.zip`
+    fallbackName
   )
 
   triggerBrowserDownload(blob, filename)

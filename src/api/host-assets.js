@@ -1,4 +1,4 @@
-import { HOST_ASSET_LIST_API } from '../constants/api'
+import { HOST_ASSET_DETAIL_API, HOST_ASSET_LIST_API } from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getHostAssetList(params = {}, signal) {
@@ -15,6 +15,16 @@ export async function getHostAssetList(params = {}, signal) {
   const requestUrl = query ? `${HOST_ASSET_LIST_API}?${query}` : HOST_ASSET_LIST_API
 
   return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function getHostAssetDetail(ipAddress, signal) {
+  const searchParams = new URLSearchParams()
+  appendQueryParam(searchParams, 'ip_address', ipAddress)
+
+  return requestJson(`${HOST_ASSET_DETAIL_API}?${searchParams.toString()}`, {
     method: 'GET',
     signal
   })

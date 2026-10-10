@@ -67,6 +67,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.HOST_ASSETS
   }
 
+  if (/^\/assets\/hosts\/[^/]+$/.test(path)) {
+    return path
+  }
+
   if (/^\/scan\/[^/]+$/.test(path)) {
     const scanId = path.split('/').filter(Boolean).pop()
     return `${ROUTE_PATHS.SCANS}/${scanId}`
@@ -86,6 +90,10 @@ export function normalizePath(path) {
 
   if (path.startsWith('/assets/domains')) {
     return ROUTE_PATHS.DOMAIN_ASSETS
+  }
+
+  if (path.startsWith('/assets/hosts/')) {
+    return path
   }
 
   if (path.startsWith('/assets/hosts')) {
@@ -122,6 +130,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/assets/domains')) {
     return 'ManScan - 域名资产清单'
+  }
+
+  if (path.startsWith('/assets/hosts/')) {
+    return 'ManScan - 主机资产详情'
   }
 
   if (path.startsWith('/assets/hosts')) {
