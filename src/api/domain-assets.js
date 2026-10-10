@@ -1,4 +1,4 @@
-import { DOMAIN_ASSET_LIST_API } from '../constants/api'
+import { DOMAIN_ASSET_DETAIL_API, DOMAIN_ASSET_LIST_API } from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getDomainAssetList(params = {}, signal) {
@@ -17,6 +17,16 @@ export async function getDomainAssetList(params = {}, signal) {
   const requestUrl = query ? `${DOMAIN_ASSET_LIST_API}?${query}` : DOMAIN_ASSET_LIST_API
 
   return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function getDomainAssetDetail(domain, signal) {
+  const searchParams = new URLSearchParams()
+  appendQueryParam(searchParams, 'domain', domain)
+
+  return requestJson(`${DOMAIN_ASSET_DETAIL_API}?${searchParams.toString()}`, {
     method: 'GET',
     signal
   })

@@ -59,6 +59,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.DOMAIN_ASSETS
   }
 
+  if (/^\/assets\/domains\/[^/]+$/.test(path)) {
+    return path
+  }
+
   if (path === ROUTE_PATHS.HOST_ASSETS) {
     return ROUTE_PATHS.HOST_ASSETS
   }
@@ -110,6 +114,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/assets/config')) {
     return 'ManScan - 资产配置中心'
+  }
+
+  if (path.startsWith('/assets/domains/')) {
+    return 'ManScan - 域名资产详情'
   }
 
   if (path.startsWith('/assets/domains')) {

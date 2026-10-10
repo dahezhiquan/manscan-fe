@@ -2,7 +2,7 @@ import {
   DOMAIN_ASSET_RISK_META,
   DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER
 } from '../constants/domainAssets'
-import { formatCount, firstDefined, severityLabel } from './scanTask'
+import { formatCount, firstDefined, formatDateTime, severityLabel } from './scanTask'
 
 export function normalizeDomainAssetListResponse(payload, fallbackPage = 1, fallbackPageSize = 10) {
   const pageSize = normalizePositiveInteger(firstDefined(payload?.pageSize, payload?.page_size), fallbackPageSize)
@@ -81,6 +81,180 @@ export function normalizeDomainAsset(record) {
       components.join('|')
     ].join('|')
   }
+}
+
+export function normalizeDomainAssetDetail(payload) {
+  const rawDetail = payload?.domain_asset && typeof payload.domain_asset === 'object'
+    ? payload.domain_asset
+    : payload
+  const serviceAssets = normalizeServiceAssets(
+    firstDefined(rawDetail?.service_assets, rawDetail?.serviceAssets)
+  )
+  const titleHistories = normalizeTitleHistories(
+    firstDefined(rawDetail?.title_histories, rawDetail?.titleHistories)
+  )
+  const domain = formatText(firstDefined(rawDetail?.domain, rawDetail?.asset_address, rawDetail?.assetAddress))
+  const title = formatText(firstDefined(rawDetail?.title, rawDetail?.site_title, rawDetail?.siteTitle))
+  const isAlive = normalizeBoolean(firstDefined(rawDetail?.is_alive, rawDetail?.isAlive))
+  const screenshotPath = normalizeScreenshotPath(
+    firstDefined(rawDetail?.screenshot_path, rawDetail?.screenshotPath)
+  )
+
+  return {
+    domain,
+    owner: formatText(rawDetail?.owner),
+    title,
+    firstAliveAtDisplay: formatDateTime(firstDefined(rawDetail?.first_alive_at, rawDetail?.firstAliveAt)),
+    lastAliveAtDisplay: formatDateTime(firstDefined(rawDetail?.last_alive_at, rawDetail?.lastAliveAt)),
+    region: formatText(firstDefined(rawDetail?.region, rawDetail?.network_region, rawDetail?.networkRegion, rawDetail?.area)),
+    hasForm: normalizeBoolean(firstDefined(rawDetail?.has_form, rawDetail?.hasForm)),
+    hasUpload: normalizeBoolean(firstDefined(rawDetail?.has_upload, rawDetail?.hasUpload)),
+    hasAdmin: normalizeBoolean(firstDefined(rawDetail?.has_admin, rawDetail?.hasAdmin)),
+    hasUcLogin: normalizeBoolean(firstDefined(rawDetail?.has_uc_login, rawDetail?.hasUcLogin)),
+    hasBaiduLogin: normalizeBoolean(firstDefined(rawDetail?.has_baidu_login, rawDetail?.hasBaiduLogin)),
+    screenshotPath,
+    manualNote: formatText(firstDefined(rawDetail?.manual_note, rawDetail?.manualNote), '暂无备注'),
+    httpStatusCode: formatText(firstDefined(rawDetail?.http_status_code, rawDetail?.httpStatusCode)),
+    request: formatCodeText(rawDetail?.request),
+    response: formatCodeText(rawDetail?.response),
+    isAlive,
+    isAliveMeta: getAliveMeta(isAlive),
+    serviceAssets,
+    titleHistories,
+    serviceAssetCountDisplay: formatCount(serviceAssets.length),
+    titleHistoryCountDisplay: formatCount(titleHistories.length)
+  }
+}
+
+function normalizeServiceAssets(value) {
+  const items = Array.isArray(value) ? value : []
+
+  return items.map((item, index) => {
+    const appName = formatText(firstDefined(item?.app_name, item?.appName), '未知组件')
+    const appVersion = formatText(firstDefined(item?.app_version, item?.appVersion), '')
+    const isAlive = normalizeBoolean(firstDefined(item?.is_alive, item?.isAlive))
+
+    return {
+      key: [
+        appName,
+        appVersion,
+        firstDefined(item?.first_found_at, item?.firstFoundAt),
+        index
+      ].join('|'),
+      appName,
+      appVersion,
+      displayName: appVersion ? `${appName} ${appVersion}` : appName,
+      firstFoundAtDisplay: formatDateTime(firstDefined(item?.first_found_at, item?.firstFoundAt)),
+      lastFoundAtDisplay: formatDateTime(firstDefined(item?.last_found_at, item?.lastFoundAt)),
+      isAlive,
+      isAliveMeta: getAliveMeta(isAlive)
+    }
+  })
+}
+
+function normalizeTitleHistories(value) {
+  const items = Array.isArray(value) ? value : []
+
+  return items.map((item, index) => {
+    const historyTitle = formatText(firstDefined(item?.history_title, item?.historyTitle, item?.title), '无标题')
+    const isAlive = normalizeBoolean(firstDefined(item?.is_alive, item?.isAlive))
+
+    return {
+      key: [
+        historyTitle,
+        firstDefined(item?.first_title_created_at, item?.firstTitleCreatedAt),
+        index
+      ].join('|'),
+      historyTitle,
+      firstTitleCreatedAtDisplay: formatDateTime(
+        firstDefined(item?.first_title_created_at, item?.firstTitleCreatedAt)
+      ),
+      latestTitleAliveAtDisplay: formatDateTime(
+        firstDefined(item?.latest_title_alive_at, item?.latestTitleAliveAt)
+      ),
+      isAlive,
+      isAliveMeta: getAliveMeta(isAlive)
+    }
+  })
+}
+
+function getAliveMeta(value) {
+  if (value === true) {
+    return { label: '存活', tone: 'alive' }
+  }
+
+  if (value === false) {
+    return { label: '不存活', tone: 'inactive' }
+  }
+
+  return { label: '未知', tone: 'unknown' }
+}
+
+function normalizeBoolean(value) {
+  if (value === true || value === false) {
+    return value
+  }
+
+  const normalized = String(value ?? '').trim().toLowerCase()
+  if (['true', '1', 'yes', 'y', '是', '有'].includes(normalized)) {
+    return true
+  }
+
+  if (['false', '0', 'no', 'n', '否', '无'].includes(normalized)) {
+    return false
+  }
+
+  return null
+}
+
+function normalizeScreenshotPath(value) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) {
+    return ''
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized
+  }
+
+  if (normalized.startsWith('/') && !normalized.startsWith('//')) {
+    return normalized
+  }
+
+  return ''
+}
+
+function formatBooleanLabel(value) {
+  if (value === true) {
+    return '是'
+  }
+
+  if (value === false) {
+    return '否'
+  }
+
+  return '--'
+}
+
+export function buildDomainAssetFlagItems(detail) {
+  return [
+    { key: 'hasForm', label: '表单', value: formatBooleanLabel(detail?.hasForm) },
+    { key: 'hasUpload', label: '上传', value: formatBooleanLabel(detail?.hasUpload) },
+    { key: 'hasAdmin', label: '后台', value: formatBooleanLabel(detail?.hasAdmin) },
+    { key: 'hasUcLogin', label: 'UC登录', value: formatBooleanLabel(detail?.hasUcLogin) },
+    { key: 'hasBaiduLogin', label: '百度登录', value: formatBooleanLabel(detail?.hasBaiduLogin) }
+  ]
+}
+
+function formatCodeText(value) {
+  if (value === null || value === undefined || value === '') {
+    return '未提供'
+  }
+
+  return String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, (character) => {
+    const code = character.charCodeAt(0).toString(16).padStart(2, '0')
+    return `\\x${code}`
+  })
 }
 
 function normalizeVulnerabilitySeverity(record, riskLevel, vulnerabilityCount) {

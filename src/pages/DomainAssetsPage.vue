@@ -42,7 +42,6 @@ const draftFilterKey = ref(DOMAIN_ASSET_FILTER_OPTIONS[0].key)
 const draftFilterValue = ref('')
 const draftError = ref('')
 const tableRows = ref([])
-const selectedDomainAssetId = ref('')
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
@@ -264,14 +263,19 @@ function selectPageSize(nextPageSize) {
   handlePageSizeChange()
 }
 
-function selectDomainAsset(assetId) {
-  selectedDomainAssetId.value = selectedDomainAssetId.value === assetId ? '' : assetId
+function openDomainAssetDetail(row) {
+  const domain = row?.assetAddress && row.assetAddress !== '--' ? row.assetAddress : row?.id
+  if (!domain) {
+    return
+  }
+
+  window.open(`/assets/domains/${encodeURIComponent(domain)}`, '_blank', 'noopener,noreferrer')
 }
 
-function handleDomainAssetKeydown(event, assetId) {
+function handleDomainAssetKeydown(event, row) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    selectDomainAsset(assetId)
+    openDomainAssetDetail(row)
   }
 }
 
@@ -305,7 +309,6 @@ async function loadDomainAssets(options = {}) {
 
     const normalized = normalizeDomainAssetListResponse(data, currentPage.value, pageSize.value)
     tableRows.value = normalized.items
-    syncSelectedDomainAsset()
     total.value = normalized.total
     currentPage.value = normalized.page
     pageSize.value = normalized.pageSize
@@ -322,18 +325,6 @@ async function loadDomainAssets(options = {}) {
       isRefreshing.value = false
       fetchController = null
     }
-  }
-}
-
-function syncSelectedDomainAsset() {
-  if (!selectedDomainAssetId.value) {
-    return
-  }
-
-  const selectedStillVisible = tableRows.value.some((row) => row.id === selectedDomainAssetId.value)
-
-  if (!selectedStillVisible) {
-    selectedDomainAssetId.value = ''
   }
 }
 
@@ -498,14 +489,13 @@ onBeforeUnmount(() => {
                     <article
                       v-for="row in tableRows"
                       :key="row.id"
-                      v-memo="[row.memoKey, selectedDomainAssetId === row.id]"
+                      v-memo="[row.memoKey]"
                       class="domain-assets-table-row"
-                      :class="{ selected: selectedDomainAssetId === row.id }"
                       tabindex="0"
-                      role="button"
-                      :aria-pressed="selectedDomainAssetId === row.id ? 'true' : 'false'"
-                      @click="selectDomainAsset(row.id)"
-                      @keydown="handleDomainAssetKeydown($event, row.id)"
+                      role="link"
+                      :aria-label="`查看域名资产详情：${row.assetAddress}`"
+                      @click="openDomainAssetDetail(row)"
+                      @keydown="handleDomainAssetKeydown($event, row)"
                     >
                       <div class="domain-assets-address-cell">
                         <strong>{{ row.assetAddress }}</strong>

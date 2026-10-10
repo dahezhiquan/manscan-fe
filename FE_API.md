@@ -688,7 +688,51 @@
   - 后端 handler 已接收 `title`、`risk_level`、`has_vulnerability`、`has_component`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
 
-### 25. 获取主机资产清单
+### 25. 获取域名资产详情
+
+- 用途：`/assets/domains/:domain` 域名资产详情页加载指定域名资产的基础信息、服务资产、标题历史、截图和请求/响应证据
+- 请求方式：`GET`
+- 路径：`/api/v1/domain-assets/detail`
+- 请求参数：
+  - `domain`: 必填，域名资产地址；前端从路由 `/assets/domains/:domain` 中 `decodeURIComponent` 后传递，需与后端资产域名完全一致
+- 返回结构：前端使用接口返回的 `data`
+  - `domain`
+  - `owner`
+  - `title`
+  - `first_alive_at`
+  - `last_alive_at`
+  - `region`
+  - `has_form`
+  - `has_upload`
+  - `has_admin`
+  - `has_uc_login`
+  - `has_baidu_login`
+  - `screenshot_path`
+  - `manual_note`
+  - `http_status_code`
+  - `request`
+  - `response`
+  - `is_alive`
+  - `service_assets[].app_name`
+  - `service_assets[].app_version`
+  - `service_assets[].first_found_at`
+  - `service_assets[].last_found_at`
+  - `service_assets[].is_alive`
+  - `title_histories[].history_title`
+  - `title_histories[].first_title_created_at`
+  - `title_histories[].latest_title_alive_at`
+  - `title_histories[].is_alive`
+- 异常分支：
+  - 缺少路由域名参数时展示错误提示和重新加载按钮
+  - 接口失败或域名不存在时展示后端错误信息；详情数据清空时展示空态
+  - 请求被新请求或页面卸载取消时不展示错误
+- 联调注意事项：
+  - 域名清单行点击后跳转到 `/assets/domains/${encodeURIComponent(domain)}`，支持键盘 `Enter` 和空格进入详情
+  - 详情页会把请求和响应分别展示为 `request.http`、`response.http`，并提供复制按钮
+  - 截图路径只展示 `http://`、`https://` 或站内绝对路径，避免把异常协议或相对脏数据写入图片地址
+  - 可空字符串、可空时间和状态码缺失时前端以 `--`、`暂无备注` 或 `未提供` 兜底
+
+### 26. 获取主机资产清单
 
 - 用途：`/assets/hosts` 主机资产清单页首屏加载、主机模糊搜索、展开式筛选和分页展示
 - 请求方式：`GET`

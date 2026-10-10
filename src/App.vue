@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import DashboardPage from './pages/DashboardPage.vue'
 import AssetConfigCenterPage from './pages/AssetConfigCenterPage.vue'
+import DomainAssetDetailPage from './pages/DomainAssetDetailPage.vue'
 import DomainAssetsPage from './pages/DomainAssetsPage.vue'
 import HostAssetsPage from './pages/HostAssetsPage.vue'
 import LoginPage from './pages/LoginPage.vue'
@@ -53,6 +54,10 @@ if (isAuthenticated.value) {
 const currentView = computed(() => {
   if (currentPath.value === '/assets/config') {
     return AssetConfigCenterPage
+  }
+
+  if (currentPath.value.startsWith('/assets/domains/')) {
+    return DomainAssetDetailPage
   }
 
   if (currentPath.value === '/assets/domains') {
