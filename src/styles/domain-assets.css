@@ -300,7 +300,7 @@
 }
 
 .host-assets-table-grid {
-  grid-template-columns: minmax(160px, 1fr) minmax(210px, 1.12fr) 150px 120px 120px 150px;
+  grid-template-columns: minmax(160px, 1fr) minmax(210px, 1.12fr) 150px 120px 150px 120px;
 }
 
 .domain-assets-table-head {

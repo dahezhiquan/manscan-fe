@@ -42,7 +42,7 @@ ManScan 漏洞扫描引擎配套前端项目，当前用于承载登录入口、
 | `/scans/create` | 创建扫描任务页 |
 | `/scans/:id` | 扫描任务详情页 |
 | `/assets/domains` | 域名资产清单页 |
-| `/assets/hosts` | 主机资产清单页，当前使用前端本地演示数据 |
+| `/assets/hosts` | 主机资产清单页 |
 | `/assets/config` | 资产配置中心页 |
 
 ## 🚀 快速开始
@@ -263,8 +263,8 @@ http://localhost:8686
   包括配置项列表、小分类选项、新增、编辑和删除
 - 域名资产接口
   包括域名资产清单、筛选和分页查询
-
-当前 `/assets/hosts` 主机资产清单页使用 `src/pages/HostAssetsPage.vue` 中的前端本地演示数据，暂未在 `src/api` 中发现对应后端请求封装。
+- 主机资产接口
+  包括主机资产清单、筛选和分页查询
 
 ### 联调时需要特别注意
 
@@ -356,15 +356,16 @@ npm run dev
 - 核对后端是否按 [`SERVER_API.md`](./SERVER_API.md) 返回 SSE 数据
 - 如仅实时流异常，可先通过刷新详情页确认普通日志接口是否正常返回
 
-### 8. 主机资产清单没有命中后端接口
+### 8. 主机资产清单加载失败
 
-现象：打开 `/assets/hosts` 后没有看到对应网络请求，或修改后端主机资产接口后页面没有变化。  
-可能原因：当前主机资产清单页仍使用前端本地演示数据。  
+现象：打开 `/assets/hosts` 后页面显示“主机资产加载失败”或列表为空。
+
+可能原因：后端服务未启动、接口路径未注册，或后端主机资产表暂无数据。
 解决方式：
 
-- 先确认真实接口是否已经写入 [`SERVER_API.md`](./SERVER_API.md)
-- 再在 `src/api` 中新增请求封装，并让 `HostAssetsPage.vue` 消费该接口
-- 接口接入完成后同步更新 [`FE_API.md`](./FE_API.md)
+- 确认后端服务运行在 `http://localhost:8686`
+- 检查浏览器网络面板中 `/api/v1/host-assets` 是否返回 `{ code, message, data }`
+- 核对 [`SERVER_API.md`](./SERVER_API.md) 与 [`FE_API.md`](./FE_API.md) 的参数和字段是否一致
 
 ## 补充说明
 

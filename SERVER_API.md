@@ -239,7 +239,7 @@ curl "http://127.0.0.1:8686/api/v1/templates/stats"
 - 说明：
   - `total` 表示扫描任务总数。
   - `running` 表示当前状态为 `running` 的任务数。
-  - `saved_requests` 仅统计最终状态为 `success` 的扫描任务，统计口径为 `SUM(total_requests - real_requests)`，并且不会小于 `0`。
+  - `saved_requests` 仅统计最终状态为 `success` 的扫描任务，统计口径为 `SUM(pre_cluster_total_requests - real_requests)`，并且不会小于 `0`；历史任务没有 `pre_cluster_total_requests` 时回退使用 `total_requests`。
   - `failed`、`cancelled`、`paused` 以及仍在 `running` 的任务都不会计入该字段。
 
 - 错误码说明：
@@ -345,6 +345,7 @@ curl "http://127.0.0.1:8686/api/v1/scans/options/names?page=1&page_size=20&keywo
         "plugin_count": 50,
         "target_count": 1,
         "total_requests": 100,
+        "pre_cluster_total_requests": 120,
         "real_requests": 10,
         "progress_percent": 10,
         "duration_seconds": 120,
@@ -357,6 +358,7 @@ curl "http://127.0.0.1:8686/api/v1/scans/options/names?page=1&page_size=20&keywo
 
 - 说明：
   - 该接口以扫描任务表为主数据源，`manscan_task_results` 仅用于补充已完成任务的结果统计。
+  - `total_requests` 是模板聚类后的进度总量；`pre_cluster_total_requests` 是相同执行范围在模板聚类前的预估总量，用于解释请求节省数量。
   - 运行中任务会叠加当前运行时快照，因此也会出现在列表中。
 
 - 错误码说明：
@@ -660,6 +662,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans/1/resume"
       "unresponsive_hosts": 0,
       "templates": 50,
       "total_requests": 100,
+      "pre_cluster_total_requests": 120,
       "requests": 10,
       "matched": 1,
       "errors": 0,
@@ -678,11 +681,13 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans/1/resume"
 - 说明：
   - `progress.templates` 和 `task.plugin_count` 表示本次扫描实际可执行的唯一漏洞模版数量；对于扫描前预探测确认 `http_alive=false` 的目标，HTTP、Headless 以及包含 HTTP/Headless 请求的模版不会计入。多目标扫描按“至少有一个目标可执行”计数，不按目标重复累加。
   - `progress.requests` 表示扫描进程实际发出的请求数，会排除项目缓存、模板聚类等没有真实出网的请求。
-  - `progress.total_requests` 表示本次任务按模板和目标预估的逻辑请求总数。
+  - `progress.total_requests` 表示本次任务按模板和目标、过滤结果以及模板聚类后的逻辑请求总数，同时包含扫描前 Wappalyzer 直连探测以及主动指纹模板阶段产生的逻辑请求；前置探测中的每次实际请求尝试都会计入最终总量，但在 scanner 给出确定可执行总量前不会单独提前返回。
+  - `progress.pre_cluster_total_requests` 表示同一执行范围在模板聚类前的预估逻辑请求总数，仅用于请求节省量统计，不参与 `progress.percent` 计算。
   - `progress.percent` 表示逻辑扫描完成度，不直接用 `requests / total_requests` 计算，因此缓存或聚类节省大量请求时，进度仍会按扫描执行进度平滑推进。
   - `task.alive_hosts` 和 `task.unresponsive_hosts` 表示扫描前资产存活探测结果；探测完成后会立即通过任务详情、日志接口和 SSE 推送，已探测到的 `0` 也会明确返回。
   - `progress.alive_hosts` 和 `progress.unresponsive_hosts` 是同一组存活探测统计的进度快照字段；探测尚未完成时字段不返回。
   - 自动模版映射的指纹识别阶段中，`progress_status` 为 `calculating`，此时 `total_requests` 和 `percent` 不返回，`last_message` 仍为“扫描进度更新”；全部目标完成指纹识别并得到映射模版后，`progress_status` 变为 `running`，再开始返回稳定的预估总请求数和完成度。单个目标完成映射后，其漏洞模版可以先行执行。
+  - 非自动模版映射任务的扫描前存活探测和主动指纹识别阶段会先累计实际请求数，但不提前公开阶段性 `total_requests`；主漏洞 scanner 发布选中漏洞模版的确定总量后，再一次性返回“存活探测 + 主动指纹识别 + 选中漏洞模版”的总请求数。
   - `progress.matched` 表示服务端保留的去重后结果数量。
 
 - 错误码说明：
@@ -809,7 +814,7 @@ data: {"task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medi
 
 ```text
 event: event
-data: {"task_id":1,"seq":2,"level":"info","type":"progress","message":"扫描进度更新","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":3,"tech_count":4,"plugin_count":50,"target_count":1,"alive_hosts":1,"unresponsive_hosts":0},"progress":{"hosts":1,"alive_hosts":1,"unresponsive_hosts":0,"templates":50,"total_requests":100,"requests":10,"matched":1,"errors":0,"percent":10,"progress_status":"running","last_updated_at":"2026-06-09T21:01:00+08:00","last_message":"扫描进度更新","last_event_seq":2,"finished":false,"finished_status":"running"},"nextOffset":2}
+data: {"task_id":1,"seq":2,"level":"info","type":"progress","message":"扫描进度更新","task":{"id":1,"status":"running","critical_count":0,"high_count":1,"medium_count":2,"low_count":0,"info_count":3,"tech_count":4,"plugin_count":50,"target_count":1,"alive_hosts":1,"unresponsive_hosts":0},"progress":{"hosts":1,"alive_hosts":1,"unresponsive_hosts":0,"templates":50,"total_requests":100,"pre_cluster_total_requests":120,"requests":10,"matched":1,"errors":0,"percent":10,"progress_status":"running","last_updated_at":"2026-06-09T21:01:00+08:00","last_message":"扫描进度更新","last_event_seq":2,"finished":false,"finished_status":"running"},"nextOffset":2}
 ```
 
 `asset_domain_probe_finished` 事件示例：
@@ -1547,4 +1552,80 @@ curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1"
 
 ```bash
 curl "http://127.0.0.1:8686/api/v1/domain-assets?page=1&page_size=10&keyword=example&title=Portal&region=internal&risk_level=high&has_vulnerability=true&has_component=true"
+```
+
+## 30. 获取主机资产清单
+
+- 请求方法和路径：`GET /api/v1/host-assets`
+
+- 请求参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `page` | `int` | 否 | 页码，最小为 `1`，默认 `1` |
+| `page_size` | `int` | 否 | 每页数量，范围 `1-100`，默认 `10` |
+| `keyword` | `string` | 否 | 按 IP、操作系统类型或关联域名模糊搜索 |
+| `owner` | `string` | 否 | 按负责人模糊筛选 |
+| `os_type` | `string` | 否 | 按操作系统类型模糊筛选 |
+| `region` | `string` | 否 | 按区域模糊筛选 |
+| `asset_address` | `string` | 否 | 按资产地址模糊筛选，当前对应 `ip_address` 字段 |
+| `risk_level` | `string` / `string[]` | 否 | 按最高风险等级筛选，支持 `critical`、`high`、`medium`、`low`、`info`，支持逗号分隔和多参数 |
+| `has_vulnerability` | `bool` | 否 | 按是否存在漏洞筛选，`true` 表示 `vulnerability_count > 0`，`false` 表示 `vulnerability_count = 0` |
+| `has_port` | `bool` | 否 | 按是否存在存活端口筛选，`true` 表示 `port_count > 0`，`false` 表示 `port_count = 0` |
+| `is_alive` | `bool` | 否 | 按存活状态筛选 |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 1,
+    "totalPages": 1,
+    "items": [
+      {
+        "id": 1,
+        "ip_address": "10.72.160.123",
+        "asset_address": "10.72.160.123",
+        "region": "生产区",
+        "owner": "安全团队",
+        "os_type": "linux",
+        "os_version": "5.15",
+        "scan_created_at": "2026-10-10T10:00:00+08:00",
+        "last_alive_at": "2026-10-10T11:00:00+08:00",
+        "manual_note": "",
+        "is_alive": true,
+        "related_domains": "app.example.com",
+        "risk_level": "critical",
+        "vulnerability_count": 2,
+        "critical_count": 1,
+        "high_count": 1,
+        "medium_count": 0,
+        "low_count": 0,
+        "port_count": 3
+      }
+    ]
+  }
+}
+```
+
+- 说明：
+  - `vulnerability_count` 表示漏洞表中 `asset_host` 等于当前主机 `ip_address` 的记录数量。
+  - `critical_count`、`high_count`、`medium_count`、`low_count` 表示上述关联漏洞中各严重等级的数量，按漏洞表 `severity` 字段统计。
+  - `risk_level` 表示当前资产的最高风险等级，计算方式暂时与域名资产一致：按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
+  - `port_count` 表示主机端口表中 `ip_address` 等于当前主机 `ip_address` 且 `is_alive = true` 的端口数量。
+  - `os_type`、`region` 为模糊筛选；`risk_level=high` 仅返回最高风险等级为高危的资产，存在严重漏洞的资产会归入 `critical`。
+  - 列表默认按最近存活时间和 ID 倒序排序。
+
+- 错误码说明：
+  - `40001`：分页参数非法，或 `is_alive`、`has_vulnerability`、`has_port` 不是布尔值
+  - `50001`：获取主机资产清单失败
+
+- 使用示例：
+
+```bash
+curl "http://127.0.0.1:8686/api/v1/host-assets?page=1&page_size=10&keyword=10.72&os_type=linux&region=生产&risk_level=critical&has_vulnerability=true&has_port=true"
 ```

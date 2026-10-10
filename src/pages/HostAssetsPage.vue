@@ -1,11 +1,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { getHostAssetList } from '../api/host-assets'
 import AppShell from '../components/layout/AppShell.vue'
 import {
   DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS,
-  DOMAIN_ASSET_RISK_META,
   DOMAIN_ASSET_RISK_OPTIONS
 } from '../constants/domainAssets'
+import { normalizeHostAssetListResponse } from '../utils/hostAsset'
 import { formatCount } from '../utils/scanTask'
 import { iconPath } from '../utils/icons'
 
@@ -41,63 +42,6 @@ const HOST_ASSET_FILTER_LABELS = HOST_ASSET_FILTER_OPTIONS.reduce((result, item)
   return result
 }, {})
 
-const hostAssetRows = [
-  {
-    id: 'host-1',
-    ip: '10.12.4.18',
-    osType: 'Linux / Ubuntu 22.04',
-    region: '华北-生产区',
-    riskLevel: 'high',
-    vulnerabilityCount: 8,
-    portComponentCount: 14
-  },
-  {
-    id: 'host-2',
-    ip: '10.12.8.31',
-    osType: 'Windows Server 2019',
-    region: '华东-办公网',
-    riskLevel: 'medium',
-    vulnerabilityCount: 4,
-    portComponentCount: 9
-  },
-  {
-    id: 'host-3',
-    ip: '172.16.20.45',
-    osType: 'Linux / CentOS 7',
-    region: '华南-DMZ',
-    riskLevel: 'critical',
-    vulnerabilityCount: 13,
-    portComponentCount: 21
-  },
-  {
-    id: 'host-4',
-    ip: '192.168.40.12',
-    osType: 'macOS 14',
-    region: '研发终端区',
-    riskLevel: 'low',
-    vulnerabilityCount: 1,
-    portComponentCount: 5
-  },
-  {
-    id: 'host-5',
-    ip: '10.30.5.77',
-    osType: 'Linux / Debian 12',
-    region: '容器节点池',
-    riskLevel: 'info',
-    vulnerabilityCount: 0,
-    portComponentCount: 18
-  },
-  {
-    id: 'host-6',
-    ip: '10.44.16.9',
-    osType: 'FreeBSD 13',
-    region: '边界服务区',
-    riskLevel: 'unknown',
-    vulnerabilityCount: 0,
-    portComponentCount: 3
-  }
-]
-
 const keywordInput = ref('')
 const appliedKeyword = ref('')
 const activeFilters = reactive(createEmptyFilters())
@@ -106,32 +50,41 @@ const filterDialogRef = ref(null)
 const draftFilterKey = ref(HOST_ASSET_FILTER_OPTIONS[0].key)
 const draftFilterValue = ref('')
 const draftError = ref('')
+const tableRows = ref([])
+const selectedHostAssetId = ref('')
+const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
+const totalPages = ref(1)
 const isPageSizeMenuOpen = ref(false)
-const selectedHostAssetId = ref('')
+const pageError = ref('')
+const isLoading = ref(true)
+const isRefreshing = ref(false)
 
+let fetchController = null
 let keywordTimer = null
+let currentRequestId = 0
+let isSyncingKeyword = false
 
-const filteredRows = computed(() => {
-  const keyword = appliedKeyword.value.trim().toLowerCase()
-
-  return hostAssetRows.filter((row) =>
-    matchesKeyword(row, keyword) &&
-    matchesTextFilter(row.osType, activeFilters.osType) &&
-    matchesTextFilter(row.region, activeFilters.region) &&
-    matchesExactFilter(row.riskLevel, activeFilters.riskLevel)
-  )
-})
-const total = computed(() => filteredRows.value.length)
-const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
-const tableRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return filteredRows.value.slice(start, start + pageSize.value)
-})
 const hasData = computed(() => tableRows.value.length > 0)
-const pageStart = computed(() => (total.value && hasData.value ? (currentPage.value - 1) * pageSize.value + 1 : 0))
-const pageEnd = computed(() => (total.value && hasData.value ? Math.min(total.value, pageStart.value + tableRows.value.length - 1) : 0))
+const showInitialLoading = computed(() => isLoading.value && !hasData.value)
+const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
+const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
+const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
+const pageStart = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+const pageEnd = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return Math.min(total.value, pageStart.value + tableRows.value.length - 1)
+})
 const pageSummary = computed(() => {
   if (!total.value) {
     return '暂无数据'
@@ -164,34 +117,22 @@ function createEmptyFilters() {
   }
 }
 
-function matchesKeyword(row, keyword) {
-  if (!keyword) {
-    return true
+function buildHostAssetListParams() {
+  return {
+    page: currentPage.value,
+    page_size: pageSize.value,
+    keyword: appliedKeyword.value,
+    os_type: activeFilters.osType,
+    region: activeFilters.region,
+    risk_level: activeFilters.riskLevel
   }
-
-  return String(row.ip).toLowerCase().includes(keyword)
-}
-
-function matchesTextFilter(value, filterValue) {
-  const normalizedFilter = String(filterValue ?? '').trim().toLowerCase()
-
-  if (!normalizedFilter) {
-    return true
-  }
-
-  return String(value ?? '').toLowerCase().includes(normalizedFilter)
-}
-
-function matchesExactFilter(value, filterValue) {
-  const normalizedFilter = String(filterValue ?? '').trim()
-  return !normalizedFilter || String(value) === normalizedFilter
-}
-
-function getRiskMeta(riskLevel) {
-  return DOMAIN_ASSET_RISK_META[riskLevel] ?? DOMAIN_ASSET_RISK_META.unknown
 }
 
 function scheduleKeywordCommit() {
+  if (isSyncingKeyword) {
+    return
+  }
+
   const nextKeyword = keywordInput.value.trim()
 
   if (nextKeyword === appliedKeyword.value) {
@@ -202,16 +143,8 @@ function scheduleKeywordCommit() {
   keywordTimer = window.setTimeout(() => {
     appliedKeyword.value = nextKeyword
     currentPage.value = 1
-    selectedHostAssetId.value = ''
+    void loadHostAssets()
   }, HOST_ASSET_SEARCH_DEBOUNCE)
-}
-
-function clearKeyword() {
-  window.clearTimeout(keywordTimer)
-  keywordInput.value = ''
-  appliedKeyword.value = ''
-  currentPage.value = 1
-  selectedHostAssetId.value = ''
 }
 
 function openFilterDialog(filterKey = '') {
@@ -256,21 +189,30 @@ function saveDraftFilter() {
 
   activeFilters[draftFilterKey.value] = value
   closeFilterDialog()
+  closePageSizeMenu()
   currentPage.value = 1
-  selectedHostAssetId.value = ''
+  void loadHostAssets()
 }
 
 function removeFilter(filterKey) {
   activeFilters[filterKey] = ''
   currentPage.value = 1
-  selectedHostAssetId.value = ''
+  void loadHostAssets()
 }
 
 function clearFilters() {
-  clearKeyword()
+  isSyncingKeyword = true
+  window.clearTimeout(keywordTimer)
+  keywordInput.value = ''
+  appliedKeyword.value = ''
   Object.assign(activeFilters, createEmptyFilters())
+  currentPage.value = 1
   closeFilterDialog()
   closePageSizeMenu()
+  void loadHostAssets()
+  window.setTimeout(() => {
+    isSyncingKeyword = false
+  }, 0)
 }
 
 function formatFilterValue(key, value) {
@@ -290,30 +232,42 @@ function handleDocumentClick() {
 }
 
 function togglePageSizeMenu() {
+  if (isLoading.value || isRefreshing.value) {
+    return
+  }
+
   closeFilterDialog()
   isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
 }
 
 function selectPageSize(nextPageSize) {
+  if (pageSize.value === nextPageSize) {
+    closePageSizeMenu()
+    return
+  }
+
   pageSize.value = nextPageSize
   currentPage.value = 1
   closePageSizeMenu()
+  void loadHostAssets()
 }
 
 function goToPreviousPage() {
-  if (currentPage.value <= 1) {
+  if (currentPage.value <= 1 || isLoading.value || isRefreshing.value) {
     return
   }
 
   currentPage.value -= 1
+  void loadHostAssets()
 }
 
 function goToNextPage() {
-  if (currentPage.value >= totalPages.value) {
+  if (currentPage.value >= totalPages.value || isLoading.value || isRefreshing.value) {
     return
   }
 
   currentPage.value += 1
+  void loadHostAssets()
 }
 
 function selectHostAsset(assetId) {
@@ -327,21 +281,83 @@ function handleHostAssetKeydown(event, assetId) {
   }
 }
 
-watch(keywordInput, scheduleKeywordCommit)
+function handleRefresh() {
+  void loadHostAssets({ forceLoading: !hasData.value })
+}
 
-watch(totalPages, (nextTotalPages) => {
-  if (currentPage.value > nextTotalPages) {
-    currentPage.value = nextTotalPages
+function stopRequest() {
+  fetchController?.abort()
+  fetchController = null
+}
+
+async function loadHostAssets(options = {}) {
+  const { forceLoading = false } = options
+
+  stopRequest()
+  const requestId = ++currentRequestId
+  const controller = new AbortController()
+  fetchController = controller
+
+  if (forceLoading || !tableRows.value.length) {
+    isLoading.value = true
+  } else {
+    isRefreshing.value = true
   }
-})
+
+  pageError.value = ''
+
+  try {
+    const data = await getHostAssetList(buildHostAssetListParams(), controller.signal)
+
+    if (requestId !== currentRequestId) {
+      return
+    }
+
+    const normalized = normalizeHostAssetListResponse(data, currentPage.value, pageSize.value)
+    tableRows.value = normalized.items
+    syncSelectedHostAsset()
+    total.value = normalized.total
+    currentPage.value = normalized.page
+    pageSize.value = normalized.pageSize
+    totalPages.value = normalized.totalPages
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return
+    }
+
+    pageError.value = error instanceof Error ? error.message : '主机资产加载失败，请稍后重试。'
+  } finally {
+    if (requestId === currentRequestId) {
+      isLoading.value = false
+      isRefreshing.value = false
+      fetchController = null
+    }
+  }
+}
+
+function syncSelectedHostAsset() {
+  if (!selectedHostAssetId.value) {
+    return
+  }
+
+  const selectedStillVisible = tableRows.value.some((row) => row.id === selectedHostAssetId.value)
+
+  if (!selectedStillVisible) {
+    selectedHostAssetId.value = ''
+  }
+}
+
+watch(keywordInput, scheduleKeywordCommit)
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  void loadHostAssets({ forceLoading: true })
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
   window.clearTimeout(keywordTimer)
+  stopRequest()
 })
 </script>
 
@@ -371,11 +387,11 @@ onBeforeUnmount(() => {
           <section class="domain-assets-panel">
             <div class="domain-assets-toolbar" aria-label="主机资产筛选">
               <label class="domain-assets-search-field">
-                <span class="sr-only">搜索主机 IP</span>
+                <span class="sr-only">模糊搜索主机资产</span>
                 <input
                   v-model="keywordInput"
                   type="text"
-                  placeholder="搜索主机 IP"
+                  placeholder="模糊搜索 IP、操作系统或关联域名"
                   autocomplete="off"
                 />
                 <span class="domain-assets-search-icon" aria-hidden="true">
@@ -438,6 +454,14 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
+            <div v-if="showInlineError || showBlockingError" class="domain-assets-alert" :class="{ 'is-blocking': showBlockingError }" role="alert">
+              <div>
+                <strong>主机资产加载失败</strong>
+                <p>{{ pageError }}</p>
+              </div>
+              <button type="button" @click="handleRefresh">重试</button>
+            </div>
+
             <section class="domain-assets-table-card host-assets-table-card">
               <div class="domain-assets-table-scroll">
                 <div class="domain-assets-table-inner host-assets-table-inner">
@@ -447,12 +471,29 @@ onBeforeUnmount(() => {
                     <div>区域</div>
                     <div>风险等级</div>
                     <div>漏洞数量</div>
-                    <div>端口组件数量</div>
+                    <div>端口数量</div>
                   </header>
 
-                  <div v-if="!hasData" class="domain-assets-state-panel">
+                  <div v-if="showInitialLoading" class="domain-assets-skeleton-list" aria-hidden="true">
+                    <div v-for="index in 6" :key="index" class="domain-assets-skeleton-row">
+                      <span class="domain-assets-skeleton is-main"></span>
+                      <span class="domain-assets-skeleton"></span>
+                      <span class="domain-assets-skeleton is-pill"></span>
+                      <span class="domain-assets-skeleton is-pill"></span>
+                      <span class="domain-assets-skeleton is-count"></span>
+                      <span class="domain-assets-skeleton is-count"></span>
+                    </div>
+                  </div>
+
+                  <div v-else-if="showBlockingError" class="domain-assets-state-panel is-error">
+                    <h2>清单加载失败</h2>
+                    <p>{{ pageError }}</p>
+                    <button class="domain-assets-state-button" type="button" @click="handleRefresh">重新加载</button>
+                  </div>
+
+                  <div v-else-if="showEmptyState" class="domain-assets-state-panel">
                     <h2>{{ hasFilters ? '没有匹配的主机资产' : '暂无主机资产' }}</h2>
-                    <p>{{ hasFilters ? '可以调整 IP 搜索、操作系统、区域或风险等级后重试。' : '后续接入主机资产接口后会在这里展示。' }}</p>
+                    <p>{{ hasFilters ? '可以调整 IP 搜索、操作系统、区域或风险等级后重试。' : '后端同步资产后会在这里展示。' }}</p>
                     <button v-if="hasFilters" class="domain-assets-state-button" type="button" @click="clearFilters">清空筛选</button>
                   </div>
 
@@ -460,6 +501,7 @@ onBeforeUnmount(() => {
                     <article
                       v-for="row in tableRows"
                       :key="row.id"
+                      v-memo="[row.memoKey, selectedHostAssetId === row.id]"
                       class="domain-assets-table-row host-assets-table-grid"
                       :class="{ selected: selectedHostAssetId === row.id }"
                       tabindex="0"
@@ -479,24 +521,38 @@ onBeforeUnmount(() => {
                       </div>
 
                       <div class="domain-assets-risk-cell">
-                        <span class="domain-assets-risk-pill" :class="`is-${getRiskMeta(row.riskLevel).tone}`">
-                          {{ getRiskMeta(row.riskLevel).label }}
+                        <span class="domain-assets-risk-pill" :class="`is-${row.riskMeta.tone}`">
+                          {{ row.riskMeta.label }}
                         </span>
                       </div>
 
-                      <div class="domain-assets-component-cell">
-                        <span>{{ formatCount(row.vulnerabilityCount) }}</span>
+                      <div class="domain-assets-vuln-cell">
+                        <div class="domain-assets-severity-group" :aria-label="row.vulnerabilityTooltip">
+                          <span
+                            v-for="item in row.vulnerabilitySeverityItems"
+                            :key="item.key"
+                            class="domain-assets-severity-badge"
+                            :class="`is-${item.key}`"
+                            tabindex="0"
+                            :aria-label="`${item.label}: ${item.countDisplay}`"
+                          >
+                            <span class="domain-assets-severity-value">{{ item.countDisplay }}</span>
+                            <span class="domain-assets-severity-tooltip" role="tooltip">
+                              {{ item.label }}
+                            </span>
+                          </span>
+                        </div>
                       </div>
 
                       <div class="domain-assets-component-cell">
-                        <span>{{ formatCount(row.portComponentCount) }}</span>
+                        <span>{{ row.portCountDisplay }}</span>
                       </div>
                     </article>
                   </div>
                 </div>
               </div>
 
-              <footer class="domain-assets-pagination">
+              <footer v-if="!showInitialLoading && !showBlockingError" class="domain-assets-pagination">
                 <div class="domain-assets-pagination-meta">
                   <span>{{ pageSummary }}</span>
                   <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
@@ -509,6 +565,7 @@ onBeforeUnmount(() => {
                       class="domain-assets-page-size-trigger"
                       :class="{ active: isPageSizeMenuOpen }"
                       type="button"
+                      :disabled="isLoading || isRefreshing"
                       aria-label="选择每页数量"
                       :aria-expanded="isPageSizeMenuOpen ? 'true' : 'false'"
                       aria-haspopup="listbox"
@@ -544,7 +601,7 @@ onBeforeUnmount(() => {
                   <button
                     class="domain-assets-pagination-arrow"
                     type="button"
-                    :disabled="currentPage <= 1"
+                    :disabled="currentPage <= 1 || isLoading || isRefreshing"
                     aria-label="上一页"
                     @click="goToPreviousPage"
                   >
@@ -556,7 +613,7 @@ onBeforeUnmount(() => {
                   <button
                     class="domain-assets-pagination-arrow"
                     type="button"
-                    :disabled="currentPage >= totalPages"
+                    :disabled="currentPage >= totalPages || isLoading || isRefreshing"
                     aria-label="下一页"
                     @click="goToNextPage"
                   >

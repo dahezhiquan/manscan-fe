@@ -687,3 +687,44 @@
   - `components` 可返回字符串数组、逗号分隔字符串或为空；为空时仅展示组件数量
   - 后端 handler 已接收 `title`、`risk_level`、`has_vulnerability`、`has_component`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
+
+### 25. 获取主机资产清单
+
+- 用途：`/assets/hosts` 主机资产清单页首屏加载、主机模糊搜索、展开式筛选和分页展示
+- 请求方式：`GET`
+- 路径：`/api/v1/host-assets`
+- 请求参数：
+  - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
+  - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
+  - `keyword`: 顶部搜索框输入值，用于按 IP、操作系统类型或关联域名模糊搜索
+  - `os_type`: “操作系统类型”筛选
+  - `region`: “区域”筛选
+  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`
+- 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
+  - `items[].id`
+  - `items[].ip_address` 或 `items[].asset_address`
+  - `items[].os_type`
+  - `items[].os_version`
+  - `items[].region`，用于表格“区域”列展示
+  - `items[].risk_level`
+  - `items[].vulnerability_count`
+  - `items[].critical_count`，用于“漏洞数量”列严重等级计数展示
+  - `items[].high_count`，用于“漏洞数量”列高危等级计数展示
+  - `items[].medium_count`，用于“漏洞数量”列中危等级计数展示
+  - `items[].low_count`，用于“漏洞数量”列低危等级计数展示
+  - `items[].port_count`
+- 异常分支：
+  - 首屏失败时展示错误态和重新加载按钮
+  - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
+  - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
+- 联调注意事项：
+  - 进入页面默认请求 `page=1&page_size=10`
+  - 顶部搜索框防抖提交 `keyword`
+  - “添加筛选条件”弹窗一次保存一个筛选项，已保存条件以 chip 展示，支持单项移除和清空全部
+  - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端在“漏洞数量”列按严重、高危、中危、低危四格展示不同等级数量
+  - 不同等级漏洞数量也兼容 `vulnerability_counts`、`severity_counts`、`vuln_counts` 等对象结构，以及常见驼峰字段名；`vulnerability_count` 缺失时前端会用四个等级数量求和兜底
+  - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；筛选项不提供 `unknown`，但展示层保留未知风险兜底
+  - `os_type` 与 `os_version` 同时存在时，前端会展示为“操作系统类型 / 操作系统版本”；缺失时以 `--` 兜底
+  - `port_count` 表示存活端口数量，前端展示列文案为“端口数量”
+  - 后端 handler 已接收 `keyword`、`os_type`、`region`、`risk_level`，前端筛选参数与后端读取字段保持一致
+  - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容

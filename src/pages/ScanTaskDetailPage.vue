@@ -212,11 +212,11 @@ const infoItems = computed(() => [
     value: formatCount(resolveTargetCount(task.value))
   },
   {
-    label: '存活目标数量',
+    label: '存活域名目标数量',
     value: formatCount(pickFirstValue(task.value, ['alive_hosts', 'live_hosts', 'up_hosts']) ?? progress.value?.hosts)
   },
   {
-    label: '无响应目标数量',
+    label: '无响应域名目标数量',
     value: formatCount(pickFirstValue(task.value, ['unresponsive_hosts', 'no_response_hosts', 'dead_hosts', 'timeout_hosts']))
   }
 ])
