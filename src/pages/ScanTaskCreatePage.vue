@@ -581,6 +581,8 @@ const hasTemplateFilters = computed(
     templateSelectedSeverities.value.length > 0 ||
     templateSelectedProtocols.value.length > 0
 )
+const isTemplateSelectionValid = computed(() => isAutomaticScanEnabled.value || form.include_ids.length > 0)
+const templateSelectionError = '请至少选择一个扫描模板，或开启自动模板映射扫描。'
 
 function createInitialForm() {
   return {
@@ -1004,6 +1006,7 @@ function toggleAutomaticScanMode() {
   closeTemplateFilterMenu()
 
   if (form.automatic_scan) {
+    errorMessage.value = ''
     triggerTemplateAutoLockPulse()
     return
   }
@@ -1108,6 +1111,10 @@ function appendSelectedTemplateIds(templateIds) {
   const nextIds = new Set(form.include_ids)
   templateIds.filter(Boolean).forEach((id) => nextIds.add(id))
   form.include_ids = [...nextIds]
+
+  if (form.include_ids.length > 0 && errorMessage.value === templateSelectionError) {
+    errorMessage.value = ''
+  }
 }
 
 function removeSelectedTemplateIds(templateIds) {
@@ -1311,6 +1318,11 @@ function handleGlobalPointerDown(event) {
 }
 
 function goNext() {
+  if (currentStep.value.key === 'filters' && !isTemplateSelectionValid.value) {
+    errorMessage.value = templateSelectionError
+    return
+  }
+
   if (activeStep.value < stepDefinitions.length - 1) {
     activeStep.value += 1
     errorMessage.value = ''
@@ -1410,6 +1422,12 @@ async function submitTask() {
       ? '全局禁扫名单加载失败，请重试后再创建扫描任务。'
       : '全局禁扫名单正在同步，请等待同步完成后再创建扫描任务。'
     activeStep.value = 1
+    return
+  }
+
+  if (!isTemplateSelectionValid.value) {
+    errorMessage.value = templateSelectionError
+    activeStep.value = stepDefinitions.findIndex((step) => step.key === 'filters')
     return
   }
 
@@ -1767,6 +1785,10 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
+
+              <p v-if="errorMessage === templateSelectionError" class="scan-create-status is-error">
+                {{ templateSelectionError }}
+              </p>
             </section>
 
             <section class="scan-template-results">
