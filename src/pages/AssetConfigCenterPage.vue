@@ -28,6 +28,10 @@ const props = defineProps({
   currentUserName: {
     type: String,
     default: 'admin'
+  },
+  currentUserRole: {
+    type: String,
+    default: 'user'
   }
 })
 
@@ -108,6 +112,7 @@ let formSmallCategoryOptionsRequestId = 0
 
 const activeCategoryMeta = computed(() => getCategoryMeta(selectedCategory.value))
 const activeCategoryLabel = computed(() => activeCategoryMeta.value.label)
+const isAdminUser = computed(() => props.currentUserRole === 'admin')
 const selectedStatusLabel = computed(() => getFilterStatusMeta(selectedStatus.value).label)
 const selectedSmallCategoryLabel = computed(() => selectedSmallCategory.value || '小分类')
 const selectedFormCategoryLabel = computed(() => getCategoryLabel(formState.big_category))
@@ -157,6 +162,9 @@ const pageSummary = computed(() => {
 })
 const categoryTabs = computed(() => CATEGORY_OPTIONS)
 const formTitle = computed(() => (formMode.value === 'create' ? '新增资产配置项' : '编辑资产配置项'))
+const emptyStateDescription = computed(() =>
+  isAdminUser.value ? '试试调整筛选条件，或者新建一条配置项。' : '试试调整筛选条件后继续查看。'
+)
 const deleteTargetLabel = computed(() => deleteTarget.value?.item_name || '')
 const deleteTargetCategoryLabel = computed(() => getCategoryLabel(deleteTarget.value?.big_category))
 const deleteTargetSummary = computed(() => {
@@ -220,6 +228,19 @@ watch(
     void loadFormSmallCategoryOptions(nextCategory)
   }
 )
+
+watch(isAdminUser, (nextIsAdmin) => {
+  if (nextIsAdmin) {
+    return
+  }
+
+  isFormDialogOpen.value = false
+  isDeleteDialogOpen.value = false
+  formError.value = ''
+  deleteError.value = ''
+  deleteTarget.value = null
+  closeFilterMenu()
+})
 
 function getCategoryMeta(value) {
   return CATEGORY_OPTIONS.find((item) => item.value === value) ?? CATEGORY_OPTIONS[0]
@@ -478,6 +499,10 @@ function selectFormSmallCategoryOption(value) {
 }
 
 function openCreateDialog() {
+  if (!isAdminUser.value) {
+    return
+  }
+
   formMode.value = 'create'
   formError.value = ''
   resetForm(selectedCategory.value)
@@ -486,6 +511,10 @@ function openCreateDialog() {
 }
 
 function openEditDialog(row) {
+  if (!isAdminUser.value) {
+    return
+  }
+
   if (!row) {
     return
   }
@@ -504,6 +533,10 @@ function closeFormDialog() {
 }
 
 function openDeleteDialog(row) {
+  if (!isAdminUser.value) {
+    return
+  }
+
   if (!row) {
     return
   }
@@ -520,6 +553,11 @@ function closeDeleteDialog() {
 }
 
 async function submitForm() {
+  if (!isAdminUser.value) {
+    formError.value = '当前账号没有修改资产配置项的权限。'
+    return
+  }
+
   const nextItemName = normalizeText(formState.item_name)
   const nextBigCategory = normalizeCategory(formState.big_category)
   const nextSmallCategory = normalizeText(formState.small_category)
@@ -573,6 +611,11 @@ async function submitForm() {
 }
 
 async function confirmDelete() {
+  if (!isAdminUser.value) {
+    deleteError.value = '当前账号没有删除资产配置项的权限。'
+    return
+  }
+
   if (!deleteTarget.value?.id) {
     deleteError.value = '未找到要删除的资产配置项。'
     return
@@ -840,7 +883,12 @@ onBeforeUnmount(() => {
               </span>
             </button>
 
-            <button class="asset-config-tab asset-config-tab--action" type="button" @click="openCreateDialog">
+            <button
+              v-if="isAdminUser"
+              class="asset-config-tab asset-config-tab--action"
+              type="button"
+              @click="openCreateDialog"
+            >
               <span class="asset-config-tab-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                   <path d="M12 5v14" />
@@ -992,14 +1040,14 @@ onBeforeUnmount(() => {
               <button class="asset-config-panel-link" type="button" @click="retryLoad">重试</button>
             </div>
 
-            <div class="asset-config-table">
+            <div class="asset-config-table" :class="{ 'is-readonly': !isAdminUser }">
               <div class="asset-config-table-head">
                 <span class="asset-config-col is-main">项名称</span>
                 <span class="asset-config-col">大分类</span>
                 <span class="asset-config-col">小分类</span>
                 <span class="asset-config-col">状态</span>
                 <span class="asset-config-col">说明</span>
-                <span class="asset-config-col is-actions">操作</span>
+                <span v-if="isAdminUser" class="asset-config-col is-actions">操作</span>
               </div>
 
               <div v-if="showInitialLoading" class="asset-config-skeleton-list" aria-hidden="true">
@@ -1009,7 +1057,7 @@ onBeforeUnmount(() => {
                   <span class="asset-config-skeleton"></span>
                   <span class="asset-config-skeleton is-status"></span>
                   <span class="asset-config-skeleton"></span>
-                  <span class="asset-config-skeleton is-actions"></span>
+                  <span v-if="isAdminUser" class="asset-config-skeleton is-actions"></span>
                 </div>
               </div>
 
@@ -1043,7 +1091,7 @@ onBeforeUnmount(() => {
                       <span>{{ row.description || '--' }}</span>
                     </div>
 
-                    <div class="asset-config-cell is-actions">
+                    <div v-if="isAdminUser" class="asset-config-cell is-actions">
                       <button
                         class="asset-config-row-action"
                         type="button"
@@ -1081,7 +1129,7 @@ onBeforeUnmount(() => {
 
                 <div v-else-if="showEmptyState" class="asset-config-empty-state">
                   <strong>没有匹配的资产配置项</strong>
-                  <p>试试调整筛选条件，或者新建一条配置项。</p>
+                  <p>{{ emptyStateDescription }}</p>
                 </div>
               </template>
             </div>

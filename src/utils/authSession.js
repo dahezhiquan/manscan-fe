@@ -83,7 +83,6 @@ export function normalizeUser(user) {
   return {
     id: user.id ?? null,
     username: String(user.username ?? '').trim(),
-    display_name: String(user.display_name ?? user.displayName ?? '').trim(),
     role: String(user.role ?? '').trim()
   }
 }

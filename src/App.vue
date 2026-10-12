@@ -34,7 +34,7 @@ const redirectAfterLogin = ref('')
 
 const currentUserName = computed(() => {
   const user = currentUser.value
-  return user?.display_name || user?.username || 'admin'
+  return user?.username || 'admin'
 })
 const currentUserRole = computed(() => currentUser.value?.role || 'user')
 

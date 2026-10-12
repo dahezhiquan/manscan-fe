@@ -590,6 +590,16 @@
   gap: 0;
 }
 
+.asset-config-table.is-readonly .asset-config-table-head,
+.asset-config-table.is-readonly .asset-config-table-row {
+  grid-template-columns:
+    minmax(0, 1.4fr)
+    minmax(160px, 0.9fr)
+    minmax(120px, 0.75fr)
+    minmax(100px, 0.8fr)
+    minmax(0, 1.2fr);
+}
+
 .asset-config-table-head {
   padding: 12px 14px;
   border-bottom: 3px solid var(--line);
@@ -782,6 +792,15 @@
   gap: 0;
   padding: 14px;
   border-bottom: 1px solid rgba(31, 26, 23, 0.12);
+}
+
+.asset-config-table.is-readonly .asset-config-skeleton-row {
+  grid-template-columns:
+    minmax(0, 1.4fr)
+    minmax(160px, 0.9fr)
+    minmax(120px, 0.75fr)
+    minmax(100px, 0.8fr)
+    minmax(0, 1.2fr);
 }
 
 .asset-config-skeleton {
