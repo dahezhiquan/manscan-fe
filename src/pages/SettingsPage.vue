@@ -126,21 +126,6 @@ function resetSettings() {
     @logout="emit('logout')"
   >
     <main class="settings-page">
-      <header class="settings-hero">
-        <div>
-          <div class="settings-page-crumbs" aria-label="当前位置">
-            <span class="settings-page-crumb">
-              <span class="settings-page-crumb-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath('gear')" />
-              </span>
-              系统设置
-            </span>
-          </div>
-          <h1>设置</h1>
-          <p>通过二级导航管理用户、主题和通知策略。</p>
-        </div>
-      </header>
-
       <div class="settings-workspace">
         <nav class="settings-tabs" aria-label="设置二级导航">
           <button

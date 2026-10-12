@@ -1,4 +1,8 @@
-import { DOMAIN_ASSET_DETAIL_API, DOMAIN_ASSET_LIST_API } from '../constants/api'
+import {
+  DOMAIN_ASSET_DETAIL_API,
+  DOMAIN_ASSET_LIST_API,
+  DOMAIN_ASSET_MANUAL_NOTE_API
+} from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getDomainAssetList(params = {}, signal) {
@@ -28,6 +32,20 @@ export async function getDomainAssetDetail(domain, signal) {
 
   return requestJson(`${DOMAIN_ASSET_DETAIL_API}?${searchParams.toString()}`, {
     method: 'GET',
+    signal
+  })
+}
+
+export async function updateDomainAssetManualNote(domain, manualNote, signal) {
+  return requestJson(DOMAIN_ASSET_MANUAL_NOTE_API, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      domain,
+      manual_note: manualNote
+    }),
     signal
   })
 }

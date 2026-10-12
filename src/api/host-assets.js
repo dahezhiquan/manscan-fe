@@ -1,4 +1,8 @@
-import { HOST_ASSET_DETAIL_API, HOST_ASSET_LIST_API } from '../constants/api'
+import {
+  HOST_ASSET_DETAIL_API,
+  HOST_ASSET_LIST_API,
+  HOST_ASSET_MANUAL_NOTE_API
+} from '../constants/api'
 import { requestJson } from '../utils/http'
 
 export async function getHostAssetList(params = {}, signal) {
@@ -26,6 +30,20 @@ export async function getHostAssetDetail(ipAddress, signal) {
 
   return requestJson(`${HOST_ASSET_DETAIL_API}?${searchParams.toString()}`, {
     method: 'GET',
+    signal
+  })
+}
+
+export async function updateHostAssetManualNote(ipAddress, manualNote, signal) {
+  return requestJson(HOST_ASSET_MANUAL_NOTE_API, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      ip_address: ipAddress,
+      manual_note: manualNote
+    }),
     signal
   })
 }

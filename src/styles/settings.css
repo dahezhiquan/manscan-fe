@@ -19,23 +19,6 @@
   color: var(--ink);
 }
 
-.settings-page-crumbs {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.settings-page-crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink-soft);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.settings-page-crumb-icon,
 .settings-tab-icon,
 .settings-user-avatar {
   display: inline-flex;
@@ -44,12 +27,6 @@
   flex: 0 0 auto;
 }
 
-.settings-page-crumb-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.settings-page-crumb-icon svg,
 .settings-tab-icon svg {
   width: 100%;
   height: 100%;
@@ -57,41 +34,11 @@
   stroke-linejoin: round;
 }
 
-.settings-hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 20px;
-  border: var(--border-strong);
-  border-radius: var(--radius-lg);
-  background:
-    linear-gradient(135deg, rgba(255, 213, 79, 0.26), transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 241, 0.96));
-  box-shadow: var(--shadow-flat-lg);
-}
-
-.settings-hero h1 {
-  margin: 0;
-  color: var(--line);
-  font-size: 32px;
-  line-height: 1;
-}
-
-.settings-hero p {
-  max-width: 680px;
-  margin: 10px 0 0;
-  color: var(--ink-soft);
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.55;
-}
-
 .settings-workspace {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
 }
 
 .settings-tabs {
@@ -99,13 +46,14 @@
   top: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px;
+  min-height: min(560px, calc(100vh - 150px));
+  padding: 10px;
   border: var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: var(--shadow-flat-lg);
+  box-shadow: var(--shadow-flat);
 }
 
 .settings-tab {
@@ -115,10 +63,10 @@
   gap: 8px;
   width: 100%;
   min-width: 0;
-  min-height: 48px;
-  padding: 0 14px;
+  min-height: 42px;
+  padding: 0 10px;
   border: 2px solid var(--line);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.96);
   color: var(--line);
   box-shadow: var(--shadow-flat);
@@ -133,13 +81,13 @@
 .settings-tab:hover,
 .settings-tab.active {
   background: var(--accent-blue);
-  box-shadow: 3px 4px 0 var(--line);
+  box-shadow: 2px 3px 0 var(--line);
   transform: translate(-1px, -1px);
 }
 
 .settings-tab-icon {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .settings-layout {
@@ -613,7 +561,7 @@
 
 @media (max-width: 1180px) {
   .settings-workspace {
-    grid-template-columns: 196px minmax(0, 1fr);
+    grid-template-columns: 156px minmax(0, 1fr);
   }
 
   .settings-users-grid,
@@ -633,7 +581,6 @@
     padding: 16px 14px 18px;
   }
 
-  .settings-hero,
   .settings-panel-head,
   .settings-save-bar {
     flex-direction: column;
@@ -648,6 +595,7 @@
 
   .settings-tabs {
     position: static;
+    min-height: 0;
   }
 
   .settings-panel-meta {

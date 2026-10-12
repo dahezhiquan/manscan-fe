@@ -822,37 +822,38 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section class="asset-config-tabs" aria-label="配置域切换">
-          <button
-            v-for="tab in categoryTabs"
-            :key="tab.value || 'all'"
-            class="asset-config-tab"
-            :class="{ active: tab.value === selectedCategory }"
-            type="button"
-            @click="selectCategory(tab.value)"
-          >
-            <span class="asset-config-tab-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath(tab.icon)" />
-            </span>
-            <span class="asset-config-tab-label">
-              <strong>{{ tab.label }}</strong>
-            </span>
-          </button>
+        <section class="asset-config-workspace">
+          <nav class="asset-config-tabs" aria-label="配置域切换">
+            <button
+              v-for="tab in categoryTabs"
+              :key="tab.value || 'all'"
+              class="asset-config-tab"
+              :class="{ active: tab.value === selectedCategory }"
+              type="button"
+              @click="selectCategory(tab.value)"
+            >
+              <span class="asset-config-tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath(tab.icon)" />
+              </span>
+              <span class="asset-config-tab-label">
+                <strong>{{ tab.label }}</strong>
+              </span>
+            </button>
 
-          <button class="asset-config-tab asset-config-tab--action" type="button" @click="openCreateDialog">
-            <span class="asset-config-tab-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M12 5v14" />
-                <path d="M5 12h14" />
-              </svg>
-            </span>
-            <span class="asset-config-tab-label">
-              <strong>新增配置项</strong>
-            </span>
-          </button>
-        </section>
+            <button class="asset-config-tab asset-config-tab--action" type="button" @click="openCreateDialog">
+              <span class="asset-config-tab-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M12 5v14" />
+                  <path d="M5 12h14" />
+                </svg>
+              </span>
+              <span class="asset-config-tab-label">
+                <strong>新增配置项</strong>
+              </span>
+            </button>
+          </nav>
 
-        <section class="asset-config-content">
+          <section class="asset-config-content">
           <section class="asset-config-panel">
             <header class="asset-config-panel-head">
               <div>
@@ -1156,6 +1157,7 @@ onBeforeUnmount(() => {
                 </button>
               </div>
             </footer>
+          </section>
           </section>
         </section>
 

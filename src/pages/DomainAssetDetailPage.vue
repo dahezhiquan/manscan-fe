@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getDomainAssetDetail } from '../api/domain-assets'
+import { getDomainAssetDetail, updateDomainAssetManualNote } from '../api/domain-assets'
 import manscanIcon from '../assets/manscan-icon.png'
 import {
   buildDomainAssetFlagItems,
@@ -24,10 +24,17 @@ const detailData = ref(null)
 const copiedState = ref('')
 const copyEffectTick = ref(0)
 const screenshotFailed = ref(false)
+const isManualNoteDialogOpen = ref(false)
+const manualNoteDraft = ref('')
+const manualNoteError = ref('')
+const manualNoteSaving = ref(false)
 
 let detailAbortController = null
+let manualNoteAbortController = null
 let copyFeedbackTimer = null
 let currentRequestId = 0
+
+const MANUAL_NOTE_MAX_LENGTH = 5000
 
 const domain = computed(() => {
   const match = props.currentPath.match(/^\/assets\/domains\/([^/]+)$/)
@@ -100,6 +107,10 @@ const evidenceSections = computed(() => {
 const canShowScreenshot = computed(() =>
   Boolean(detail.value?.screenshotPath) && !screenshotFailed.value
 )
+const manualNoteLength = computed(() => manualNoteDraft.value.length)
+const canSaveManualNote = computed(() =>
+  !manualNoteSaving.value && manualNoteLength.value <= MANUAL_NOTE_MAX_LENGTH
+)
 
 function getAlivePillClass(tone) {
   return `domain-asset-detail-alive-pill is-${tone}`
@@ -111,6 +122,21 @@ function goBackToList() {
 
 function refreshDetail() {
   void fetchDomainAssetDetail()
+}
+
+function openManualNoteDialog() {
+  manualNoteDraft.value = getManualNoteValue()
+  manualNoteError.value = ''
+  isManualNoteDialogOpen.value = true
+}
+
+function closeManualNoteDialog() {
+  if (manualNoteSaving.value) {
+    return
+  }
+
+  isManualNoteDialogOpen.value = false
+  manualNoteError.value = ''
 }
 
 function openScreenshot() {
@@ -205,6 +231,58 @@ async function fetchDomainAssetDetail() {
   }
 }
 
+async function saveManualNote() {
+  const targetDomain = detail.value?.domain && detail.value.domain !== '--' ? detail.value.domain : domain.value
+
+  if (!canSaveManualNote.value || !targetDomain) {
+    return
+  }
+
+  manualNoteAbortController?.abort()
+  manualNoteAbortController = new AbortController()
+  manualNoteSaving.value = true
+  manualNoteError.value = ''
+
+  try {
+    const data = await updateDomainAssetManualNote(
+      targetDomain,
+      manualNoteDraft.value,
+      manualNoteAbortController.signal
+    )
+    const nextManualNote = String(data?.manual_note ?? data?.manualNote ?? manualNoteDraft.value ?? '').trim()
+    applyManualNote(nextManualNote)
+    isManualNoteDialogOpen.value = false
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      manualNoteError.value = error instanceof Error ? error.message : '人工备注保存失败，请稍后重试。'
+    }
+  } finally {
+    manualNoteSaving.value = false
+    manualNoteAbortController = null
+  }
+}
+
+function getManualNoteValue() {
+  const rawDetail = detailData.value?.domain_asset && typeof detailData.value.domain_asset === 'object'
+    ? detailData.value.domain_asset
+    : detailData.value
+
+  return String(rawDetail?.manual_note ?? rawDetail?.manualNote ?? '').trim()
+}
+
+function applyManualNote(manualNote) {
+  if (!detailData.value) {
+    return
+  }
+
+  const target = detailData.value.domain_asset && typeof detailData.value.domain_asset === 'object'
+    ? detailData.value.domain_asset
+    : detailData.value
+
+  target.manual_note = manualNote
+  target.manualNote = manualNote
+}
+
 onMounted(() => {
   void fetchDomainAssetDetail()
 })
@@ -226,6 +304,7 @@ watch(
 
 onBeforeUnmount(() => {
   detailAbortController?.abort()
+  manualNoteAbortController?.abort()
   window.clearTimeout(copyFeedbackTimer)
 })
 </script>
@@ -453,7 +532,12 @@ onBeforeUnmount(() => {
           </article>
 
           <article class="template-detail-card">
-            <div class="template-detail-section-title">人工备注</div>
+            <div class="domain-asset-detail-note-head">
+              <div class="template-detail-section-title">人工备注</div>
+              <button class="template-detail-secondary-button compact" type="button" @click="openManualNoteDialog">
+                修改备注
+              </button>
+            </div>
             <p class="domain-asset-detail-note">{{ detail.manualNote }}</p>
           </article>
 
@@ -513,6 +597,54 @@ onBeforeUnmount(() => {
         <h2>未能加载域名资产详情</h2>
         <p>{{ detailError || '当前没有可展示的域名资产信息。' }}</p>
         <button class="template-detail-secondary-button" type="button" @click="refreshDetail">重新加载</button>
+      </div>
+
+      <div v-if="isManualNoteDialogOpen" class="domain-assets-dialog-overlay" role="presentation" @click.self="closeManualNoteDialog">
+        <section
+          class="domain-assets-dialog domain-asset-detail-note-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="domain-manual-note-dialog-title"
+        >
+          <form @submit.prevent="saveManualNote">
+            <header class="domain-assets-dialog-head">
+              <h2 id="domain-manual-note-dialog-title">修改人工备注</h2>
+              <button class="domain-assets-dialog-close" type="button" aria-label="关闭" :disabled="manualNoteSaving" @click="closeManualNoteDialog">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M6 6l12 12" />
+                  <path d="M18 6 6 18" />
+                </svg>
+              </button>
+            </header>
+
+            <div class="domain-assets-dialog-body domain-asset-detail-note-dialog-body">
+              <label class="domain-assets-dialog-field domain-asset-detail-note-field">
+                <span>备注内容</span>
+                <textarea
+                  v-model="manualNoteDraft"
+                  :maxlength="MANUAL_NOTE_MAX_LENGTH"
+                  rows="7"
+                  placeholder="输入人工备注，留空可清除备注"
+                ></textarea>
+                <small :class="{ muted: manualNoteLength <= MANUAL_NOTE_MAX_LENGTH }">
+                  {{ manualNoteLength }} / {{ MANUAL_NOTE_MAX_LENGTH }}
+                </small>
+              </label>
+              <div v-if="manualNoteError" class="domain-asset-detail-note-error" role="alert">
+                {{ manualNoteError }}
+              </div>
+            </div>
+
+            <footer class="domain-assets-dialog-actions">
+              <button class="domain-assets-dialog-button is-secondary" type="button" :disabled="manualNoteSaving" @click="closeManualNoteDialog">
+                取消
+              </button>
+              <button class="domain-assets-dialog-button" type="submit" :disabled="!canSaveManualNote">
+                {{ manualNoteSaving ? '保存中' : '确认保存' }}
+              </button>
+            </footer>
+          </form>
+        </section>
       </div>
     </section>
   </main>
