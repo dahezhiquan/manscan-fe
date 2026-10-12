@@ -76,6 +76,7 @@ const DEFAULT_CUSTOM_HEADERS = [
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])
 const AUTOMATIC_SCAN_EXCLUDED_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
 const MB_TO_BYTES = 1024 * 1024
+const SELECT_ALL_TEMPLATE_TIMEOUT = 90000
 
 const stepFields = {
   basic: [
@@ -408,6 +409,7 @@ const templateProtocolOptions = ref(
 const templateListLoading = ref(false)
 const templateOptionLoading = ref(false)
 const selectAllTemplatesLoading = ref(false)
+const isAllFilteredTemplatesSelected = ref(false)
 const templateListError = ref('')
 const templateAutoLockPulse = ref(false)
 const multiLineDrafts = reactive({})
@@ -430,6 +432,7 @@ const templateListState = ref({
 let templateListAbortController = null
 let templateTagsAbortController = null
 let templateProtocolsAbortController = null
+let selectAllTemplatesAbortController = null
 let templateSearchTimer = null
 let templateAutoLockTimer = null
 let globalScanDisabledAbortController = null
@@ -548,6 +551,9 @@ const currentPageTemplateIds = computed(() => normalizedTemplateRows.value.map((
 const isCurrentPageFullySelected = computed(
   () => currentPageTemplateIds.value.length > 0 && currentPageTemplateIds.value.every((id) => isTemplateSelected(id))
 )
+const selectedTemplateCount = computed(() =>
+  isAllFilteredTemplatesSelected.value ? templateListState.value.total : form.include_ids.length
+)
 const isAutomaticScanEnabled = computed(() => form.automatic_scan)
 const templateResultsSummary = computed(() => {
   if (templateListLoading.value) {
@@ -581,7 +587,9 @@ const hasTemplateFilters = computed(
     templateSelectedSeverities.value.length > 0 ||
     templateSelectedProtocols.value.length > 0
 )
-const isTemplateSelectionValid = computed(() => isAutomaticScanEnabled.value || form.include_ids.length > 0)
+const isTemplateSelectionValid = computed(
+  () => isAutomaticScanEnabled.value || isAllFilteredTemplatesSelected.value || form.include_ids.length > 0
+)
 const templateSelectionError = '请至少选择一个扫描模板，或开启自动模板映射扫描。'
 
 function createInitialForm() {
@@ -1050,6 +1058,7 @@ function clearTemplateFilters() {
     return
   }
 
+  clearAllFilteredTemplateSelection()
   templateIdKeyword.value = ''
   templateTagSearch.value = ''
   templateSelectedTags.value = []
@@ -1063,7 +1072,15 @@ function clearSelectedTemplates() {
     return
   }
 
+  clearAllFilteredTemplateSelection()
   form.include_ids = []
+}
+
+function clearAllFilteredTemplateSelection() {
+  isAllFilteredTemplatesSelected.value = false
+  form.tags = []
+  form.severities = []
+  form.protocols = []
 }
 
 function isTemplateMenuOpen(name) {
@@ -1108,6 +1125,7 @@ function selectFieldOption(field, value) {
 }
 
 function appendSelectedTemplateIds(templateIds) {
+  clearAllFilteredTemplateSelection()
   const nextIds = new Set(form.include_ids)
   templateIds.filter(Boolean).forEach((id) => nextIds.add(id))
   form.include_ids = [...nextIds]
@@ -1118,16 +1136,22 @@ function appendSelectedTemplateIds(templateIds) {
 }
 
 function removeSelectedTemplateIds(templateIds) {
+  clearAllFilteredTemplateSelection()
   const removedIds = new Set(templateIds)
   form.include_ids = form.include_ids.filter((id) => !removedIds.has(id))
 }
 
 function isTemplateSelected(templateId) {
-  return form.include_ids.includes(templateId)
+  return isAllFilteredTemplatesSelected.value || form.include_ids.includes(templateId)
 }
 
 function toggleTemplateSelection(template) {
   if (isAutomaticScanEnabled.value || !template.id) {
+    return
+  }
+
+  if (isAllFilteredTemplatesSelected.value) {
+    clearSelectedTemplates()
     return
   }
 
@@ -1161,12 +1185,34 @@ async function selectAllFilteredTemplates() {
     return
   }
 
+  if (isAllFilteredTemplatesSelected.value) {
+    clearSelectedTemplates()
+    return
+  }
+
   if (!templateListState.value.total || selectAllTemplatesLoading.value) {
+    return
+  }
+
+  if (!templateIdKeyword.value.trim()) {
+    form.include_ids = []
+    form.tags = [...templateSelectedTags.value]
+    form.severities = [...templateSelectedSeverities.value]
+    form.protocols = [...templateSelectedProtocols.value]
+    isAllFilteredTemplatesSelected.value = true
+    errorMessage.value = ''
+    templateListError.value = ''
     return
   }
 
   selectAllTemplatesLoading.value = true
   templateListError.value = ''
+  selectAllTemplatesAbortController?.abort()
+  selectAllTemplatesAbortController = new AbortController()
+  const { signal } = selectAllTemplatesAbortController
+  const timeoutId = window.setTimeout(() => {
+    selectAllTemplatesAbortController?.abort()
+  }, SELECT_ALL_TEMPLATE_TIMEOUT)
 
   try {
     const allIds = new Set(currentPageTemplateIds.value)
@@ -1181,7 +1227,7 @@ async function selectAllFilteredTemplates() {
         continue
       }
 
-      const data = await getTemplateList(buildTemplateListParams(page))
+      const data = await getTemplateList(buildTemplateListParams(page), signal)
       const pageState = buildTemplateListState(data, page)
       pageState.items
         .map((item) => normalizeTemplateItem(item).id)
@@ -1195,10 +1241,18 @@ async function selectAllFilteredTemplates() {
 
     appendSelectedTemplateIds([...allIds])
   } catch (error) {
-    console.error('全选模板失败:', error)
-    templateListError.value = '全部全选失败，请稍后重试。'
+    if (error.name === 'AbortError') {
+      templateListError.value = '全部全选已中断，请稍后重试。'
+    } else {
+      console.error('全选模板失败:', error)
+      templateListError.value = '全部全选失败，请稍后重试。'
+    }
   } finally {
-    selectAllTemplatesLoading.value = false
+    window.clearTimeout(timeoutId)
+    if (selectAllTemplatesAbortController?.signal === signal) {
+      selectAllTemplatesAbortController = null
+      selectAllTemplatesLoading.value = false
+    }
   }
 }
 
@@ -1460,9 +1514,7 @@ async function submitTask() {
 watch(
   [templateIdKeyword, templateSelectedTags, templateSelectedSeverities, templateSelectedProtocols],
   () => {
-    form.tags = []
-    form.severities = []
-    form.protocols = []
+    clearAllFilteredTemplateSelection()
     scheduleTemplateFetch()
   },
   { deep: true }
@@ -1480,6 +1532,7 @@ onBeforeUnmount(() => {
   templateListAbortController?.abort()
   templateTagsAbortController?.abort()
   templateProtocolsAbortController?.abort()
+  selectAllTemplatesAbortController?.abort()
   window.clearTimeout(templateSearchTimer)
   window.clearTimeout(templateAutoLockTimer)
   cancelGlobalScanDisabledRequest()
@@ -1724,7 +1777,7 @@ onBeforeUnmount(() => {
                 <div class="scan-template-toolbar-actions scan-template-library-actions">
                   <div class="scan-template-selection-summary is-inline-bar">
                     <div>
-                      <strong>{{ form.include_ids.length }}</strong>
+                      <strong>{{ selectedTemplateCount }}</strong>
                       <span>已选模板</span>
                     </div>
                   </div>
@@ -1760,7 +1813,13 @@ onBeforeUnmount(() => {
                       @click="selectAllFilteredTemplates"
                     >
                       <span v-if="isAutomaticScanEnabled" class="scan-template-lock-mark" aria-hidden="true">AUTO</span>
-                      {{ selectAllTemplatesLoading ? '全选中...' : `全部全选（${templateListState.total}）` }}
+                      {{
+                        selectAllTemplatesLoading
+                          ? '全选中...'
+                          : isAllFilteredTemplatesSelected
+                            ? '取消全部全选'
+                            : `全部全选（${templateListState.total}）`
+                      }}
                     </button>
                     <button
                       class="scan-create-secondary-button"
@@ -1776,7 +1835,7 @@ onBeforeUnmount(() => {
                       class="scan-create-secondary-button"
                       type="button"
                       :class="{ 'is-locked': isAutomaticScanEnabled }"
-                      :disabled="isAutomaticScanEnabled || form.include_ids.length === 0"
+                      :disabled="isAutomaticScanEnabled || selectedTemplateCount === 0"
                       @click="clearSelectedTemplates"
                     >
                       <span v-if="isAutomaticScanEnabled" class="scan-template-lock-mark" aria-hidden="true">AUTO</span>

@@ -7,7 +7,8 @@ export const ROUTE_PATHS = {
   TEMPLATES: '/templates/all',
   DOMAIN_ASSETS: '/assets/domains',
   HOST_ASSETS: '/assets/hosts',
-  ASSET_CONFIG: '/assets/config'
+  ASSET_CONFIG: '/assets/config',
+  SETTINGS: '/settings'
 }
 
 export const ROUTE_TITLES = {
@@ -19,7 +20,8 @@ export const ROUTE_TITLES = {
   [ROUTE_PATHS.SCAN_CREATE]: 'ManScan - 创建扫描任务',
   [ROUTE_PATHS.DOMAIN_ASSETS]: 'ManScan - 域名资产清单',
   [ROUTE_PATHS.HOST_ASSETS]: 'ManScan - 主机资产清单',
-  [ROUTE_PATHS.ASSET_CONFIG]: 'ManScan - 资产配置中心'
+  [ROUTE_PATHS.ASSET_CONFIG]: 'ManScan - 资产配置中心',
+  [ROUTE_PATHS.SETTINGS]: 'ManScan - 设置'
 }
 
 export function normalizePath(path) {
@@ -53,6 +55,10 @@ export function normalizePath(path) {
 
   if (path === ROUTE_PATHS.ASSET_CONFIG) {
     return ROUTE_PATHS.ASSET_CONFIG
+  }
+
+  if (path === ROUTE_PATHS.SETTINGS) {
+    return ROUTE_PATHS.SETTINGS
   }
 
   if (path === ROUTE_PATHS.DOMAIN_ASSETS) {
@@ -100,6 +106,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.HOST_ASSETS
   }
 
+  if (path.startsWith('/settings')) {
+    return ROUTE_PATHS.SETTINGS
+  }
+
   return ROUTE_PATHS.HOME
 }
 
@@ -138,6 +148,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/assets/hosts')) {
     return 'ManScan - 主机资产清单'
+  }
+
+  if (path.startsWith('/settings')) {
+    return 'ManScan - 设置'
   }
 
   return ROUTE_TITLES[path] || ROUTE_TITLES[ROUTE_PATHS.HOME]

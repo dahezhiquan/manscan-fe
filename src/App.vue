@@ -9,6 +9,7 @@ import HostAssetDetailPage from './pages/HostAssetDetailPage.vue'
 import HostAssetsPage from './pages/HostAssetsPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import ScansDashboardPage from './pages/ScansDashboardPage.vue'
+import SettingsPage from './pages/SettingsPage.vue'
 import TemplateDetailPage from './pages/TemplateDetailPage.vue'
 import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
@@ -135,6 +136,10 @@ watch(currentPath, () => {
 const currentView = computed(() => {
   if (currentPath.value === '/assets/config') {
     return AssetConfigCenterPage
+  }
+
+  if (currentPath.value === '/settings') {
+    return SettingsPage
   }
 
   if (currentPath.value.startsWith('/assets/domains/')) {

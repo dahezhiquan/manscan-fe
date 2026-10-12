@@ -12,6 +12,10 @@ const props = defineProps({
     type: String,
     default: 'admin'
   },
+  currentPath: {
+    type: String,
+    default: '/'
+  },
   primaryNav: {
     type: Array,
     default: () => []
@@ -43,6 +47,14 @@ function closeAccountMenu() {
 function handleLogout() {
   closeAccountMenu()
   emit('logout')
+}
+
+function isNavItemActive(item) {
+  if (!item?.route) {
+    return false
+  }
+
+  return item.active || props.currentPath === item.route || props.currentPath.startsWith(`${item.route}/`)
 }
 
 function handleDocumentClick(event) {
@@ -136,7 +148,7 @@ onBeforeUnmount(() => {
         v-for="item in props.primaryNav"
         :key="item.label"
         class="nav-item"
-        :class="{ active: item.active }"
+        :class="{ active: isNavItemActive(item) }"
         @click="item.route && $emit('navigate', item.route)"
       >
         <span class="nav-icon">
@@ -158,7 +170,7 @@ onBeforeUnmount(() => {
         v-for="item in props.secondaryNav"
         :key="item.label"
         class="nav-item"
-        :class="{ active: item.active }"
+        :class="{ active: isNavItemActive(item) }"
         @click="item.route && $emit('navigate', item.route)"
       >
         <span class="nav-icon">
@@ -175,7 +187,13 @@ onBeforeUnmount(() => {
     </nav>
 
     <nav class="nav-footer separated">
-      <button v-for="item in props.footerNav" :key="item.label" class="nav-item">
+      <button
+        v-for="item in props.footerNav"
+        :key="item.label"
+        class="nav-item"
+        :class="{ active: isNavItemActive(item) }"
+        @click="item.route && $emit('navigate', item.route)"
+      >
         <span class="nav-icon">
           <svg
             viewBox="0 0 24 24"

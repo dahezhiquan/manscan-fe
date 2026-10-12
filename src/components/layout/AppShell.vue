@@ -33,6 +33,7 @@ const { navigationState } = useSidebarNavigation(toRef(props, 'currentPath'))
     <AppSidebar
       :is-collapsed="props.isSidebarCollapsed"
       :current-user-name="props.currentUserName"
+      :current-path="props.currentPath"
       :primary-nav="navigationState.primaryNav"
       :secondary-nav="navigationState.secondaryNav"
       :footer-nav="footerNav"

@@ -13,7 +13,7 @@ export const secondaryNav = [
 ]
 
 export const footerNav = [
-  { label: '设置', icon: 'gear' },
+  { label: '设置', icon: 'gear', route: '/settings' },
   { label: '文档中心', icon: 'help' }
 ]
 
