@@ -43,6 +43,10 @@ const props = defineProps({
   currentUserName: {
     type: String,
     default: 'admin'
+  },
+  currentUserRole: {
+    type: String,
+    default: 'user'
   }
 })
 const leftColumnRef = ref(null)
@@ -226,7 +230,7 @@ watch(
     />
 
     <main class="main-content">
-      <DashboardTopbar />
+      <DashboardTopbar :current-user-name="props.currentUserName" :current-user-role="props.currentUserRole" />
       <DiscoverCard :navigate-to="props.navigateTo" />
 
       <section class="content-grid">

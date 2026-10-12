@@ -35,6 +35,7 @@ const currentUserName = computed(() => {
   const user = currentUser.value
   return user?.display_name || user?.username || 'admin'
 })
+const currentUserRole = computed(() => currentUser.value?.role || 'user')
 
 function rememberRedirectPath() {
   if (currentPath.value !== ROUTE_PATHS.LOGIN) {
@@ -188,6 +189,7 @@ const currentView = computed(() => {
     :current-path="currentPath"
     :is-sidebar-collapsed="isSidebarCollapsed"
     :current-user-name="currentUserName"
+    :current-user-role="currentUserRole"
     @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed"
     @logout="handleLogout"
   />

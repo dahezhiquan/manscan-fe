@@ -307,6 +307,198 @@
   transform: translate(-1px, -1px);
 }
 
+.login-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.login-challenge {
+  margin-top: 16px;
+}
+
+.login-challenge-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.login-challenge-head > span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.login-challenge-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+  color: var(--line);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.login-challenge-refresh svg {
+  width: 17px;
+  height: 17px;
+}
+
+.login-challenge-refresh:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--line);
+}
+
+.login-challenge-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.login-challenge-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 112px;
+  padding: 14px;
+  border: 2px dashed var(--line-soft);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.78);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.login-challenge-status.is-error {
+  border-style: solid;
+  background: #ffd8df;
+  color: #8f1830;
+}
+
+.login-challenge-status button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat);
+  color: var(--line);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.login-orbit {
+  position: relative;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 148px;
+  align-items: center;
+  padding: 12px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(rgba(31, 26, 23, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 26, 23, 0.045) 1px, transparent 1px),
+    var(--surface);
+  background-size: 18px 18px, 18px 18px, auto;
+  box-shadow: var(--shadow-flat);
+  user-select: none;
+  touch-action: none;
+}
+
+.login-orbit-svg {
+  width: 148px;
+  height: 148px;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.login-orbit-svg circle:first-child {
+  fill: rgba(132, 215, 255, 0.22);
+  stroke: var(--line);
+  stroke-width: 4;
+  stroke-dasharray: 6 7;
+}
+
+.login-orbit-svg path {
+  stroke: rgba(31, 26, 23, 0.42);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.login-orbit-target {
+  fill: var(--accent-orange);
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.login-orbit-knob {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--accent-yellow);
+  box-shadow: 4px 4px 0 var(--line);
+  color: var(--line);
+  transition:
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+  touch-action: none;
+}
+
+.login-orbit-knob svg {
+  width: 19px;
+  height: 19px;
+}
+
+.login-orbit-knob:hover,
+.login-orbit-knob:focus-visible,
+.login-orbit.is-dragging .login-orbit-knob {
+  box-shadow: 6px 6px 0 var(--line);
+  background: var(--accent-green);
+}
+
+.login-orbit-copy {
+  min-width: 0;
+}
+
+.login-orbit-copy strong {
+  display: block;
+  color: var(--line);
+  font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.login-orbit-copy span {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.login-orbit.is-done .login-orbit-copy span {
+  color: #287a1d;
+}
+
 .login-error {
   min-height: 34px;
   margin: 14px 0 0;
@@ -447,6 +639,15 @@
   .login-terminal-body {
     font-size: 12px;
   }
+
+  .login-orbit {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .login-orbit-copy {
+    text-align: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -456,7 +657,9 @@
   }
 
   .login-submit,
-  .login-field input {
+  .login-field input,
+  .login-challenge-refresh,
+  .login-orbit-knob {
     transition: none;
   }
 }

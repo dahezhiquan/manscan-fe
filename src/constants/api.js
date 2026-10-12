@@ -3,6 +3,7 @@ export const TEMPLATE_MULTI_VALUE_QUERY_MODE = 'repeat'
 
 export const API_PREFIX = `${API_BASE_URL}/api/v1`
 
+export const AUTH_CHALLENGE_API = `${API_PREFIX}/auth/challenge`
 export const AUTH_LOGIN_API = `${API_PREFIX}/auth/login`
 export const AUTH_ME_API = `${API_PREFIX}/auth/me`
 export const AUTH_LOGOUT_API = `${API_PREFIX}/auth/logout`

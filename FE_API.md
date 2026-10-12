@@ -28,7 +28,27 @@
 
 ## 认证相关接口
 
-### 1. 登录
+### 1. 获取登录验证码
+
+- 用途：登录页加载和验证码失效后刷新 `orbital_slider` 验证场景
+- 请求方式：`GET`
+- 路径：`/api/v1/auth/challenge`
+- 请求参数：无
+- 返回结构：前端使用 `data.challenge_id`、`data.challenge_type`、`data.scene` 和 `data.requirements`
+  - `challenge_type`: 当前支持 `orbital_slider`
+  - `scene.prompt` / `scene.title` / `scene.instruction`: 可选，作为验证码提示文案
+  - `scene.start_angle` / `scene.startAngle`: 可选，作为滑块初始角度
+  - `scene.target_angle` / `scene.targetAngle` / `scene.target`: 可选，作为目标角度提示点
+  - `requirements.max_track_points`: 可选，作为前端记录轨迹点数量上限
+- 异常分支：
+  - 请求失败时，登录页展示验证码加载失败状态和重试入口
+  - 返回的 `challenge_type` 不是 `orbital_slider` 时，登录页展示“不支持当前验证码场景”
+- 联调注意事项：
+  - 验证码接口不携带 `Authorization` 请求头
+  - 前端会在登录页挂载时立即请求一次验证码
+  - 登录失败且后端返回 `data.refresh_required=true` 时，前端会重新请求本接口并清空当前拖拽结果
+
+### 2. 登录
 
 - 用途：登录页提交账户密码并建立前端会话
 - 请求方式：`POST`
@@ -36,12 +56,16 @@
 - 请求参数：
   - `username`: 登录用户名，最长 `64` 个字符
   - `password`: 登录密码，最长 `256` 个字符
+  - `challenge_id`: 登录验证码 ID，来自 `/api/v1/auth/challenge`
+  - `challenge_answer.angle`: `orbital_slider` 最终角度，前端按圆心右侧为 `0` 度、顺时针递增提交
+  - `challenge_answer.drag_duration_ms`: 本次拖拽耗时，单位毫秒
+  - `challenge_answer.track`: 拖拽轨迹数组，格式为 `[{x,y,t}]`
 - 返回结构：前端使用 `data.access_token`、`data.token_type`、`data.expires_at`、`data.user`
   - `user.username`
   - `user.display_name`
   - `user.role`
 - 异常分支：
-  - `40001`: 登录表单参数错误，登录页展示后端错误文案
+  - `40001`: 登录表单参数错误或验证码错误，登录页展示后端错误文案；若 `data.refresh_required=true`，前端刷新验证码并提示用户重试
   - `40101`: 用户名或密码错误，登录页展示后端错误文案，并读取 `data.remaining_attempts` 展示剩余尝试次数
   - `40301`: 用户被禁用或账户已锁定，登录页展示后端错误文案；若 `data.locked=true`，前端展示锁定提示并禁用当前账号的密码输入和提交按钮
   - 网络或未知错误展示“登录失败，请检查网络后重试。”
@@ -51,7 +75,7 @@
   - 错误密码达到后端阈值后，后端返回 `locked=true`；前端切换用户名时会清理当前锁定提示
   - 登录成功后由后端清零连续失败次数，前端不额外维护失败计数
 
-### 2. 获取当前用户
+### 3. 获取当前用户
 
 - 用途：应用启动时校验已有登录态，并刷新侧边栏用户展示
 - 请求方式：`GET`
@@ -64,7 +88,7 @@
 - 联调注意事项：
   - 页面刷新后，前端会优先调用本接口确认 token 是否仍然有效
 
-### 3. 退出登录
+### 4. 退出登录
 
 - 用途：侧边栏账户菜单退出当前会话
 - 请求方式：`POST`
