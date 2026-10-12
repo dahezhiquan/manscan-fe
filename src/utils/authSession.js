@@ -7,7 +7,15 @@ const LEGACY_LOGIN_USERNAME_KEY = 'manscan-login-username'
 
 export const AUTH_SESSION_EXPIRED_EVENT = 'manscan-auth-session-expired'
 
-function getStorage() {
+function getPrimaryStorage() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  return window.localStorage
+}
+
+function getFallbackStorage() {
   if (typeof window === 'undefined') {
     return null
   }
@@ -17,7 +25,20 @@ function getStorage() {
 
 function readStorageValue(key) {
   try {
-    return getStorage()?.getItem(key) || ''
+    const primaryValue = getPrimaryStorage()?.getItem(key)
+
+    if (primaryValue) {
+      return primaryValue
+    }
+
+    const fallbackValue = getFallbackStorage()?.getItem(key) || ''
+
+    if (fallbackValue) {
+      writeStorageValue(key, fallbackValue)
+      getFallbackStorage()?.removeItem(key)
+    }
+
+    return fallbackValue
   } catch {
     return ''
   }
@@ -25,7 +46,8 @@ function readStorageValue(key) {
 
 function writeStorageValue(key, value) {
   try {
-    getStorage()?.setItem(key, value)
+    getPrimaryStorage()?.setItem(key, value)
+    getFallbackStorage()?.removeItem(key)
   } catch {
     // Storage can be unavailable in restricted browser contexts.
   }
@@ -33,7 +55,8 @@ function writeStorageValue(key, value) {
 
 function removeStorageValue(key) {
   try {
-    getStorage()?.removeItem(key)
+    getPrimaryStorage()?.removeItem(key)
+    getFallbackStorage()?.removeItem(key)
   } catch {
     // Storage can be unavailable in restricted browser contexts.
   }

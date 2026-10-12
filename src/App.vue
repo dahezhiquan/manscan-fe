@@ -177,12 +177,7 @@ const currentView = computed(() => {
 </script>
 
 <template>
-  <main v-if="!isAuthReady" class="auth-loading-page" aria-label="正在校验登录状态">
-    <div class="auth-loading-card">
-      <span class="auth-loading-mark" aria-hidden="true"></span>
-      <span>正在校验登录状态</span>
-    </div>
-  </main>
+  <div v-if="!isAuthReady" class="auth-init-placeholder" aria-hidden="true"></div>
 
   <LoginPage v-else-if="!isAuthenticated" @login-success="handleLoginSuccess" />
 
