@@ -858,6 +858,7 @@
 .scan-task-detail-ghost-button,
 .scan-task-detail-primary-button,
 .scan-task-detail-inline-button,
+.scan-task-detail-recreate-button,
 .scan-task-detail-rescan-button,
 .scan-task-detail-toggle-button,
 .scan-task-detail-danger-button {
@@ -878,6 +879,14 @@
 
 .scan-task-detail-primary-button {
   background: var(--accent-blue);
+}
+
+.scan-task-detail-recreate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-3);
+  color: #3f4f10;
 }
 
 .scan-task-detail-rescan-button {
@@ -917,6 +926,7 @@
 }
 
 .scan-task-detail-toggle-button svg,
+.scan-task-detail-recreate-button svg,
 .scan-task-detail-rescan-button svg,
 .scan-task-detail-danger-button svg {
   width: 16px;
@@ -926,6 +936,7 @@
 .scan-task-detail-ghost-button:hover,
 .scan-task-detail-primary-button:hover,
 .scan-task-detail-inline-button:hover,
+.scan-task-detail-recreate-button:hover,
 .scan-task-detail-rescan-button:hover,
 .scan-task-detail-toggle-button:hover,
 .scan-task-detail-danger-button:hover {
@@ -934,6 +945,7 @@
 
 .scan-task-detail-primary-button:disabled,
 .scan-task-detail-inline-button:disabled,
+.scan-task-detail-recreate-button:disabled,
 .scan-task-detail-rescan-button:disabled,
 .scan-task-detail-toggle-button:disabled,
 .scan-task-detail-danger-button:disabled {
@@ -1388,6 +1400,7 @@
 
   .scan-task-detail-ghost-button,
   .scan-task-detail-primary-button,
+  .scan-task-detail-recreate-button,
   .scan-task-detail-rescan-button {
     flex: 1 1 180px;
   }
@@ -2487,6 +2500,11 @@
   flex-direction: column;
   gap: 4px;
   color: #287b49;
+}
+
+.scan-create-status.is-recreate {
+  color: #37508f;
+  font-weight: 700;
 }
 
 .scan-create-status.is-success strong {

@@ -407,6 +407,7 @@
 - 请求参数：
   - 请求体为 JSON
   - 前端会按表单仅提交已填写字段
+  - `created_by` 固定使用当前登录用户，由前端在提交前写入；创建页不提供手动编辑入口
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
   - 高级能力字段：
     - `dast`: `boolean`，启用 DAST/fuzzable 模板
@@ -417,6 +418,7 @@
   - 当前后端不限制单次任务的目标数量上限
   - `no_interactsh=true` 时，前端会阻止同时填写 `interactsh_server` 或 `interactsh_token`，与后端互斥约定保持一致
   - `interactsh_token` 仅在创建请求中提交，前端不会在任务查询页面展示该字段
+  - 从扫描详情页点击“重新创建扫描”进入创建页时，前端会先请求 `GET /api/v1/scans/:id/config`，再消费一次性内存草稿并预填表单；草稿中的 `created_by` 会被忽略并改用当前登录用户
 - 返回结构：前端使用 `data.task.id`、`data.task.task_no`、`data.task.status`、`data.task_api`
 - 异常分支：
   - 非 2xx 或业务错误时，在页面顶部展示错误文案
@@ -443,7 +445,25 @@
   - 成功后前端立即在当前页跳转到 `/scans/:newId`，并由新详情页重新加载任务详情和日志流
   - `task_api` 建议返回 `/api/v1/scans/:id`，作为 `task.id` 缺失时的兜底解析来源
 
-### 11. 取消扫描任务
+### 11. 获取扫描任务可复用配置
+
+- 用途：扫描任务详情页“重新创建扫描”按钮读取原任务配置，并带入创建扫描任务页表单
+- 请求方式：`GET`
+- 路径：`/api/v1/scans/:id/config`
+- 请求参数：
+  - 路径参数 `id`: 原扫描任务 ID
+- 返回结构：前端使用 `data.config`
+  - `data.config` 字段口径与创建扫描任务表单字段保持一致，例如 `targets`、`exclude_targets`、`include_ids`、`tags`、`severities`、`protocols`、`automatic_scan`、`store_response`、`custom_headers`、`interactsh_server`、`interactsh_token`、`no_interactsh`、并发/超时/headless/代理等配置字段
+- 异常分支：
+  - 请求失败时，在扫描详情页顶部展示错误提示
+  - 返回配置为空或无法映射到创建页字段时，展示“当前任务缺少可带入创建页的扫描配置。”
+- 联调注意事项：
+  - 前端点击“重新创建扫描”时只读取配置并跳转创建页，不会创建或启动新任务
+  - 前端会把 `data.config` 存入一次性内存草稿，创建页读取后立即清理；页面刷新后草稿不会保留
+  - 前端会按创建页字段类型做兼容归一化，例如 JSON 字符串数组、多行字符串数组、布尔值、数字值和响应大小 MB 展示值
+  - `interactsh_token` 会按接口返回值回填到创建页密码输入框
+
+### 12. 取消扫描任务
 
 - 用途：扫描任务详情页停止仍处于 `pending` / `running` / `paused` 状态的任务
 - 请求方式：`POST`
@@ -457,7 +477,7 @@
   - 前端当前会在任务状态为 `pending`、`running` 或 `paused` 时展示停止按钮
   - 当 `cancel_requested=true` 且返回状态仍为 `running` 时，表示后端已受理取消请求，最终状态会在后续详情轮询或日志流中收敛为 `cancelled`
 
-### 12. 暂停扫描任务
+### 13. 暂停扫描任务
 
 - 用途：扫描任务详情页暂停仍处于 `pending` / `running` 状态的任务
 - 请求方式：`POST`
@@ -472,7 +492,7 @@
   - 点击后前端会立即切换为“已暂停”交互态，并停止实时日志连接与详情轮询
   - 当后端最终把任务状态收敛为 `paused` 后，前端会自动清除本地过渡状态
 
-### 13. 恢复扫描任务
+### 14. 恢复扫描任务
 
 - 用途：扫描任务详情页恢复 `paused` 状态的任务
 - 请求方式：`POST`
@@ -606,6 +626,7 @@
   - `data.task.tech_count` 用于“指纹识别数量”展示，空值前端回退为 `--`
   - `progress.finished`、`progress.finished_status` 会影响是否切换到已完成日志模式；当 `finished_status=paused` 时，前端会按“暂停态”而不是“已结束态”处理
   - `progress.last_event_seq` 会影响日志续拉偏移量
+  - 详情页“重新创建扫描”按钮不再依赖详情接口返回完整扫描配置，而是单独请求 `GET /api/v1/scans/:id/config`
 
 ### 15. 获取扫描任务日志
 

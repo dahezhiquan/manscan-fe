@@ -5,6 +5,7 @@ import {
   SCAN_TASK_STATS_API,
   buildScanTaskApi,
   buildScanTaskCancelApi,
+  buildScanTaskConfigApi,
   buildScanTaskLogsApi,
   buildScanTaskRawLogsArchiveApi,
   buildScanTaskResponsesArchiveApi,
@@ -68,6 +69,12 @@ export async function createScanTask(payload) {
 
 export async function getScanTask(taskId, signal) {
   return requestJson(buildScanTaskApi(taskId), {
+    signal
+  })
+}
+
+export async function getScanTaskConfig(taskId, signal) {
+  return requestJson(buildScanTaskConfigApi(taskId), {
     signal
   })
 }

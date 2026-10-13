@@ -8,6 +8,7 @@ import {
 } from '../constants/scanTasks'
 import { getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
 import { protocolFilterOptions, severityFilterOptions } from '../data/templates'
+import { consumeScanTaskRecreateDraft } from '../utils/scanTaskRecreateDraft'
 import {
   appendMultiValueParam,
   mapSeverityTone,
@@ -21,6 +22,10 @@ const props = defineProps({
   navigateTo: {
     type: Function,
     required: true
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
   }
 })
 
@@ -29,7 +34,7 @@ const stepDefinitions = [
     key: 'basic',
     label: '基础信息',
     title: '指定扫描的基础信息',
-    description: '先填写任务名称、描述和创建人，方便后续在任务列表中快速识别。',
+    description: '先填写任务名称和描述，方便后续在任务列表中快速识别。',
     accent: 'Base'
   },
   {
@@ -75,14 +80,14 @@ const DEFAULT_CUSTOM_HEADERS = [
 
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])
 const AUTOMATIC_SCAN_EXCLUDED_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
+const FILLED_FIELD_COUNT_EXCLUDED_FIELDS = new Set(['created_by'])
 const MB_TO_BYTES = 1024 * 1024
 const SELECT_ALL_TEMPLATE_TIMEOUT = 90000
 
 const stepFields = {
   basic: [
     { key: 'name', label: '任务名称', type: 'string', placeholder: '例如：外网域名漏扫' },
-    { key: 'description', label: '任务描述', type: 'string', placeholder: '描述本次扫描目标、背景或关注点' },
-    { key: 'created_by', label: '创建人', type: 'string', placeholder: '例如：guohongquan_dxm' }
+    { key: 'description', label: '任务描述', type: 'string', placeholder: '描述本次扫描目标、背景或关注点' }
   ],
   targets: [
     {
@@ -418,6 +423,7 @@ const globalScanDisabledTargets = ref([])
 const globalScanDisabledLoading = ref(false)
 const globalScanDisabledError = ref('')
 const globalScanDisabledRequestState = ref('idle')
+const recreateDraftNotice = ref('')
 const isGlobalScanDisabledConfirmOpen = ref(false)
 const manualExcludeTargets = ref([])
 const globalScanDisabledConfirmCancelButton = ref(null)
@@ -440,10 +446,14 @@ let globalScanDisabledRequestId = 0
 
 const currentStep = computed(() => stepDefinitions[activeStep.value])
 const currentFields = computed(() => (stepFields[currentStep.value.key] ?? []).filter((field) => isFieldVisible(field)))
+const currentCreatorName = computed(() => String(props.currentUserName ?? '').trim() || 'admin')
 const completionRate = computed(() => `${Math.round(((activeStep.value + 1) / stepDefinitions.length) * 100)}%`)
 const filledFieldCount = computed(() => {
-  const values = Object.values(form)
-  return values.filter((value) => {
+  return Object.entries(form).filter(([key, value]) => {
+    if (FILLED_FIELD_COUNT_EXCLUDED_FIELDS.has(key)) {
+      return false
+    }
+
     if (typeof value === 'boolean') {
       return value
     }
@@ -677,6 +687,78 @@ function normalizeStringList(value) {
   }
 
   return [...new Set(value.map((item) => String(item ?? '').trim()).filter(Boolean))]
+}
+
+function syncCurrentCreator() {
+  form.created_by = currentCreatorName.value
+}
+
+function applyRecreateDraft() {
+  let draft = null
+
+  try {
+    draft = consumeScanTaskRecreateDraft()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '读取扫描配置草稿失败。'
+    return
+  }
+
+  if (!draft?.form) {
+    return
+  }
+
+  Object.entries(draft.form).forEach(([key, value]) => {
+    if (key === 'created_by') {
+      return
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(form, key)) {
+      return
+    }
+
+    if (Array.isArray(form[key])) {
+      const nextValue = normalizeStringList(Array.isArray(value) ? value : [])
+
+      if (key === 'exclude_targets') {
+        manualExcludeTargets.value = nextValue
+        syncExcludeTargets()
+        return
+      }
+
+      form[key] = nextValue
+      multiLineDrafts[key] = arrayToLines(nextValue)
+      return
+    }
+
+    if (typeof form[key] === 'boolean') {
+      form[key] = Boolean(value)
+      return
+    }
+
+    if (typeof value === 'number') {
+      form[key] = Number.isFinite(value) ? value : form[key]
+      return
+    }
+
+    if (value !== null && value !== undefined) {
+      form[key] = String(value)
+    }
+  })
+
+  syncCurrentCreator()
+
+  templateSelectedTags.value = [...form.tags]
+  templateSelectedSeverities.value = [...form.severities]
+  templateSelectedProtocols.value = [...form.protocols]
+  isAllFilteredTemplatesSelected.value =
+    !form.automatic_scan &&
+    form.include_ids.length === 0 &&
+    (form.tags.length > 0 || form.severities.length > 0 || form.protocols.length > 0)
+
+  const sourceLabel = draft.source_task_no || draft.source_task_id || draft.source_task_name
+  recreateDraftNotice.value = sourceLabel
+    ? `已从扫描任务 ${sourceLabel} 带入配置。`
+    : '已带入原扫描配置。'
 }
 
 function mergeStringLists(...values) {
@@ -1386,6 +1468,8 @@ function goNext() {
 function buildPayload() {
   const payload = {}
 
+  syncCurrentCreator()
+
   Object.entries(multiLineDrafts).forEach(([key, value]) => {
     if (Array.isArray(form[key])) {
       form[key] = linesToArray(value)
@@ -1520,7 +1604,10 @@ watch(
   { deep: true }
 )
 
+watch(currentCreatorName, syncCurrentCreator, { immediate: true })
+
 onMounted(() => {
+  applyRecreateDraft()
   fetchTemplateOptions()
   fetchTemplateList(1)
   loadGlobalScanDisabledTargets()
@@ -1545,7 +1632,7 @@ onBeforeUnmount(() => {
   <main class="scan-create-page">
     <section class="scan-create-hero">
       <div class="scan-create-hero-copy">
-        <h1>创建扫描任务</h1>
+        <h1>{{ recreateDraftNotice ? '重新创建扫描任务' : '创建扫描任务' }}</h1>
         <div class="scan-create-checklist-card">
           <span class="scan-create-checklist-label">度小满安全扫描前 checklist</span>
           <a
@@ -1600,6 +1687,7 @@ onBeforeUnmount(() => {
             <span class="scan-create-form-badge">{{ currentStep.accent }}</span>
             <h2>{{ currentStep.title }}</h2>
             <p>{{ currentStep.description }}</p>
+            <p v-if="currentStep.key === 'basic'">创建人：{{ currentCreatorName }}</p>
           </div>
 
           <button class="scan-create-ghost-button" type="button" @click="props.navigateTo('/scans')">
@@ -2125,6 +2213,7 @@ onBeforeUnmount(() => {
                 任务号：{{ successPayload.task?.task_no || '--' }} · 状态：{{ successPayload.task?.status || '--' }}
               </span>
             </div>
+            <p v-else-if="recreateDraftNotice" class="scan-create-status is-recreate">{{ recreateDraftNotice }}</p>
 <!--            <p v-else class="scan-create-status is-muted">-->
 <!--              表单状态会保留在当前页面切换中；提交前会自动过滤空字段，只发送已填写内容。-->
 <!--            </p>-->

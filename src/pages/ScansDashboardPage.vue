@@ -44,7 +44,12 @@ const taskDetailId = computed(() => {
     @logout="emit('logout')"
   >
     <template #default>
-      <ScanTaskCreatePage v-if="isCreatePage" :key="props.currentPath" :navigate-to="props.navigateTo" />
+      <ScanTaskCreatePage
+        v-if="isCreatePage"
+        :key="props.currentPath"
+        :navigate-to="props.navigateTo"
+        :current-user-name="props.currentUserName"
+      />
       <ScanTaskDetailPage
         v-else-if="taskDetailId"
         :key="props.currentPath"

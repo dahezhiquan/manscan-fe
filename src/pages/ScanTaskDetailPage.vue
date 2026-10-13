@@ -6,12 +6,14 @@ import {
   downloadScanTaskRawLogsArchive,
   downloadScanTaskResponsesArchive,
   getScanTask,
+  getScanTaskConfig,
   getScanTaskLogs,
   pauseScanTask,
   rescanScanTask,
   resumeScanTask
 } from '../api/scans'
 import { SCAN_STRATEGY_LABELS } from '../constants/scanTasks'
+import { saveScanTaskRecreateDraft } from '../utils/scanTaskRecreateDraft'
 import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
@@ -49,6 +51,7 @@ const isRefreshing = ref(false)
 const isCancelling = ref(false)
 const isPauseActionLoading = ref(false)
 const isRescanning = ref(false)
+const isRecreating = ref(false)
 const isDownloadingResponsesArchive = ref(false)
 const isDownloadingRawLogsArchive = ref(false)
 const downloadArchiveError = ref('')
@@ -71,6 +74,7 @@ const actionStatusOverride = ref('')
 let currentTaskRequestId = 0
 let fetchController = null
 let rescanController = null
+let recreateController = null
 let eventSource = null
 let reconnectTimer = null
 let durationTimer = null
@@ -239,6 +243,7 @@ const canCancelTask = computed(() => ['pending', 'running', 'paused'].includes(t
 const canPauseTask = computed(() => ['pending', 'running'].includes(taskStatus.value))
 const canResumeTask = computed(() => taskStatus.value === 'paused')
 const canRescanTask = computed(() => Boolean(taskId.value) && !isLoading.value && taskStatus.value !== 'running')
+const canRecreateTask = computed(() => Boolean(task.value) && !isLoading.value)
 const showPauseToggleButton = computed(() => canPauseTask.value || canResumeTask.value)
 const pauseToggleAriaLabel = computed(() => {
   if (isPauseActionLoading.value) {
@@ -1086,6 +1091,32 @@ async function handleRescanTask() {
   }
 }
 
+async function handleRecreateTask() {
+  if (!taskId.value || isRecreating.value || !canRecreateTask.value) {
+    return
+  }
+
+  recreateController?.abort()
+  recreateController = new AbortController()
+  isRecreating.value = true
+  pageError.value = ''
+
+  try {
+    const data = await getScanTaskConfig(taskId.value, recreateController.signal)
+    const config = data?.config && typeof data.config === 'object' ? data.config : data
+
+    saveScanTaskRecreateDraft(config, task.value)
+    props.navigateTo('/scans/create')
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      pageError.value = error instanceof Error ? error.message : '读取扫描配置失败，请稍后重试。'
+    }
+  } finally {
+    isRecreating.value = false
+    recreateController = null
+  }
+}
+
 async function handleDownloadResponsesArchive() {
   if (!taskId.value || isDownloadingResponsesArchive.value) {
     return
@@ -1346,6 +1377,8 @@ function resetState() {
   fetchController = null
   rescanController?.abort()
   rescanController = null
+  recreateController?.abort()
+  recreateController = null
   closeStream()
   stopSummaryPolling()
 
@@ -1364,6 +1397,7 @@ function resetState() {
   isCancelling.value = false
   isPauseActionLoading.value = false
   isRescanning.value = false
+  isRecreating.value = false
   isDownloadingResponsesArchive.value = false
   downloadArchiveError.value = ''
   streamOffset.value = 0
@@ -1500,14 +1534,30 @@ onBeforeUnmount(() => {
         <button class="scan-task-detail-ghost-button" type="button" @click="props.navigateTo('/scans')">
           返回任务列表
         </button>
-        <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing || isRescanning" @click="fetchTaskSummary">
+        <button class="scan-task-detail-primary-button" type="button" :disabled="isRefreshing || isRescanning || isRecreating" @click="fetchTaskSummary">
           {{ isRefreshing ? '刷新中...' : '刷新详情' }}
+        </button>
+        <button
+          v-if="canRecreateTask"
+          class="scan-task-detail-recreate-button"
+          type="button"
+          :disabled="isRefreshing || isRescanning || isRecreating"
+          :aria-busy="isRecreating ? 'true' : 'false'"
+          @click="handleRecreateTask"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+            <path d="M7.5 5.5h-1A2.5 2.5 0 0 0 4 8v9.5A2.5 2.5 0 0 0 6.5 20h9.5a2.5 2.5 0 0 0 2.5-2.5v-1" />
+            <path d="M10 4h7.5A2.5 2.5 0 0 1 20 6.5V14" />
+          </svg>
+          <span>{{ isRecreating ? '读取配置中...' : '重新创建扫描' }}</span>
         </button>
         <button
           v-if="canRescanTask"
           class="scan-task-detail-rescan-button"
           type="button"
-          :disabled="isLoading || isRefreshing || isRescanning"
+          :disabled="isLoading || isRefreshing || isRescanning || isRecreating"
           :aria-busy="isRescanning ? 'true' : 'false'"
           @click="handleRescanTask"
         >
@@ -1522,7 +1572,7 @@ onBeforeUnmount(() => {
           class="scan-task-detail-toggle-button"
           :class="{ 'is-paused': canResumeTask }"
           type="button"
-          :disabled="isPauseActionLoading || isRescanning"
+          :disabled="isPauseActionLoading || isRescanning || isRecreating"
           :aria-label="pauseToggleAriaLabel"
           @click="handlePauseToggle"
         >
@@ -1537,7 +1587,7 @@ onBeforeUnmount(() => {
           v-if="canCancelTask"
           class="scan-task-detail-danger-button"
           type="button"
-          :disabled="isCancelling || isRescanning"
+          :disabled="isCancelling || isRescanning || isRecreating"
           :aria-label="isCancelling ? '正在停止扫描任务' : '停止扫描任务'"
           @click="handleCancelTask"
         >

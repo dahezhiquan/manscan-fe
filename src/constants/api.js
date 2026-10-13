@@ -42,6 +42,10 @@ export function buildScanTaskApi(taskId) {
   return `${SCAN_TASK_CREATE_API}/${taskId}`
 }
 
+export function buildScanTaskConfigApi(taskId) {
+  return `${buildScanTaskApi(taskId)}/config`
+}
+
 export function buildScanTaskCancelApi(taskId) {
   return `${buildScanTaskApi(taskId)}/cancel`
 }
