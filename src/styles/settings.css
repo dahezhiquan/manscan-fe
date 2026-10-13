@@ -568,20 +568,32 @@
   text-align: right;
 }
 
-.settings-theme-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.settings-theme-section {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
 }
 
-.settings-theme-preview {
-  grid-column: 1 / -1;
+.settings-theme-control-panel {
+  min-width: 0;
+}
+
+.settings-theme-mode-toggle {
+  min-height: 92px;
+  padding: 16px;
+}
+
+.settings-theme-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .settings-theme-card {
   display: flex;
+  position: relative;
   flex-direction: column;
-  gap: 10px;
-  min-height: 156px;
-  padding: 14px;
+  gap: 14px;
+  min-height: 176px;
+  padding: 16px;
   cursor: pointer;
   transition:
     background-color 0.18s ease,
@@ -596,6 +608,15 @@
   transform: translate(-1px, -1px);
 }
 
+.settings-theme-card.is-disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.settings-theme-card.is-disabled:hover {
+  transform: none;
+}
+
 .settings-theme-card input {
   position: absolute;
   width: 1px;
@@ -604,17 +625,40 @@
   pointer-events: none;
 }
 
+.settings-theme-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
 .settings-theme-swatches {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  min-height: 44px;
+  gap: 8px;
+  min-height: 58px;
 }
 
 .settings-theme-swatches span {
   border: 2px solid var(--line);
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 1px 1px 0 var(--line);
+}
+
+.settings-theme-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 28px;
+  margin-top: auto;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--accent-yellow);
+  color: var(--line);
+  box-shadow: var(--shadow-flat);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .settings-toggle-row {
@@ -652,13 +696,14 @@
 .settings-switch::after {
   content: '';
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
   width: 16px;
   height: 16px;
   border: 2px solid var(--line);
   border-radius: 50%;
   background: #fff;
+  transform: translateY(-50%);
   transition: transform 0.18s ease;
 }
 
@@ -666,8 +711,13 @@
   background: var(--accent-green);
 }
 
+.settings-switch-input:disabled + .settings-switch {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .settings-switch-input:checked + .settings-switch::after {
-  transform: translateX(20px);
+  transform: translate(20px, -50%);
 }
 
 .settings-switch-input:focus-visible + .settings-switch {

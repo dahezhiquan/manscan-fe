@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getCurrentUser, logoutCurrentUser } from './api/auth'
+import { getThemeSettings } from './api/settings'
 import DashboardPage from './pages/DashboardPage.vue'
 import AssetConfigCenterPage from './pages/AssetConfigCenterPage.vue'
 import DomainAssetDetailPage from './pages/DomainAssetDetailPage.vue'
@@ -15,6 +16,7 @@ import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
 import { useAppRouter } from './composables/useAppRouter'
+import { setColorMode } from './composables/useColorMode'
 import { ROUTE_PATHS } from './router/routes'
 import {
   AUTH_SESSION_EXPIRED_EVENT,
@@ -24,6 +26,7 @@ import {
   setAuthSession,
   updateStoredUser
 } from './utils/authSession'
+import { normalizeThemeSettings } from './utils/themeSettings'
 
 const isSidebarCollapsed = ref(false)
 const { currentPath, navigateTo } = useAppRouter()
@@ -31,6 +34,7 @@ const isAuthReady = ref(false)
 const isAuthenticated = ref(Boolean(getAuthToken()))
 const currentUser = ref(getStoredUser())
 const redirectAfterLogin = ref('')
+let themeSettingsAbortController = null
 
 const currentUserName = computed(() => {
   const user = currentUser.value
@@ -64,14 +68,38 @@ function handleLoginSuccess(payload) {
   currentUser.value = updateStoredUser(payload?.user)
   isAuthenticated.value = true
   isAuthReady.value = true
+  void syncCurrentUserThemeSettings()
   redirectAuthenticatedLogin()
 }
 
 function resetAuthState() {
+  themeSettingsAbortController?.abort()
+  themeSettingsAbortController = null
+  setColorMode(false)
   clearAuthSession()
   currentUser.value = null
   isAuthenticated.value = false
   isSidebarCollapsed.value = false
+}
+
+async function syncCurrentUserThemeSettings() {
+  themeSettingsAbortController?.abort()
+  themeSettingsAbortController = new AbortController()
+  const controller = themeSettingsAbortController
+
+  try {
+    const data = await getThemeSettings(controller.signal)
+    const normalized = normalizeThemeSettings(data)
+    setColorMode(normalized.darkModeEnabled)
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      setColorMode(false)
+    }
+  } finally {
+    if (themeSettingsAbortController === controller) {
+      themeSettingsAbortController = null
+    }
+  }
 }
 
 async function handleLogout() {
@@ -97,6 +125,7 @@ async function initializeAuth() {
     const user = await getCurrentUser()
     currentUser.value = updateStoredUser(user)
     isAuthenticated.value = true
+    void syncCurrentUserThemeSettings()
     redirectAuthenticatedLogin()
   } catch {
     resetAuthState()
@@ -118,6 +147,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired)
+  themeSettingsAbortController?.abort()
 })
 
 watch(currentPath, () => {

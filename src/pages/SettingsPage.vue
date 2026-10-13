@@ -1,8 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { getThemeSettings, updateThemeSettings } from '../api/settings'
 import { createUser, deleteUser, getUserList, updateUser } from '../api/users'
 import AppShell from '../components/layout/AppShell.vue'
+import { setColorMode } from '../composables/useColorMode'
 import { iconPath } from '../utils/icons'
+import { normalizeThemeSettings } from '../utils/themeSettings'
 import {
   USER_ROLE_OPTIONS,
   USER_STATUS_OPTIONS,
@@ -42,9 +45,8 @@ const SETTINGS_TABS = [
 ]
 
 const THEME_OPTIONS = [
-  { id: 'cartoon', label: '经典手绘', description: '沿用当前 ManScan 控制台视觉。', swatches: ['#ffd54f', '#84d7ff', '#ffb6b9'] },
-  { id: 'light', label: '清爽浅色', description: '降低装饰感，适合高频数据录入。', swatches: ['#f8fafc', '#3b82f6', '#f59e0b'] },
-  { id: 'contrast', label: '高对比', description: '强化边界和文字对比，适合投屏与弱光环境。', swatches: ['#1f1a17', '#ffffff', '#b9f19f'] }
+  { id: 'cartoon', label: '经典手绘', description: '充满活力的手绘风格主题，适合年轻的使用者', swatches: ['#ffd54f', '#84d7ff', '#ffb6b9'] },
+  { id: 'deep', label: '深邃沉稳', description: '科技深邃风格主题，适合沉稳的使用者', swatches: ['#171f2f', '#2d6cdf', '#7dd3fc'] }
 ]
 
 const NOTIFICATION_POLICIES = [
@@ -56,8 +58,7 @@ const NOTIFICATION_POLICIES = [
 const activeTab = ref('users')
 const settingsState = reactive({
   selectedTheme: THEME_OPTIONS[0].id,
-  compactMode: false,
-  reduceMotion: true,
+  darkModeEnabled: false,
   scanFinished: true,
   criticalVulnerability: true,
   dailyDigest: false,
@@ -66,6 +67,11 @@ const settingsState = reactive({
 })
 const savedSnapshot = ref(JSON.stringify(settingsState))
 const saveState = ref('idle')
+const themeSettingsState = reactive({
+  loading: false,
+  loaded: false,
+  error: ''
+})
 const usersState = reactive({
   items: [],
   page: 1,
@@ -104,7 +110,10 @@ let usersAbortController = null
 let createUserAbortController = null
 let editUserAbortController = null
 let deleteUserAbortController = null
+let themeSettingsAbortController = null
+let saveThemeSettingsAbortController = null
 let usersRequestId = 0
+let themeSettingsRequestId = 0
 let createUserFeedbackTimer = null
 
 const USERNAME_MAX_LENGTH = 64
@@ -119,13 +128,14 @@ const visibleSettingsTabs = computed(() =>
 const activeTabMeta = computed(
   () => visibleSettingsTabs.value.find((item) => item.id === activeTab.value) ?? visibleSettingsTabs.value[0]
 )
-const selectedTheme = computed(
-  () => THEME_OPTIONS.find((item) => item.id === settingsState.selectedTheme) ?? THEME_OPTIONS[0]
-)
+const isThemeTabActive = computed(() => activeTab.value === 'theme')
 const enabledNotificationCount = computed(() =>
   NOTIFICATION_POLICIES.filter((item) => Boolean(settingsState[item.id])).length
 )
 const isDirty = computed(() => JSON.stringify(settingsState) !== savedSnapshot.value)
+const canSaveSettings = computed(() =>
+  isDirty.value && saveState.value !== 'saving' && !(isThemeTabActive.value && themeSettingsState.loading)
+)
 const saveButtonLabel = computed(() => {
   if (saveState.value === 'saving') {
     return '保存中'
@@ -136,6 +146,21 @@ const saveButtonLabel = computed(() => {
   }
 
   return '保存设置'
+})
+const saveBarDescription = computed(() => {
+  if (isThemeTabActive.value) {
+    if (themeSettingsState.loading) {
+      return '正在读取后端保存的主题设置。'
+    }
+
+    if (themeSettingsState.error) {
+      return '主题设置加载或保存失败，请重试。'
+    }
+
+    return '暗夜模式会即时切换界面，保存后会同步到当前登录用户。'
+  }
+
+  return '当前设置保存在前端状态，后续接入接口后可替换保存逻辑。'
 })
 const usersRangeStart = computed(() => {
   if (!usersState.total) {
@@ -246,6 +271,11 @@ function closeDeleteUserDialog() {
 }
 
 async function saveSettings() {
+  if (isThemeTabActive.value) {
+    await saveThemeSettings()
+    return
+  }
+
   saveState.value = 'saving'
 
   await new Promise((resolve) => {
@@ -265,6 +295,85 @@ async function saveSettings() {
 function resetSettings() {
   Object.assign(settingsState, JSON.parse(savedSnapshot.value))
   saveState.value = 'idle'
+  themeSettingsState.error = ''
+}
+
+function refreshThemeSettings() {
+  void fetchThemeSettings({ force: true })
+}
+
+async function fetchThemeSettings(options = {}) {
+  if (themeSettingsState.loading) {
+    return
+  }
+
+  if (themeSettingsState.loaded && !options.force) {
+    return
+  }
+
+  themeSettingsAbortController?.abort()
+  themeSettingsAbortController = new AbortController()
+  const requestId = ++themeSettingsRequestId
+  themeSettingsState.loading = true
+  themeSettingsState.error = ''
+
+  try {
+    const data = await getThemeSettings(themeSettingsAbortController.signal)
+    const normalized = normalizeThemeSettings(data, THEME_OPTIONS)
+
+    if (requestId === themeSettingsRequestId) {
+      settingsState.selectedTheme = normalized.theme
+      settingsState.darkModeEnabled = normalized.darkModeEnabled
+      updateSavedThemeSnapshot(normalized)
+      themeSettingsState.loaded = true
+      saveState.value = 'idle'
+    }
+  } catch (error) {
+    if (error?.name !== 'AbortError' && requestId === themeSettingsRequestId) {
+      themeSettingsState.error = error instanceof Error ? error.message : '主题设置加载失败，请稍后重试。'
+    }
+  } finally {
+    if (requestId === themeSettingsRequestId) {
+      themeSettingsState.loading = false
+      themeSettingsAbortController = null
+    }
+  }
+}
+
+async function saveThemeSettings() {
+  saveThemeSettingsAbortController?.abort()
+  saveThemeSettingsAbortController = new AbortController()
+  saveState.value = 'saving'
+  themeSettingsState.error = ''
+
+  try {
+    const data = await updateThemeSettings(
+      {
+        theme: settingsState.selectedTheme,
+        darkModeEnabled: settingsState.darkModeEnabled
+      },
+      saveThemeSettingsAbortController.signal
+    )
+    const normalized = normalizeThemeSettings(data, THEME_OPTIONS)
+    settingsState.selectedTheme = normalized.theme
+    settingsState.darkModeEnabled = normalized.darkModeEnabled
+    updateSavedThemeSnapshot(normalized)
+    themeSettingsState.loaded = true
+    saveState.value = 'saved'
+
+    window.setTimeout(() => {
+      if (saveState.value === 'saved') {
+        saveState.value = 'idle'
+      }
+    }, 1600)
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      themeSettingsState.error = error instanceof Error ? error.message : '主题设置保存失败，请稍后重试。'
+      saveState.value = 'idle'
+    }
+  } finally {
+    saveThemeSettingsAbortController = null
+  }
 }
 
 async function fetchUsers(page = usersState.page) {
@@ -430,6 +539,21 @@ function resetEditUserForm() {
   editUserState.error = ''
 }
 
+function updateSavedThemeSnapshot(themeSettings) {
+  const snapshot = parseSavedSettingsSnapshot()
+  snapshot.selectedTheme = themeSettings.theme
+  snapshot.darkModeEnabled = themeSettings.darkModeEnabled
+  savedSnapshot.value = JSON.stringify(snapshot)
+}
+
+function parseSavedSettingsSnapshot() {
+  try {
+    return JSON.parse(savedSnapshot.value)
+  } catch {
+    return { ...settingsState }
+  }
+}
+
 function startUserFeedbackTimer() {
   window.clearTimeout(createUserFeedbackTimer)
   createUserFeedbackTimer = window.setTimeout(() => {
@@ -472,14 +596,24 @@ watch(
       createUserState.isOpen = false
       editUserState.isOpen = false
       deleteUserState.isOpen = false
-      return
     }
 
-    if (tabId === 'users' && !usersState.items.length && !usersState.loading) {
+    if (isAdmin && tabId === 'users' && !usersState.items.length && !usersState.loading) {
       void fetchUsers()
+    }
+
+    if (tabId === 'theme') {
+      void fetchThemeSettings()
     }
   },
   { immediate: true }
+)
+
+watch(
+  () => settingsState.darkModeEnabled,
+  (enabled) => {
+    setColorMode(enabled)
+  }
 )
 
 onBeforeUnmount(() => {
@@ -487,6 +621,8 @@ onBeforeUnmount(() => {
   createUserAbortController?.abort()
   editUserAbortController?.abort()
   deleteUserAbortController?.abort()
+  themeSettingsAbortController?.abort()
+  saveThemeSettingsAbortController?.abort()
   window.clearTimeout(createUserFeedbackTimer)
 })
 </script>
@@ -628,46 +764,57 @@ onBeforeUnmount(() => {
               </section>
             </div>
 
-            <div v-else-if="activeTab === 'theme'" class="settings-theme-grid">
-              <label
-                v-for="theme in THEME_OPTIONS"
-                :key="theme.id"
-                class="settings-theme-card"
-                :class="{ active: settingsState.selectedTheme === theme.id }"
-              >
-                <input v-model="settingsState.selectedTheme" type="radio" name="settings-theme" :value="theme.id" />
-                <span class="settings-theme-swatches" aria-hidden="true">
-                  <span v-for="color in theme.swatches" :key="color" :style="{ backgroundColor: color }"></span>
-                </span>
-                <strong>{{ theme.label }}</strong>
-                <small>{{ theme.description }}</small>
-              </label>
+            <div v-else-if="activeTab === 'theme'" class="settings-theme-section">
+              <div v-if="themeSettingsState.loading" class="settings-alert" role="status">
+                正在加载主题设置
+              </div>
+              <div v-if="themeSettingsState.error" class="settings-alert is-error" role="alert">
+                <span>{{ themeSettingsState.error }}</span>
+                <button type="button" @click="refreshThemeSettings">重试</button>
+              </div>
 
-              <div class="settings-detail-panel settings-theme-preview">
-                <div class="settings-panel-head">
-                  <div>
-                    <span class="settings-panel-kicker">Preview</span>
-                    <h2>{{ selectedTheme.label }}</h2>
-                  </div>
-                </div>
-                <div class="settings-toggle-list">
-                  <label class="settings-toggle-row">
-                    <span>
-                      <strong>紧凑模式</strong>
-                      <small>压缩列表、表格和表单间距。</small>
-                    </span>
-                    <input v-model="settingsState.compactMode" type="checkbox" class="settings-switch-input" />
-                    <span class="settings-switch" aria-hidden="true"></span>
-                  </label>
-                  <label class="settings-toggle-row">
-                    <span>
-                      <strong>减少动效</strong>
-                      <small>降低过渡动画，提升低性能设备稳定性。</small>
-                    </span>
-                    <input v-model="settingsState.reduceMotion" type="checkbox" class="settings-switch-input" />
-                    <span class="settings-switch" aria-hidden="true"></span>
-                  </label>
-                </div>
+              <div class="settings-theme-control-panel">
+                <label class="settings-toggle-row settings-theme-mode-toggle">
+                  <span>
+                    <strong>暗夜模式</strong>
+                    <small>{{ settingsState.darkModeEnabled ? '已开启暗夜模式，界面已即时切换。' : '关闭暗夜模式，界面保持浅色显示。' }}</small>
+                  </span>
+                  <input
+                    v-model="settingsState.darkModeEnabled"
+                    type="checkbox"
+                    class="settings-switch-input"
+                    :disabled="themeSettingsState.loading || saveState === 'saving'"
+                  />
+                  <span class="settings-switch" aria-hidden="true"></span>
+                </label>
+              </div>
+
+              <div class="settings-theme-grid" aria-label="主题选项">
+                <label
+                  v-for="theme in THEME_OPTIONS"
+                  :key="theme.id"
+                  class="settings-theme-card"
+                  :class="{
+                    active: settingsState.selectedTheme === theme.id,
+                    'is-disabled': themeSettingsState.loading || saveState === 'saving'
+                  }"
+                >
+                  <input
+                    v-model="settingsState.selectedTheme"
+                    type="radio"
+                    name="settings-theme"
+                    :value="theme.id"
+                    :disabled="themeSettingsState.loading || saveState === 'saving'"
+                  />
+                  <span class="settings-theme-swatches" aria-hidden="true">
+                    <span v-for="color in theme.swatches" :key="color" :style="{ backgroundColor: color }"></span>
+                  </span>
+                  <span class="settings-theme-copy">
+                    <strong>{{ theme.label }}</strong>
+                    <small>{{ theme.description }}</small>
+                  </span>
+                  <span v-if="settingsState.selectedTheme === theme.id" class="settings-theme-current">当前主题</span>
+                </label>
               </div>
             </div>
 
@@ -715,13 +862,13 @@ onBeforeUnmount(() => {
           <div v-if="activeTab !== 'users'" class="settings-save-bar" :class="{ 'is-dirty': isDirty }">
             <div>
               <strong>{{ isDirty ? '有未保存的设置' : '设置已同步' }}</strong>
-              <p>当前设置保存在前端状态，后续接入接口后可替换保存逻辑。</p>
+              <p>{{ saveBarDescription }}</p>
             </div>
             <div class="settings-save-actions">
-              <button type="button" class="settings-button" :disabled="!isDirty || saveState === 'saving'" @click="resetSettings">
+              <button type="button" class="settings-button" :disabled="!isDirty || saveState === 'saving' || themeSettingsState.loading" @click="resetSettings">
                 撤销
               </button>
-              <button type="button" class="settings-button settings-button--primary" :disabled="saveState === 'saving'" @click="saveSettings">
+              <button type="button" class="settings-button settings-button--primary" :disabled="!canSaveSettings" @click="saveSettings">
                 {{ saveButtonLabel }}
               </button>
             </div>

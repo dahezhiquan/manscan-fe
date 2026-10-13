@@ -428,6 +428,85 @@ curl -X POST "http://127.0.0.1:8686/api/v1/auth/logout" \
 
 访问令牌本身不会明文入库；退出登录会写入会话 `revoked_at`，后续请求即使 JWT 尚未过期也会被拒绝。
 
+## 用户设置
+
+### 获取当前用户主题设置
+
+- 请求方法和路径：`GET /api/v1/settings/theme`
+
+- 请求参数：无
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "theme": "cartoon",
+    "dark_mode_enabled": false
+  }
+}
+```
+
+- 错误码说明：
+  - `40101`：未登录或登录状态已失效
+  - `50001`：获取主题设置失败
+
+- 使用示例：
+
+```bash
+curl "http://127.0.0.1:8686/api/v1/settings/theme" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+用户尚未保存过设置时，接口返回默认配置：`theme=cartoon`、`dark_mode_enabled=false`。
+
+### 保存当前用户主题设置
+
+- 请求方法和路径：`PUT /api/v1/settings/theme`
+
+- 请求参数：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `theme` | `string` | 是 | 主题标识，1-32 位小写字母、数字、下划线或连字符，且以字母或数字开头；保存时会转为小写 |
+| `dark_mode_enabled` | `bool` | 是 | 是否开启深色模式 |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "theme": "cartoon",
+    "dark_mode_enabled": false
+  }
+}
+```
+
+- 错误码说明：
+  - `40001`：请求体格式错误或 `theme` 不合法
+  - `40101`：未登录或登录状态已失效
+  - `50001`：保存主题设置失败
+
+- 使用示例：
+
+```bash
+curl -X PUT "http://127.0.0.1:8686/api/v1/settings/theme" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "theme": "cartoon",
+    "dark_mode_enabled": false
+  }'
+```
+
+### 数据库表
+
+- `docs/SQL/create_manscan_user_settings.sql`：用户设置表，按当前登录用户保存主题标识和深色模式开关。
+
 ## 1. 获取模板列表
 
 - 请求方法和路径：`GET /api/v1/templates`
@@ -1815,12 +1894,14 @@ curl "http://127.0.0.1:8686/api/v1/asset-config-centers/options/small-categories
 
 - 错误码说明：
   - `40001`：请求体非法，必填字段为空，`status` 不合法，或 `item_name` 已存在
+  - `40301`：当前用户不是管理员
   - `50001`：新增资产配置项失败
 
 - 使用示例：
 
 ```bash
 curl -X POST "http://127.0.0.1:8686/api/v1/asset-config-centers" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"item_name":"登录页配置","big_category":"前端","small_category":"页面","status":"enabled","description":"登录页相关配置"}'
 ```
@@ -1859,6 +1940,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/asset-config-centers" \
 
 - 错误码说明：
   - `40001`：路径 ID 非法，请求体非法，必填字段为空，`status` 不合法，或 `item_name` 已存在
+  - `40301`：当前用户不是管理员
   - `40401`：资产配置项不存在
   - `50001`：编辑资产配置项失败
 
@@ -1866,6 +1948,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/asset-config-centers" \
 
 ```bash
 curl -X PUT "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"item_name":"登录页配置","big_category":"前端","small_category":"页面","status":"disabled","description":"暂不启用"}'
 ```
@@ -1895,13 +1978,15 @@ curl -X PUT "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
 
 - 错误码说明：
   - `40001`：路径 ID 非法
+  - `40301`：当前用户不是管理员
   - `40401`：资产配置项不存在
   - `50001`：删除资产配置项失败
 
 - 使用示例：
 
 ```bash
-curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1"
+curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ## 30. 获取域名资产清单

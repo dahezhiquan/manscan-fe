@@ -1,0 +1,2049 @@
+:root[data-color-mode='dark'] {
+  color-scheme: dark;
+  --dark-page-bg: #020617;
+  --dark-page-bg-2: #0b1120;
+  --dark-surface: rgba(15, 23, 42, 0.94);
+  --dark-surface-solid: #0f172a;
+  --dark-surface-2: rgba(30, 41, 59, 0.9);
+  --dark-surface-3: rgba(51, 65, 85, 0.7);
+  --dark-border: rgba(219, 231, 246, 0.24);
+  --dark-border-strong: rgba(219, 231, 246, 0.42);
+  --dark-text: #e5edf7;
+  --dark-text-strong: #f8fafc;
+  --dark-text-muted: #a8b3c7;
+  --dark-blue-soft: rgba(56, 189, 248, 0.16);
+  --dark-blue-selected: rgba(14, 165, 233, 0.2);
+  --dark-green-soft: rgba(34, 197, 94, 0.16);
+  --dark-red-soft: rgba(127, 29, 29, 0.46);
+  --dark-amber-soft: rgba(120, 53, 15, 0.42);
+  --dark-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+  --dark-shadow-flat: 2px 2px 0 rgba(219, 231, 246, 0.22);
+  --ink-strong: #f8fafc;
+  --ink: #e5edf7;
+  --ink-soft: #a8b3c7;
+  --paper: #0b1120;
+  --paper-2: #172033;
+  --paper-3: #1f2a3d;
+  --surface: #111827;
+  --surface-2: #172033;
+  --surface-3: #16324a;
+  --surface-4: #3a1f2a;
+  --surface-5: #173323;
+  --line: #dbe7f6;
+  --line-soft: rgba(219, 231, 246, 0.32);
+  --accent-yellow: #facc15;
+  --accent-blue: #38bdf8;
+  --accent-pink: #fb7185;
+  --accent-green: #86efac;
+  --accent-orange: #fb923c;
+  --shadow-flat: var(--dark-shadow-flat);
+  --shadow-flat-lg: 3px 3px 0 rgba(219, 231, 246, 0.22);
+  --border-strong: 3px solid var(--line);
+  background: var(--dark-page-bg);
+}
+
+html[data-color-mode='dark'],
+html[data-color-mode='dark'] body,
+html[data-color-mode='dark'] #app {
+  min-height: 100%;
+  background: var(--dark-page-bg);
+}
+
+html[data-color-mode='dark'] body {
+  color: var(--dark-text);
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 16% 14%, rgba(56, 189, 248, 0.1), transparent 24%),
+    radial-gradient(circle at 84% 12%, rgba(34, 197, 94, 0.08), transparent 22%),
+    linear-gradient(180deg, #020617 0%, #0b1120 100%);
+  background-size: 30px 30px, 30px 30px, auto, auto, auto;
+}
+
+html[data-color-mode='dark'] *::selection {
+  background: rgba(56, 189, 248, 0.45);
+  color: #f8fafc;
+}
+
+html[data-color-mode='dark'] ::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(219, 231, 246, 0.36);
+}
+
+html[data-color-mode='dark'] ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-color: rgba(219, 231, 246, 0.42);
+}
+
+html[data-color-mode='dark'] :where(
+  .dashboard-shell,
+  .main-content,
+  .templates-shell-main,
+  .templates-page,
+  .template-detail-page,
+  .vuln-page,
+  .scans-page,
+  .asset-config-shell-main,
+  .asset-config-page,
+  .domain-assets-shell-main,
+  .domain-assets-page,
+  .settings-shell-main,
+  .settings-page,
+  .scan-create-page,
+  .scan-task-detail-page
+) {
+  color: var(--dark-text);
+  background:
+    radial-gradient(circle at 88% 10%, rgba(56, 189, 248, 0.08), transparent 25%),
+    radial-gradient(circle at 12% 16%, rgba(34, 197, 94, 0.06), transparent 22%),
+    linear-gradient(180deg, #020617 0%, #0b1120 100%) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .dashboard-shell,
+  .templates-page,
+  .template-detail-page,
+  .vuln-page,
+  .scans-page,
+  .asset-config-page,
+  .domain-assets-page,
+  .settings-page,
+  .scan-create-page,
+  .scan-task-detail-page
+)::before {
+  opacity: 0.14;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(226, 232, 240, 0.65) 0 1px, transparent 1.2px),
+    radial-gradient(circle at 88% 18%, rgba(148, 163, 184, 0.65) 0 1px, transparent 1.2px),
+    linear-gradient(120deg, transparent 0 49%, rgba(148, 163, 184, 0.05) 49% 50%, transparent 50% 100%) !important;
+  background-size: 260px 260px, 320px 320px, 100% 100% !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .dashboard-shell,
+  .main-content,
+  .templates-page,
+  .template-detail-page,
+  .vuln-page,
+  .scans-page,
+  .asset-config-page,
+  .domain-assets-page,
+  .settings-page,
+  .scan-create-page,
+  .scan-task-detail-page
+) * {
+  border-color: var(--dark-border);
+}
+
+html[data-color-mode='dark'] :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  b,
+  th,
+  dt,
+  label,
+  .card-header h3,
+  .panel-head h3,
+  .template-detail-hero-main h1,
+  .scan-create-hero h1
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  p,
+  small,
+  dd,
+  td,
+  span,
+  a,
+  button,
+  li,
+  .templates-stat-label,
+  .templates-name-cell p,
+  .templates-pagination-meta,
+  .template-detail-description,
+  .template-detail-markdown,
+  .template-detail-info-label,
+  .template-detail-empty-text,
+  .template-detail-reference-text,
+  .vulnerabilities-muted-text,
+  .vulnerabilities-asset-line,
+  .scans-muted-text,
+  .scans-pagination-meta,
+  .domain-assets-muted-text,
+  .domain-assets-page-crumb,
+  .asset-config-page-crumb,
+  .asset-config-panel-head p,
+  .settings-panel-meta,
+  .settings-detail-head p,
+  .settings-detail-list dt,
+  .scan-task-detail-side-note,
+  .scan-task-detail-log-meta,
+  .scan-create-field-note,
+  .scan-create-step-copy small
+) {
+  color: inherit;
+}
+
+html[data-color-mode='dark'] :where(
+  small,
+  .muted,
+  [class$='-meta'],
+  [class$='-hint'],
+  [class$='-copy'] small,
+  [class$='-description'],
+  [class$='-crumb'],
+  .templates-stat-label,
+  .templates-name-cell p,
+  .template-detail-description,
+  .template-detail-markdown,
+  .template-detail-info-label,
+  .template-detail-empty-text,
+  .vulnerabilities-muted-text,
+  .vulnerabilities-asset-line,
+  .domain-assets-muted-text,
+  .asset-config-panel-head p,
+  .settings-panel-meta,
+  .settings-user-copy small,
+  .settings-toggle-row small,
+  .settings-theme-card small,
+  .settings-save-bar p,
+  .scan-task-detail-side-note,
+  .scan-task-detail-log-meta,
+  .scan-task-detail-stream-tip,
+  .scan-create-step-copy small,
+  .scan-create-field-note,
+  .scan-template-results-meta
+) {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .template-detail-section-title,
+  .template-detail-copy-block h3,
+  .template-detail-side-block h3,
+  .template-detail-info-box strong,
+  .template-detail-metric-box strong,
+  .template-detail-query-box strong,
+  .template-detail-query-value,
+  .template-detail-code-topbar,
+  .template-detail-markdown h1,
+  .template-detail-markdown h2,
+  .template-detail-markdown h3,
+  .template-detail-markdown h4,
+  .template-detail-markdown h5,
+  .template-detail-markdown h6
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(input, textarea, select, [contenteditable='true']) {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22) !important;
+}
+
+html[data-color-mode='dark'] :where(input, textarea)::placeholder {
+  color: rgba(168, 179, 199, 0.72) !important;
+}
+
+html[data-color-mode='dark'] :where(input, textarea, select):is(:hover, :focus) {
+  background: rgba(8, 17, 32, 0.98) !important;
+  border-color: var(--dark-border-strong) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-color-mode='dark'] :where(input, textarea, select):disabled {
+  background: rgba(51, 65, 85, 0.68) !important;
+  color: var(--dark-text-muted) !important;
+  opacity: 0.78;
+}
+
+html[data-color-mode='dark'] :where(
+  .card,
+  .team-popover,
+  .templates-topbar,
+  .templates-stat-card,
+  .templates-filter-panel,
+  .templates-table-card,
+  .templates-tag-menu,
+  .templates-cve-menu,
+  .templates-empty,
+  .templates-pagination,
+  .template-detail-card,
+  .template-detail-alert,
+  .template-detail-empty-state,
+  .template-detail-info-box,
+  .template-detail-metric-box,
+  .template-detail-query-box,
+  .template-detail-code-shell,
+  .template-detail-reference,
+  .template-detail-skeleton-card,
+  .template-detail-skeleton-query-box,
+  .vulnerabilities-filter-panel,
+  .vulnerabilities-list-card,
+  .vulnerabilities-filter-menu,
+  .vulnerabilities-bulk-action-menu,
+  .vulnerabilities-page-size-menu,
+  .vulnerabilities-page-notice,
+  .vulnerabilities-state-panel,
+  .scans-panel,
+  .scans-toolbar,
+  .scans-table-card,
+  .scans-filter-menu,
+  .scans-state-panel,
+  .scans-pagination,
+  .domain-assets-panel-card,
+  .domain-assets-table-card,
+  .domain-assets-summary-card,
+  .domain-assets-filter-menu,
+  .domain-assets-dialog,
+  .domain-assets-dialog-head,
+  .domain-assets-dialog-body,
+  .domain-assets-dialog-actions,
+  .domain-assets-page-size-menu,
+  .asset-config-tabs,
+  .asset-config-section,
+  .asset-config-panel,
+  .asset-config-card,
+  .asset-config-toolbar,
+  .asset-config-filter-menu,
+  .asset-config-dialog,
+  .asset-config-dialog-select-menu,
+  .asset-config-dialog-combobox-menu,
+  .settings-tabs,
+  .settings-panel,
+  .settings-detail-panel,
+  .settings-user-table-card,
+  .settings-save-bar,
+  .settings-dialog,
+  .scan-task-detail-hero,
+  .scan-task-detail-progress-card,
+  .scan-task-detail-panel,
+  .scan-task-detail-notice,
+  .scan-task-detail-empty-state,
+  .scan-create-hero,
+  .scan-create-checklist-card,
+  .scan-create-steps,
+  .scan-create-form-card,
+  .scan-create-field,
+  .scan-create-select-menu,
+  .scan-global-denylist-control,
+  .scan-global-denylist-dialog,
+  .scan-template-library-panel,
+  .scan-template-results,
+  .scan-template-library-menu,
+  .scan-template-empty-state,
+  .scan-template-pagination
+) {
+  background: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .card-header,
+  .panel-head,
+  .stats-row,
+  .summary-row,
+  .stat-box,
+  .summary-box,
+  .templates-content,
+  .templates-stats,
+  .templates-filters,
+  .templates-selected-tags,
+  .templates-tag-menu-list,
+  .templates-actions-cell,
+  .template-detail-content,
+  .template-detail-hero,
+  .template-detail-layout,
+  .template-detail-main-column,
+  .template-detail-side-column,
+  .template-detail-actions,
+  .template-detail-section-stack,
+  .template-detail-copy-block,
+  .template-detail-copy-block-head,
+  .template-detail-tags-cloud,
+  .template-detail-query-list,
+  .template-detail-reference-list,
+  .template-detail-collapse-head,
+  .template-detail-code-block code,
+  .vulnerabilities-content,
+  .vulnerabilities-selection-tools,
+  .vulnerabilities-selected-tags,
+  .vulnerabilities-title-line,
+  .vulnerabilities-asset-line,
+  .vulnerabilities-tag-row,
+  .vulnerabilities-row-main,
+  .scans-table-cell,
+  .scans-row-main,
+  .scans-row-meta,
+  .domain-assets-row-main,
+  .domain-assets-row-meta,
+  .asset-config-panel-head,
+  .asset-config-dialog-actions,
+  .asset-config-row-actions,
+  .settings-panel-head,
+  .settings-user-row-actions,
+  .settings-save-actions,
+  .settings-theme-copy,
+  .scan-task-detail-copy,
+  .scan-task-detail-meta,
+  .scan-task-detail-actions,
+  .scan-task-detail-panel-actions,
+  .scan-task-detail-info-list,
+  .scan-create-shell,
+  .scan-create-grid,
+  .scan-create-field-head,
+  .scan-create-footer,
+  .scan-create-actions,
+  .scan-template-library-toolbar,
+  .scan-template-library-filters,
+  .scan-template-toolbar-actions,
+  .scan-template-selection-summary,
+  .scan-template-inline-actions,
+  .scan-template-library-actions,
+  .scan-template-results-header
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .team-switcher,
+  .sidebar-toggle,
+  .nav-item,
+  .ghost-icon,
+  .icon-button,
+  .invite-button,
+  .create-button,
+  .templates-back,
+  .templates-nav-item,
+  .templates-filter-chip,
+  .templates-clear-chip,
+  .templates-selected-tag,
+  .templates-action-button,
+  .templates-page-arrow,
+  .template-detail-crumb-button,
+  .template-detail-secondary-button,
+  .template-detail-primary-button,
+  .template-detail-ai-badge,
+  .template-detail-tag-badge,
+  .template-detail-info-pill,
+  .template-detail-collapse-arrow,
+  .vuln-filter-chip,
+  .vulnerabilities-icon-button,
+  .vulnerabilities-clear-button,
+  .vulnerabilities-filter-trigger,
+  .vulnerabilities-filter-option,
+  .vulnerabilities-bulk-action-trigger,
+  .vulnerabilities-bulk-action-option,
+  .vulnerabilities-selection-tool,
+  .vulnerabilities-selected-tag,
+  .vulnerabilities-page-size-trigger,
+  .vulnerabilities-page-size-option,
+  .vulnerabilities-pagination-arrow,
+  .vulnerabilities-state-button,
+  .scans-tab,
+  .scans-search,
+  .scans-filter-chip,
+  .scans-filter-menu-item,
+  .scans-clear-chip,
+  .scans-upgrade-button,
+  .scans-state-button,
+  .scans-chip-tooltip-icon,
+  .scans-page-size,
+  .scans-page-saved-chip,
+  .scans-pagination-arrow,
+  .domain-assets-search-field,
+  .domain-assets-filter-chip,
+  .domain-assets-filter-menu-item,
+  .domain-assets-filter-option,
+  .domain-assets-value-option,
+  .domain-assets-page-size,
+  .domain-assets-page-size-trigger,
+  .domain-assets-page-size-option,
+  .domain-assets-pagination-arrow,
+  .domain-assets-dialog-button,
+  .domain-assets-dialog-close,
+  .asset-config-tab,
+  .asset-config-filter-trigger,
+  .asset-config-filter-option,
+  .asset-config-panel-link,
+  .asset-config-row-action,
+  .asset-config-action-button,
+  .asset-config-dialog-button,
+  .asset-config-dialog-select-button,
+  .asset-config-dialog-select-option,
+  .asset-config-dialog-combobox-option,
+  .settings-tab,
+  .settings-user-row,
+  .settings-toggle-row,
+  .settings-theme-card,
+  .settings-row-action,
+  .settings-option-button,
+  .settings-button,
+  .settings-dialog-close,
+  .scan-task-detail-ghost-button,
+  .scan-task-detail-primary-button,
+  .scan-task-detail-inline-button,
+  .scan-task-detail-rescan-button,
+  .scan-task-detail-toggle-button,
+  .scan-task-detail-danger-button,
+  .scan-task-detail-download-button,
+  .scan-create-ai-trigger,
+  .scan-create-field-tooltip-icon,
+  .scan-create-checklist-link,
+  .scan-create-step,
+  .scan-create-ghost-button,
+  .scan-create-primary-button,
+  .scan-create-secondary-button,
+  .scan-create-select-button,
+  .scan-create-select-option,
+  .scan-create-switch,
+  .scan-global-denylist-switch,
+  .scan-global-denylist-retry,
+  .scan-global-denylist-confirm-button,
+  .scan-template-library-filter-button,
+  .scan-template-library-menu-item,
+  .scan-template-page-button,
+  .scan-template-auto-toggle,
+  .scan-template-library-row
+) {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: var(--dark-shadow-flat) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .team-switcher:hover,
+  .team-switcher[aria-expanded='true'],
+  .sidebar-toggle:hover,
+  .nav-item:hover,
+  .nav-item.active,
+  .templates-back:hover,
+  .templates-nav-item:hover,
+  .templates-nav-item.active,
+  .templates-filter-chip:hover,
+  .templates-filter-chip.active,
+  .templates-clear-chip:hover,
+  .templates-action-button:hover,
+  .templates-page-arrow:hover:not(:disabled),
+  .template-detail-crumb-button:hover,
+  .template-detail-secondary-button:hover,
+  .template-detail-primary-button:hover,
+  .template-detail-secondary-button.is-copied,
+  .template-detail-collapse-head:hover .template-detail-collapse-arrow,
+  .vuln-filter-chip:hover,
+  .vuln-filter-chip.is-active,
+  .vulnerabilities-icon-button:hover,
+  .vulnerabilities-clear-button:hover,
+  .vulnerabilities-filter-trigger:hover,
+  .vulnerabilities-filter-trigger.active,
+  .vulnerabilities-filter-option:hover,
+  .vulnerabilities-filter-option.selected,
+  .vulnerabilities-bulk-action-trigger:hover,
+  .vulnerabilities-bulk-action-option:hover:not(:disabled),
+  .vulnerabilities-selection-tool:hover:not(:disabled),
+  .vulnerabilities-page-size-trigger:hover,
+  .vulnerabilities-page-size-trigger.active,
+  .vulnerabilities-page-size-option:hover,
+  .vulnerabilities-page-size-option.selected,
+  .vulnerabilities-pagination-arrow:hover:not(:disabled),
+  .scans-tab:hover,
+  .scans-tab.active,
+  .scans-search:hover,
+  .scans-search:focus-within,
+  .scans-filter-chip:hover,
+  .scans-filter-chip.active,
+  .scans-filter-menu-item:hover,
+  .scans-filter-menu-item.selected,
+  .scans-clear-chip:hover,
+  .scans-clear-chip:focus-visible,
+  .scans-upgrade-button:hover,
+  .scans-upgrade-button:focus-visible,
+  .scans-state-button:hover,
+  .scans-state-button:focus-visible,
+  .scans-chip-tooltip-anchor:hover .scans-chip-tooltip-icon,
+  .scans-chip-tooltip-anchor:focus-visible .scans-chip-tooltip-icon,
+  .scans-page-size:hover,
+  .scans-pagination-arrow:hover:not(:disabled),
+  .domain-assets-search-field:hover,
+  .domain-assets-search-field:focus-within,
+  .domain-assets-filter-chip:hover,
+  .domain-assets-filter-chip.active,
+  .domain-assets-filter-menu-item:hover,
+  .domain-assets-filter-menu-item.selected,
+  .domain-assets-filter-option:hover,
+  .domain-assets-filter-option.selected,
+  .domain-assets-value-option:hover,
+  .domain-assets-value-option.selected,
+  .domain-assets-page-size:hover,
+  .domain-assets-page-size-trigger:hover,
+  .domain-assets-page-size-trigger.active,
+  .domain-assets-page-size-option:hover,
+  .domain-assets-page-size-option.selected,
+  .domain-assets-pagination-arrow:hover:not(:disabled),
+  .domain-assets-dialog-close:hover,
+  .domain-assets-dialog-button:hover:not(:disabled),
+  .asset-config-tab:hover,
+  .asset-config-tab.active,
+  .asset-config-filter-trigger:hover:not(:disabled),
+  .asset-config-filter-trigger.active,
+  .asset-config-filter-option:hover,
+  .asset-config-filter-option.selected,
+  .asset-config-row-action:hover:not(:disabled),
+  .asset-config-action-button:hover:not(:disabled),
+  .asset-config-dialog-button:hover:not(:disabled),
+  .asset-config-dialog-select-button:hover,
+  .asset-config-dialog-select.is-open .asset-config-dialog-select-button,
+  .asset-config-dialog-select-option:hover,
+  .asset-config-dialog-select-option.is-selected,
+  .asset-config-dialog-combobox.is-open input,
+  .asset-config-dialog-combobox-option:hover,
+  .asset-config-dialog-combobox-option.is-selected,
+  .settings-tab:hover,
+  .settings-tab.active,
+  .settings-user-row:hover,
+  .settings-user-row.active,
+  .settings-toggle-row:hover,
+  .settings-theme-card:hover,
+  .settings-theme-card.active,
+  .settings-option-button:hover,
+  .settings-option-button:focus-visible,
+  .settings-option-button.active,
+  .scan-task-detail-ghost-button:hover,
+  .scan-task-detail-primary-button:hover,
+  .scan-task-detail-inline-button:hover,
+  .scan-task-detail-rescan-button:hover,
+  .scan-task-detail-toggle-button:hover,
+  .scan-create-ai-trigger:hover,
+  .scan-create-field-tooltip-anchor:hover .scan-create-field-tooltip-icon,
+  .scan-create-field-tooltip-anchor:focus-visible .scan-create-field-tooltip-icon,
+  .scan-create-checklist-link:hover,
+  .scan-create-step:hover,
+  .scan-create-step.is-active,
+  .scan-create-ghost-button:hover,
+  .scan-create-primary-button:hover,
+  .scan-create-secondary-button:hover,
+  .scan-create-select-button:hover,
+  .scan-create-select.is-open .scan-create-select-button,
+  .scan-create-select-option:hover,
+  .scan-create-select-option.is-selected,
+  .scan-create-switch:hover,
+  .scan-create-switch.is-on,
+  .scan-global-denylist-switch:hover,
+  .scan-global-denylist-switch.is-on,
+  .scan-template-library-filter-button:hover,
+  .scan-template-library-filter-button.is-active,
+  .scan-template-library-menu-item:hover,
+  .scan-template-page-button:hover,
+  .scan-template-page-button.is-active,
+  .scan-template-auto-toggle:hover,
+  .scan-template-auto-toggle.is-active
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 4px 0 rgba(219, 231, 246, 0.24) !important;
+}
+
+html[data-color-mode='dark'] .scans-upgrade-button,
+html[data-color-mode='dark'] .scans-state-button:not(.is-secondary) {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 0.82)) !important;
+  border-color: rgba(125, 211, 252, 0.54) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.16) !important;
+}
+
+html[data-color-mode='dark'] .scans-state-button.is-secondary,
+html[data-color-mode='dark'] .scans-clear-chip {
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scans-upgrade-button:hover,
+  .scans-upgrade-button:focus-visible,
+  .scans-state-button:not(.is-secondary):hover,
+  .scans-state-button:not(.is-secondary):focus-visible
+) {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.92), rgba(37, 99, 235, 0.86)) !important;
+  border-color: rgba(186, 230, 253, 0.72) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.2) !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scans-clear-chip:hover,
+  .scans-clear-chip:focus-visible,
+  .scans-state-button.is-secondary:hover,
+  .scans-state-button.is-secondary:focus-visible
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .scans-chip-tooltip {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34) !important;
+}
+
+html[data-color-mode='dark'] .scans-chip-tooltip::after {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] .scans-chip-tooltip a {
+  color: #7dd3fc !important;
+}
+
+html[data-color-mode='dark'] .scan-create-field-tooltip-icon {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-create-field-tooltip-anchor:hover .scan-create-field-tooltip-icon,
+  .scan-create-field-tooltip-anchor:focus-visible .scan-create-field-tooltip-icon
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: rgba(125, 211, 252, 0.54) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14) !important;
+}
+
+html[data-color-mode='dark'] .scan-create-field-tooltip {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34) !important;
+}
+
+html[data-color-mode='dark'] .scan-create-field-tooltip::after {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] .scan-create-hero {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-create-hero::before {
+  opacity: 0 !important;
+}
+
+html[data-color-mode='dark'] .scan-create-hero-panel > div {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-create-hero-panel strong {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .scan-create-panel-label {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-create-step-index {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border: 1px solid rgba(125, 211, 252, 0.24) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-create-step.is-active .scan-create-step-index {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.88), rgba(37, 99, 235, 0.82)) !important;
+  border-color: rgba(125, 211, 252, 0.54) !important;
+  color: #f8fafc !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-topbar,
+  .templates-nav,
+  .scans-topbar,
+  .scans-toolbar,
+  .scans-tabs
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-nav-item,
+  .templates-nav-item:hover,
+  .templates-nav-item.active,
+  .scans-tab,
+  .scans-tab:hover,
+  .scans-tab.active
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-nav-item,
+  .scans-tab
+) {
+  border-color: transparent !important;
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-nav-item:hover,
+  .templates-nav-item.active,
+  .scans-tab:hover,
+  .scans-tab.active
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-nav-item.active,
+  .scans-tab.active
+) {
+  border-bottom-color: var(--accent-blue) !important;
+}
+
+html[data-color-mode='dark'] .template-detail-crumb-button,
+html[data-color-mode='dark'] .template-detail-crumb-button:hover {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .template-detail-crumb-separator {
+  color: rgba(203, 213, 225, 0.7) !important;
+}
+
+html[data-color-mode='dark'] .template-detail-crumb-library-icon {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-detail-status-edit-button,
+  .vulnerability-detail-link-chip
+) {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-detail-status-edit-button:hover,
+  .vulnerability-detail-status-edit-button:focus-visible,
+  .vulnerability-detail-link-chip:hover,
+  .vulnerability-detail-link-chip:focus-visible
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .sidebar {
+  border-right-color: rgba(219, 231, 246, 0.28) !important;
+  background:
+    radial-gradient(circle at 100% 0, rgba(56, 189, 248, 0.18), transparent 26%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.96)) !important;
+  box-shadow: 2px 0 0 rgba(219, 231, 246, 0.18) !important;
+}
+
+html[data-color-mode='dark'] .team-popover::before {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-table-head,
+  .template-detail-code-topbar,
+  .vulnerabilities-table-head,
+  .scans-table-head,
+  .domain-assets-table-head,
+  .asset-config-table-head,
+  .settings-user-table-head
+) {
+  background: rgba(30, 41, 59, 0.98) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-row,
+  .vulnerabilities-row,
+  .scans-table-row,
+  .domain-assets-table-row,
+  .asset-config-table-row,
+  .settings-user-table-row,
+  .scan-template-library-row,
+  .scan-task-detail-log-row,
+  .scan-task-detail-info-row
+) {
+  background: rgba(15, 23, 42, 0.84) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-row,
+  .vulnerabilities-row,
+  .scans-table-row,
+  .domain-assets-table-row,
+  .asset-config-table-row,
+  .settings-user-table-row,
+  .scan-template-library-row,
+  .scan-task-detail-log-row,
+  .scan-task-detail-info-row
+):nth-child(odd) {
+  background: rgba(30, 41, 59, 0.54) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-row,
+  .vulnerabilities-row,
+  .scans-table-row,
+  .domain-assets-table-row,
+  .asset-config-table-row,
+  .settings-user-table-row,
+  .scan-template-library-row
+):is(:hover, :focus-visible) {
+  background: rgba(56, 189, 248, 0.14) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerabilities-row.selected,
+  .scans-table-row.selected,
+  .domain-assets-table-row.selected,
+  .asset-config-table-row.selected,
+  .scan-template-library-row.is-selected
+) {
+  background: var(--dark-blue-selected) !important;
+  border-color: rgba(56, 189, 248, 0.42) !important;
+  box-shadow: inset 3px 0 0 #38bdf8 !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-row *,
+  .vulnerabilities-row *,
+  .scans-table-row *,
+  .domain-assets-table-row *,
+  .asset-config-table-row *,
+  .settings-user-table-row *,
+  .scan-template-library-row *,
+  .scan-task-detail-info-row *,
+  .scan-task-detail-log-row *
+) {
+  box-shadow: none;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerabilities-row-main,
+  .vulnerabilities-title-block,
+  .vulnerabilities-tag-row,
+  .scans-table-cell,
+  .scans-row-main,
+  .scans-row-meta,
+  .domain-assets-row-main,
+  .domain-assets-row-meta,
+  .asset-config-table-cell,
+  .scan-template-library-main-cell,
+  .scan-template-library-id-cell,
+  .scan-template-library-state-cell,
+  .scan-task-detail-info-label
+) {
+  background: transparent !important;
+}
+
+html[data-color-mode='dark'] .scans-table-card {
+  background: rgba(2, 6, 23, 0.5) !important;
+  border-color: rgba(219, 231, 246, 0.16) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scans-table-body {
+  background: transparent !important;
+}
+
+html[data-color-mode='dark'] .scans-table-row {
+  background: rgba(8, 17, 32, 0.88) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+html[data-color-mode='dark'] .scans-table-row:nth-child(odd) {
+  background: rgba(11, 18, 32, 0.92) !important;
+}
+
+html[data-color-mode='dark'] .scans-table-row:is(:hover, :focus-visible) {
+  background: rgba(14, 165, 233, 0.16) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-search,
+  .templates-menu-search,
+  .vulnerabilities-search-field,
+  .vulnerabilities-tag-menu-search,
+  .scans-search,
+  .domain-assets-search-field,
+  .asset-config-search-field,
+  .scan-template-library-search,
+  .scan-template-library-menu-search
+) {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: var(--dark-shadow-flat) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-search::before,
+  .templates-search::after,
+  .scan-template-library-search::before,
+  .scan-template-library-search::after,
+  .scan-create-ai-trigger::before,
+  .scan-create-ai-trigger::after,
+  .scan-template-library-panel::before,
+  .scan-template-library-panel::after
+) {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: rgba(219, 231, 246, 0.18) !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-filter-panel {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-search-field,
+html[data-color-mode='dark'] .vulnerabilities-search-field:hover,
+html[data-color-mode='dark'] .vulnerabilities-search-field:focus-within {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-search-field input {
+  background: transparent !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-tag-menu-search {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-tag-menu-search input {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-tag-menu-search input:focus {
+  background: rgba(8, 17, 32, 0.98) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-color-mode='dark'] .scan-template-library-menu-search {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-template-library-menu-search input {
+  background: rgba(8, 17, 32, 0.96) !important;
+  border-color: rgba(125, 211, 252, 0.34) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-template-library-menu-search input:focus {
+  background: rgba(2, 6, 23, 0.98) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-color-mode='dark'] .asset-config-search-field,
+html[data-color-mode='dark'] .asset-config-search-field:hover,
+html[data-color-mode='dark'] .asset-config-search-field:focus-within {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .asset-config-search-field input {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .asset-config-search-field input:hover,
+html[data-color-mode='dark'] .asset-config-search-field input:focus,
+html[data-color-mode='dark'] .asset-config-search-field:focus-within input {
+  background: rgba(8, 17, 32, 0.98) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-search-field,
+html[data-color-mode='dark'] .domain-assets-search-field:hover,
+html[data-color-mode='dark'] .domain-assets-search-field:focus-within,
+html[data-color-mode='dark'] .domain-assets-page-size,
+html[data-color-mode='dark'] .domain-assets-page-size:hover {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-search-field input {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-search-field input:hover,
+html[data-color-mode='dark'] .domain-assets-search-field input:focus,
+html[data-color-mode='dark'] .domain-assets-search-field:focus-within input {
+  background: rgba(8, 17, 32, 0.98) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-page-size-trigger,
+html[data-color-mode='dark'] .domain-assets-page-size-trigger:hover,
+html[data-color-mode='dark'] .domain-assets-page-size-trigger.active {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-group {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-group .domain-assets-severity-badge {
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-asset-detail-flag {
+  background: rgba(127, 29, 29, 0.28) !important;
+  border-color: rgba(248, 113, 113, 0.34) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .domain-asset-detail-flag.enabled {
+  background: rgba(20, 83, 45, 0.32) !important;
+  border-color: rgba(134, 239, 172, 0.36) !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-color-mode='dark'] .domain-asset-detail-flag strong {
+  background: rgba(248, 113, 113, 0.16) !important;
+  color: #fee2e2 !important;
+}
+
+html[data-color-mode='dark'] .domain-asset-detail-flag.enabled strong {
+  background: rgba(134, 239, 172, 0.16) !important;
+  color: #dcfce7 !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-pagination {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-top-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size,
+html[data-color-mode='dark'] .vulnerabilities-page-size:hover {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size > span,
+html[data-color-mode='dark'] .vulnerabilities-pagination-meta {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size-trigger,
+html[data-color-mode='dark'] .vulnerabilities-page-size-trigger:hover,
+html[data-color-mode='dark'] .vulnerabilities-page-size-trigger.active {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size-trigger span,
+html[data-color-mode='dark'] .vulnerabilities-page-size-option span {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size-check {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(226, 232, 240, 0.52) !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size-check.selected {
+  background: #f8fafc !important;
+  border-color: #f8fafc !important;
+}
+
+html[data-color-mode='dark'] .vulnerabilities-page-size-check.selected::after {
+  border-color: #0f172a !important;
+}
+
+html[data-color-mode='dark'] .templates-tag-menu .templates-menu-search {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .templates-tag-menu .templates-menu-search input {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .templates-tag-menu .templates-menu-search input:focus {
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .template-detail-markdown blockquote,
+  .template-detail-markdown code
+) {
+  background: rgba(30, 41, 59, 0.78) !important;
+  border-color: rgba(147, 197, 253, 0.28) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] .template-detail-markdown pre {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 26%),
+    linear-gradient(180deg, #0f172a 0%, #020617 100%) !important;
+  border-color: var(--dark-border) !important;
+}
+
+html[data-color-mode='dark'] .template-detail-code-block {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 26%),
+    linear-gradient(180deg, #0f172a 0%, #020617 100%) !important;
+  color: #dbeafe !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-skeleton,
+  .templates-row-skeleton,
+  .templates-skeleton-title,
+  .templates-skeleton-text,
+  .templates-skeleton-inline,
+  .templates-skeleton-pill,
+  .templates-skeleton-button,
+  .vulnerabilities-loading-row,
+  .vulnerabilities-loading-pill,
+  .vulnerabilities-loading-line,
+  .vulnerabilities-loading-chip,
+  .scans-loading-row,
+  .scans-loading-line,
+  .domain-assets-loading-row,
+  .domain-assets-loading-line,
+  .asset-config-loading-row,
+  .asset-config-skeleton,
+  .settings-user-skeleton,
+  .scan-template-library-skeleton
+) {
+  background: linear-gradient(90deg, #1e293b 0%, #334155 42%, #1e293b 84%) !important;
+  background-size: 200% 100% !important;
+  color: transparent !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerabilities-severity-pill,
+  .vulnerabilities-status-pill,
+  .vulnerabilities-protocol-tag,
+  .vulnerabilities-tag,
+  .vulnerabilities-template-id,
+  .vulnerabilities-asset-domain,
+  .templates-severity-pill,
+  .templates-protocol-pill,
+  .templates-id-cell > span,
+  .scan-status-pill,
+  .scans-severity-badge,
+  .domain-assets-severity-badge,
+  .domain-assets-risk-pill,
+  .asset-config-status-pill,
+  .settings-status-pill,
+  .scan-task-detail-chip,
+  .scan-task-detail-status,
+  .scan-task-detail-stream-badge,
+  .scan-template-severity,
+  .scan-template-meta-pill,
+  .scan-template-row-state,
+  .scan-create-eyebrow,
+  .scan-create-form-badge,
+  .scan-create-ai-trigger-badge,
+  .scan-global-denylist-state
+) {
+  background: rgba(30, 41, 59, 0.82) !important;
+  border-color: rgba(226, 232, 240, 0.34) !important;
+  color: var(--dark-text) !important;
+  box-shadow: 0 2px 0 rgba(226, 232, 240, 0.16) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-critical,
+  .severity-critical,
+  .scan-template-severity.is-critical,
+  .templates-severity-pill.is-critical,
+  .vulnerabilities-severity-pill.is-critical,
+  .scans-severity-badge.is-critical,
+  .domain-assets-severity-badge.is-critical
+) {
+  background: rgba(127, 29, 29, 0.58) !important;
+  border-color: rgba(248, 113, 113, 0.48) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-high,
+  .severity-high,
+  .scan-template-severity.is-high,
+  .templates-severity-pill.is-high,
+  .vulnerabilities-severity-pill.is-high,
+  .scans-severity-badge.is-high,
+  .domain-assets-severity-badge.is-high
+) {
+  background: rgba(154, 52, 18, 0.58) !important;
+  border-color: rgba(251, 146, 60, 0.46) !important;
+  color: #fed7aa !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-medium,
+  .severity-medium,
+  .scan-template-severity.is-medium,
+  .templates-severity-pill.is-medium,
+  .vulnerabilities-severity-pill.is-medium,
+  .scans-severity-badge.is-medium,
+  .domain-assets-severity-badge.is-medium,
+  .scan-task-detail-status.is-running,
+  .scan-task-detail-status.is-pending,
+  .scan-task-detail-status.is-warning
+) {
+  background: rgba(113, 63, 18, 0.56) !important;
+  border-color: rgba(251, 191, 36, 0.44) !important;
+  color: #fde68a !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-low,
+  .is-info,
+  .severity-low,
+  .severity-info,
+  .scan-template-severity.is-low,
+  .scan-template-severity.is-info,
+  .templates-severity-pill.is-low,
+  .templates-severity-pill.is-info,
+  .vulnerabilities-severity-pill.is-low,
+  .vulnerabilities-severity-pill.is-info,
+  .scans-severity-badge.is-low,
+  .scans-severity-badge.is-info,
+  .domain-assets-severity-badge.is-low,
+  .domain-assets-severity-badge.is-info
+) {
+  background: rgba(30, 64, 175, 0.46) !important;
+  border-color: rgba(147, 197, 253, 0.42) !important;
+  color: #dbeafe !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-success,
+  .is-enabled,
+  .is-fixed,
+  .is-confirmed,
+  .scan-task-detail-status.is-success,
+  .scan-task-detail-stream-badge.is-connected,
+  .scan-task-detail-stream-badge.is-complete,
+  .settings-status-pill.is-enabled,
+  .vulnerabilities-status-pill.is-confirmed,
+  .vulnerabilities-status-pill.is-fixed,
+  .scan-global-denylist-state.is-on
+) {
+  background: rgba(20, 83, 45, 0.5) !important;
+  border-color: rgba(134, 239, 172, 0.46) !important;
+  color: #dcfce7 !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-error,
+  .is-danger,
+  .is-false-positive,
+  .scan-task-detail-status.is-error,
+  .scan-task-detail-danger-button,
+  .settings-alert.is-error,
+  .settings-button--danger,
+  .vulnerabilities-status-pill.is-false-positive,
+  .vulnerabilities-bulk-action-option.is-danger
+) {
+  background: var(--dark-red-soft) !important;
+  border-color: rgba(248, 113, 113, 0.44) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .is-neutral,
+  .is-unknown,
+  .is-ignored,
+  .is-disabled,
+  .is-locked,
+  :disabled,
+  .settings-status-pill.disabled,
+  .settings-status-pill.is-disabled,
+  .settings-status-pill.is-locked,
+  .vulnerabilities-status-pill.is-neutral,
+  .vulnerabilities-status-pill.is-ignored,
+  .vulnerabilities-severity-pill.is-unknown,
+  .scan-template-severity.is-unknown
+) {
+  background: rgba(51, 65, 85, 0.72) !important;
+  border-color: rgba(148, 163, 184, 0.36) !important;
+  color: #cbd5e1 !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-group {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge + .scans-severity-badge {
+  border-left: 1px solid rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge.is-critical {
+  background: rgba(127, 29, 29, 0.46) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge.is-high {
+  background: rgba(154, 52, 18, 0.46) !important;
+  color: #fed7aa !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge.is-medium {
+  background: rgba(113, 63, 18, 0.46) !important;
+  color: #fde68a !important;
+}
+
+html[data-color-mode='dark'] .scans-severity-badge.is-low,
+html[data-color-mode='dark'] .scans-severity-badge.is-info {
+  background: rgba(30, 64, 175, 0.46) !important;
+  color: #dbeafe !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-group {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge + .domain-assets-severity-badge {
+  border-left: 1px solid rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge.is-critical {
+  background: rgba(127, 29, 29, 0.46) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge.is-high {
+  background: rgba(154, 52, 18, 0.46) !important;
+  color: #fed7aa !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge.is-medium {
+  background: rgba(113, 63, 18, 0.46) !important;
+  color: #fde68a !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-badge.is-low,
+html[data-color-mode='dark'] .domain-assets-severity-badge.is-info {
+  background: rgba(30, 64, 175, 0.46) !important;
+  color: #dbeafe !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-tooltip {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34) !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-severity-tooltip::after {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-panel-kicker,
+  .settings-theme-current,
+  .settings-button--primary,
+  .scan-create-primary-button,
+  .scan-create-primary-button.is-launch,
+  .scan-task-detail-primary-button,
+  .scan-global-denylist-confirm-button
+) {
+  background: #facc15 !important;
+  border-color: rgba(250, 204, 21, 0.76) !important;
+  color: #111827 !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-user-avatar,
+  .settings-tab-icon,
+  .asset-config-tab-icon,
+  .asset-config-action-icon,
+  .asset-config-dialog-select-check,
+  .asset-config-dialog-combobox-check,
+  .domain-assets-filter-option-check,
+  .vulnerabilities-filter-trigger-icon,
+  .vulnerabilities-filter-option-icon,
+  .scan-task-detail-log-seq,
+  .scan-task-detail-log-level,
+  .scan-template-library-menu-check,
+  .scan-create-select-check
+) {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(56, 189, 248, 0.42) !important;
+  color: #bae6fd !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .asset-config-dialog-select-check.is-selected,
+  .asset-config-dialog-combobox-check.is-selected
+) {
+  background: #f8fafc !important;
+  border-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .asset-config-dialog-select-check.is-selected::after,
+  .asset-config-dialog-combobox-check.is-selected::after
+) {
+  border-color: #0f172a !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .asset-config-dialog-select-option-copy strong,
+  .asset-config-dialog-combobox-option-copy strong,
+  .asset-config-dialog-combobox-message,
+  .asset-config-dialog-combobox-message span
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .asset-config-dialog-combobox-message {
+  background: rgba(15, 23, 42, 0.72) !important;
+  border-color: rgba(219, 231, 246, 0.18) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-dialog-field,
+  .domain-assets-filter-option-grid,
+  .domain-assets-value-option-grid
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-dialog-field > span,
+  .domain-assets-dialog-field small,
+  .domain-assets-page-size > span
+) {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-filter-option span:last-child,
+  .domain-assets-value-option span:last-child,
+  .domain-assets-page-size-trigger span,
+  .domain-assets-page-size-option span
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-page-size-check,
+  .domain-assets-filter-option-check
+) {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(226, 232, 240, 0.52) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-filter-option-check.selected,
+  .domain-assets-page-size-check.selected
+) {
+  background: #f8fafc !important;
+  border-color: #f8fafc !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .domain-assets-filter-option-check.selected::after,
+  .domain-assets-page-size-check.selected::after
+) {
+  border-color: #0f172a !important;
+}
+
+html[data-color-mode='dark'] .settings-user-avatar.is-large {
+  background: #facc15 !important;
+  color: #111827 !important;
+}
+
+html[data-color-mode='dark'] .stat-box::before,
+html[data-color-mode='dark'] .summary-box::before {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(30, 41, 59, 0.58), rgba(15, 23, 42, 0.82) 66%, rgba(2, 6, 23, 0.92) 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 211, 252, 0.08),
+    0 10px 22px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-color-mode='dark'] .stat-box::after,
+html[data-color-mode='dark'] .summary-box::after {
+  border-color: rgba(125, 211, 252, 0.12) !important;
+}
+
+html[data-color-mode='dark'] .detection-box::before {
+  border-color: rgba(96, 165, 250, 0.28) !important;
+  background:
+    radial-gradient(circle at 50% 55%, rgba(56, 189, 248, 0.08), transparent 54%),
+    radial-gradient(circle at 50% 35%, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.84) 66%, rgba(2, 6, 23, 0.92) 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 211, 252, 0.08),
+    0 10px 22px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-color-mode='dark'] .detection-box::after {
+  border-color: rgba(125, 211, 252, 0.12) !important;
+}
+
+html[data-color-mode='dark'] .detection-box .detection-label {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(.stat-label, .summary-label) {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .tone-total {
+  color: #f8fafc !important;
+}
+
+html[data-color-mode='dark'] .tone-critical {
+  color: #fb7185 !important;
+}
+
+html[data-color-mode='dark'] .tone-high {
+  color: #fda4af !important;
+}
+
+html[data-color-mode='dark'] .tone-medium {
+  color: #fde68a !important;
+}
+
+html[data-color-mode='dark'] .tone-low {
+  color: #bfdbfe !important;
+}
+
+html[data-color-mode='dark'] .tone-info,
+html[data-color-mode='dark'] .tone-unknown {
+  color: #cbd5e1 !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .newest-card .newest-header,
+  .newest-card .search-section,
+  .newest-card .globe-section,
+  .newest-card .panel-footer
+) {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: var(--dark-border) !important;
+}
+
+html[data-color-mode='dark'] .newest-card .globe-section {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.16), transparent 56%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98)) !important;
+}
+
+html[data-color-mode='dark'] .newest-card .detection-list {
+  background: rgba(15, 23, 42, 0.94) !important;
+}
+
+html[data-color-mode='dark'] .newest-card .detection-item,
+html[data-color-mode='dark'] .newest-card .detection-item:nth-child(odd) {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] .newest-card .detection-item:hover {
+  background: rgba(30, 41, 59, 0.86) !important;
+}
+
+html[data-color-mode='dark'] .newest-card .vulnerability-search {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .newest-card .vulnerability-search:focus {
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .newest-card .detection-time,
+  .newest-card .detection-item-title,
+  .newest-card .detection-empty
+) {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .newest-card .severity-pill,
+  .newest-card .detection-chip,
+  .newest-card .panel-footer-button
+) {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .newest-card .panel-footer-button:hover {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-detail-list div,
+  .scan-task-detail-progress-card,
+  .scan-task-detail-log-viewport,
+  .scan-template-selection-summary.is-inline-bar > div,
+  .scan-template-auto-lock-banner
+) {
+  background: rgba(30, 41, 59, 0.7) !important;
+  border-color: rgba(219, 231, 246, 0.22) !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-log-viewport {
+  background: rgba(2, 6, 23, 0.72) !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-task-detail-log-row,
+  .scan-task-detail-log-row.is-error,
+  .scan-task-detail-log-row.is-warn
+) {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: rgba(219, 231, 246, 0.2) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-log-row.is-error {
+  border-color: rgba(248, 113, 113, 0.46) !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-log-row.is-warn {
+  border-color: rgba(251, 191, 36, 0.42) !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-log-row.is-match {
+  border-color: var(--match-border) !important;
+  background: var(--match-background) !important;
+  box-shadow: var(--match-shadow) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-task-detail-log-row,
+  .scan-task-detail-log-row *,
+  .scan-task-detail-log-loader,
+  .scan-task-detail-empty-state,
+  .scan-task-detail-empty-state *,
+  .scan-task-detail-stream-tip
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-task-detail-log-row.is-match .scan-task-detail-log-meta,
+  .scan-task-detail-log-row.is-match p
+) {
+  color: var(--match-text) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-task-detail-log-seq,
+  .scan-task-detail-log-level
+) {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: rgba(125, 211, 252, 0.45) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scan-task-detail-log-row.is-match .scan-task-detail-log-seq,
+  .scan-task-detail-log-row.is-match .scan-task-detail-log-level
+) {
+  background: var(--match-pill-bg) !important;
+  border-color: var(--match-pill-border) !important;
+  color: var(--match-pill-text) !important;
+  box-shadow: 2px 2px 0 rgba(42, 7, 13, 0.46) !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-log-loader,
+html[data-color-mode='dark'] .scan-task-detail-stream-tip {
+  background: rgba(15, 23, 42, 0.88) !important;
+  border-color: rgba(219, 231, 246, 0.26) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-dialog-overlay,
+  .domain-assets-dialog-overlay,
+  .scan-global-denylist-dialog-overlay
+) {
+  background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-dialog-head,
+  .settings-dialog-actions
+) {
+  background: rgba(30, 41, 59, 0.98) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] .settings-dialog-body {
+  background: rgba(15, 23, 42, 0.94) !important;
+}
+
+html[data-color-mode='dark'] .settings-delete-copy {
+  background: transparent !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-overlay,
+  .vulnerability-delete-dialog-overlay
+) {
+  background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog,
+  .vulnerability-delete-dialog
+) {
+  background: var(--dark-surface-solid) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-delete-dialog--danger {
+  border-color: rgba(248, 113, 113, 0.5) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-header h2,
+  .vulnerability-delete-dialog-header h2
+) {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-header p,
+  .vulnerability-delete-dialog-header p
+) {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-close,
+  .vulnerability-delete-dialog-close,
+  .vulnerability-status-option
+) {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-close:hover,
+  .vulnerability-status-dialog-close:focus-visible,
+  .vulnerability-delete-dialog-close:hover,
+  .vulnerability-delete-dialog-close:focus-visible,
+  .vulnerability-status-option:hover:not(:disabled),
+  .vulnerability-status-option:focus-visible,
+  .vulnerability-status-option.selected
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-status-option-check {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(226, 232, 240, 0.56) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-status-option.selected .vulnerability-status-option-check::after {
+  background: #38bdf8 !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-progress,
+  .vulnerability-delete-dialog-progress
+) {
+  background: rgba(14, 165, 233, 0.16) !important;
+  border-color: rgba(56, 189, 248, 0.36) !important;
+  color: #bae6fd !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-error,
+  .vulnerability-delete-dialog-error,
+  .vulnerability-delete-dialog-warning
+) {
+  background: var(--dark-red-soft) !important;
+  border-color: rgba(248, 113, 113, 0.44) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .vulnerability-status-dialog-actions,
+  .vulnerability-delete-dialog-actions
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-delete-dialog .template-detail-primary-button.is-danger {
+  background: rgba(185, 28, 28, 0.94) !important;
+  border-color: rgba(248, 113, 113, 0.56) !important;
+  color: #fee2e2 !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-switch,
+  .scan-create-switch-track,
+  .scan-global-denylist-status-indicator
+) {
+  background: #0f172a !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .settings-switch::after,
+  .scan-create-switch-thumb
+) {
+  background: #cbd5e1 !important;
+  border-color: var(--dark-border-strong) !important;
+}
+
+html[data-color-mode='dark'] .settings-switch-input:checked + .settings-switch,
+html[data-color-mode='dark'] .scan-create-switch.is-on .scan-create-switch-track {
+  background: #22c55e !important;
+}
+
+html[data-color-mode='dark'] .settings-switch-input:checked + .settings-switch::after,
+html[data-color-mode='dark'] .scan-create-switch.is-on .scan-create-switch-thumb {
+  background: #f8fafc !important;
+}
+
+html[data-color-mode='dark'] :where(
+  svg,
+  svg *,
+  .templates-search-icon,
+  .vulnerabilities-search-icon,
+  .asset-config-search-icon,
+  .domain-assets-search-icon,
+  .scan-template-library-search-icon
+) {
+  color: currentColor;
+  stroke: currentColor;
+}
+
+html[data-color-mode='dark'] :where(
+  .templates-filter-chip::before,
+  .templates-row::before,
+  .scan-template-library-filter-button::before,
+  .scan-template-library-filter-button::after,
+  .scan-template-inline-shell::after,
+  .scan-template-library-skeleton::after
+) {
+  opacity: 0.32;
+}
