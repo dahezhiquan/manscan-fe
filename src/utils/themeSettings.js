@@ -1,9 +1,8 @@
-export const DEFAULT_THEME_SETTINGS = {
-  theme: 'cartoon',
-  darkModeEnabled: false
-}
+import { DEFAULT_THEME_SETTINGS, THEME_OPTIONS } from '../constants/themes'
 
-export function normalizeThemeSettings(payload, supportedThemes = []) {
+export { DEFAULT_THEME_SETTINGS } from '../constants/themes'
+
+export function normalizeThemeSettings(payload, supportedThemes = THEME_OPTIONS) {
   const supportedThemeIds = supportedThemes.map((item) => item.id)
   const rawTheme = String(payload?.theme ?? '').trim().toLowerCase()
   const theme = supportedThemeIds.includes(rawTheme)

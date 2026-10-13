@@ -1,0 +1,1639 @@
+/* Deep theme owns its tokens and visual overrides; layouts remain in their base files. */
+:root[data-theme='deep'] {
+  --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: var(--font-display);
+  --ink-strong: #0f172a;
+  --ink: #334155;
+  --ink-soft: #64748b;
+  --paper: #f8fafc;
+  --paper-2: #edf2f7;
+  --paper-3: #e2e8f0;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e8f1f8;
+  --surface-4: #fff1f2;
+  --surface-5: #edf7f2;
+  --line: #0f172a;
+  --line-soft: #dce3ec;
+  --accent-yellow: #e2e8f0;
+  --accent-blue: #dcecf7;
+  --accent-pink: #edf2f7;
+  --accent-green: #dcefe6;
+  --accent-orange: #b45309;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --border-strong: 1px solid var(--line-soft);
+  --shadow-flat: 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-flat-lg: 0 4px 16px rgba(15, 23, 42, 0.04);
+  --deep-accent: #0369a1;
+  --deep-accent-hover: #075985;
+  --deep-accent-soft: #e8f1f8;
+  --deep-nav: #0f172a;
+  --deep-nav-surface: #182338;
+  --deep-nav-text: #cbd5e1;
+  --deep-nav-active: #24374d;
+  --deep-focus: #0284c7;
+  --deep-danger: #be123c;
+  --deep-danger-soft: #fff1f2;
+  --deep-warning: #92400e;
+  --deep-warning-soft: #fffbeb;
+  --deep-success: #166534;
+  --deep-success-soft: #edf7f2;
+  --deep-status-enabled: #15803d;
+  --deep-status-disabled: #94a3b8;
+  --deep-control-accent: #0369a1;
+  --deep-overlay: rgba(15, 23, 42, 0.48);
+  --deep-shadow-menu: 0 12px 32px rgba(15, 23, 42, 0.12);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+html[data-theme='deep'] body {
+  font-weight: 400;
+  background: var(--paper);
+}
+
+html[data-theme='deep'] :is(
+  .dashboard-shell, .main-content, .templates-shell-main, .templates-page,
+  .template-detail-page, .vuln-page, .scans-page, .asset-config-shell-main,
+  .asset-config-page, .domain-assets-shell-main, .domain-assets-page,
+  .settings-shell-main, .settings-page, .scan-create-page, .scan-task-detail-page
+) {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+html[data-theme='deep'] :is(
+  .dashboard-shell, .templates-page, .template-detail-page, .vuln-page,
+  .scans-page, .asset-config-page, .domain-assets-page, .settings-page,
+  .scan-create-page, .scan-task-detail-page,
+  .stat-box, .summary-box, .detection-box
+)::before,
+html[data-theme='deep'] :is(.stat-box, .summary-box, .detection-box)::after {
+  display: none;
+}
+
+html[data-theme='deep'] :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--ink-strong);
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-shadow: none;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme='deep'] :is(
+  button, strong, th, dt, [class$='-label'], [class$='-badge'], [class$='-pill'],
+  [class$='-chip'], [class$='-kicker'], .team-name, .nav-label
+) {
+  font-weight: 600;
+}
+
+html[data-theme='deep'] :is(
+  small, [class$='-meta'], [class$='-hint'], [class$='-description'],
+  .stat-label, .summary-label, .detection-label, .settings-panel-meta
+) {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+html[data-theme='deep'] :is(
+  .stat-value, .summary-value, .detection-value, .score-value,
+  .templates-stat-value, .domain-assets-stat-value
+) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+html[data-theme='deep'] *::selection {
+  background: var(--accent-blue);
+  color: var(--ink-strong);
+}
+
+html[data-theme='deep'] :focus-visible {
+  outline: 2px solid var(--deep-focus);
+  outline-offset: 3px;
+}
+
+html[data-theme='deep'] ::-webkit-scrollbar-track {
+  background: transparent;
+  border: 0;
+}
+
+html[data-theme='deep'] ::-webkit-scrollbar-thumb {
+  background: #b8c4d3;
+  border: 3px solid var(--paper);
+}
+
+/* A dark navigation rail anchors the predominantly light workspace. */
+html[data-theme='deep'] .sidebar {
+  border-right: 1px solid var(--deep-nav);
+  background: var(--deep-nav);
+  color: var(--deep-nav-text);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.nav-item, .sidebar-toggle, .team-switcher) {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--deep-nav-text);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .team-switcher {
+  border-color: #2d3c52;
+  background: var(--deep-nav-surface);
+}
+
+html[data-theme='deep'] :is(.team-arrows, .create-button svg) {
+  color: inherit;
+}
+
+html[data-theme='deep'] :is(
+  .nav-item:hover, .sidebar-toggle:hover, .team-switcher:hover,
+  .team-switcher[aria-expanded='true']
+) {
+  color: #f8fafc;
+  background: var(--deep-nav-surface);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .nav-item.active {
+  color: #f8fafc;
+  background: var(--deep-nav-active);
+  border-color: #36526c;
+  box-shadow: inset 3px 0 0 #7dd3fc;
+}
+
+html[data-theme='deep'] :is(.nav-badge, .nav-item.active .nav-badge) {
+  border: 1px solid #3a4b63;
+  color: #dbeafe;
+  background: #1e3047;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .separated {
+  border-top: 1px solid #2d3c52;
+}
+
+html[data-theme='deep'] .create-button {
+  border: 1px solid #277eac;
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  background: var(--deep-accent);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .create-button:hover {
+  background: #075985;
+  transform: none;
+}
+
+/* Shared surfaces, including dialogs and menus rendered outside page containers. */
+html[data-theme='deep'] :is(
+  .card, .templates-stat-card, .templates-table-card, .template-detail-card,
+  .vuln-results-card, .vulnerabilities-list-card, .vulnerabilities-filter-panel,
+  .vulnerabilities-table-card, .templates-filter-panel, .scans-table-card,
+  .scans-panel, .asset-config-card, .asset-config-panel,
+  .asset-config-section, .asset-config-tabs,
+  .domain-assets-table-card, .domain-assets-panel-card, .domain-assets-summary-card,
+  .domain-assets-stat-card, .domain-assets-detail-card, .settings-tabs,
+  .settings-panel, .settings-detail-panel, .settings-user-table-card,
+  .settings-user-table-wrap, .settings-save-bar,
+  .scan-create-hero, .scan-create-checklist-card, .scan-create-steps,
+  .scan-create-form-card, .scan-create-field, .scan-template-library-panel,
+  .scan-task-detail-card, .scan-task-detail-info-card, .scan-task-detail-panel,
+  .scan-task-detail-hero, .scan-task-detail-progress-card,
+  .template-detail-info-box, .template-detail-metric-box,
+  .template-detail-query-box, .template-detail-code-shell,
+  [class$='-dialog'], [class$='-dialog-card'], [class$='-state-panel']
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-flat-lg);
+  backdrop-filter: none;
+}
+
+html[data-theme='deep'] :is(
+  .team-popover, .severity-menu, .protocol-menu, .templates-tag-menu,
+  .boolean-menu, .scans-actions-menu, .scan-create-select-menu,
+  .scan-template-library-menu, .asset-config-filter-menu,
+  [class$='-filter-menu'], [class$='-page-size-menu'],
+  [class$='-actions-menu'], [class$='-select-menu'], [class$='-value-menu'],
+  [class$='-bulk-action-menu']
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--deep-shadow-menu);
+}
+
+html[data-theme='deep'] :is(.team-popover::before, .scans-chip-tooltip::after) {
+  border-color: var(--line-soft);
+  background: var(--surface);
+}
+
+html[data-theme='deep'] :is([class$='-dialog-backdrop'], [class$='-dialog-overlay']) {
+  background: var(--deep-overlay);
+}
+
+html[data-theme='deep'] :is(
+  .topbar, .templates-topbar, .scans-topbar, .scan-create-topbar,
+  .domain-assets-topbar, .asset-config-topbar, .settings-topbar
+) {
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+html[data-theme='deep'] .topbar {
+  padding-bottom: 16px;
+}
+
+html[data-theme='deep'] :is(.templates-nav-item, .scans-tab) {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.templates-nav-item.active, .scans-tab.active) {
+  border-bottom-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: transparent;
+}
+
+/* Quiet data blocks replace the cartoon theme's irregular pencil loops. */
+html[data-theme='deep'] :is(.stat-box, .summary-box, .detection-box) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.summary-value, .detection-value, .tone-total) {
+  color: var(--ink-strong);
+}
+
+html[data-theme='deep'] :is(.info-icon, .summary-info) {
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  color: var(--ink-soft);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .globe-section {
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2);
+}
+
+html[data-theme='deep'] .avatar {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .category-panel, .empty-panel, .panel-footer, .remediation-panel,
+  .newest-header, .search-section, .settings-detail-head,
+  [class$='-pagination'], [class$='-table-head'], [class$='-table-header']
+) {
+  border-color: var(--line-soft);
+  border-width: 1px;
+}
+
+html[data-theme='deep'] :is(
+  .templates-table-head, .scans-table-head, .domain-assets-table-head,
+  .vulnerabilities-table-head, .settings-user-table thead,
+  .scan-template-library-head, .scan-template-library-table-head
+) {
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .scans-table-head {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+html[data-theme='deep'] :is(
+  .templates-row, .scans-table-row, .vuln-result-row, .vulnerabilities-row,
+  .domain-assets-row, .settings-user-table tbody tr, .detection-item,
+  .scan-template-library-row
+) {
+  border-color: var(--line-soft);
+  background: var(--surface);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .templates-row:hover, .scans-table-row:hover, .vuln-result-row:hover,
+  .vulnerabilities-row:hover, .domain-assets-row:hover,
+  .settings-user-table tbody tr:hover, .detection-item:hover,
+  .scan-template-library-row:hover
+) {
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerabilities-row.selected, .domain-assets-row.selected,
+  .scan-template-library-row.is-selected
+) {
+  background: var(--deep-accent-soft);
+}
+
+/* Only visual properties are overridden: checkbox, tooltip and switch geometry stays intact. */
+html[data-theme='deep'] :is(
+  .icon-button, .invite-button, .dark-button, .doc-button, .ghost-icon, .easter-egg-button,
+  .panel-footer-button, .templates-action-button, .templates-filter-chip,
+  .templates-back, .templates-page-arrow, .template-detail-secondary-button,
+  .template-detail-primary-button, .vuln-action, .vuln-icon-action,
+  .vuln-filter-chip, .vuln-clear-chip, .vuln-per-page,
+  .scans-filter-button, .scans-toolbar-icon, .scans-upgrade-button,
+  .scans-page-size, .scans-row-icon, .scans-pagination-arrow, .scans-selection-tool,
+  .settings-tab, .settings-button, .settings-row-action, .settings-option-button,
+  .team-popover-item, .scan-create-switch, .scan-create-ai-trigger,
+  .scan-template-page-button, .scan-template-library-filter-button,
+  .scan-create-ghost-button, .scan-create-primary-button,
+  .scan-create-secondary-button, .scan-create-select-button,
+  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-chip,
+  .domain-assets-dialog-close, .domain-assets-dialog-button,
+  .domain-assets-filter-option, .domain-assets-value-option,
+  [class$='-action-button'], [class$='-dialog-button'], [class$='-icon-button'],
+  [class$='-filter-trigger'], [class$='-page-size-trigger'],
+  [class$='-ghost-button'], [class$='-primary-button'], [class$='-secondary-button']
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+  text-shadow: none;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+html[data-theme='deep'] button:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .scans-selection-tool:is(:hover, :focus-visible) {
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .icon-button, .invite-button, .doc-button, .panel-footer-button,
+  .templates-action-button, .templates-filter-chip, .settings-button,
+  .settings-row-action, .settings-tab, .team-popover-item, .scans-selection-tool,
+  .scan-create-secondary-button, .scan-create-ghost-button, .scan-create-select-button,
+  [class$='-filter-trigger'], [class$='-page-size-trigger'],
+  [class$='-action-button'], [class$='-dialog-button']
+):hover:not(:disabled) {
+  border-color: #afc0d2;
+  background: var(--surface-2);
+}
+
+html[data-theme='deep'] :is(
+  .dark-button, .template-detail-primary-button, .scans-upgrade-button,
+  .scan-create-primary-button, .scan-create-primary-button.is-launch,
+  .settings-button--primary, .scan-task-detail-primary-button,
+  .asset-config-action-button.is-primary, .asset-config-dialog-button.is-primary,
+  .domain-assets-dialog-button.is-primary, .domain-assets-dialog-button:not(.is-secondary)
+) {
+  border: 1px solid var(--deep-accent);
+  color: #ffffff;
+  background: var(--deep-accent);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .dark-button, .template-detail-primary-button, .scans-upgrade-button,
+  .scan-create-primary-button, .settings-button--primary,
+  .scan-task-detail-primary-button, .asset-config-action-button.is-primary,
+  .asset-config-dialog-button.is-primary, .domain-assets-dialog-button.is-primary,
+  .domain-assets-dialog-button:not(.is-secondary)
+):hover:not(:disabled) {
+  border-color: var(--deep-accent-hover);
+  color: #ffffff;
+  background: var(--deep-accent-hover);
+}
+
+html[data-theme='deep'] :is(
+  .settings-tab.active, .settings-option-button.active, .templates-filter-chip.active,
+  .vuln-filter-chip.is-active, .scan-template-library-filter-button.is-active,
+  .scan-template-page-button.is-active, [class$='-filter-option'].selected,
+  [class$='-page-size-option'].selected, .scan-create-select-option.is-selected
+) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(input:not([type='checkbox']):not([type='radio']), textarea, select) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-strong);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+html[data-theme='deep'] :is(input, textarea)::placeholder {
+  color: var(--ink-soft);
+}
+
+html[data-theme='deep'] :is(input, textarea, select):focus {
+  border-color: var(--deep-focus);
+  box-shadow: 0 0 0 3px var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] :is(
+  .templates-search, .vuln-search, .scans-search, .scan-template-library-search
+):is(:hover, :focus-within) input {
+  border-color: var(--deep-focus);
+  box-shadow: 0 0 0 3px var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] :is(
+  .templates-search, .scans-search, .vulnerabilities-search-field,
+  .domain-assets-search-field, .asset-config-search-field,
+  .scan-template-library-search
+) {
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .templates-search, .scans-search, .vulnerabilities-search-field,
+  .domain-assets-search-field, .asset-config-search-field,
+  .scan-template-library-search
+):is(:hover, :focus-within) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .templates-search, .scans-search, .vulnerabilities-search-field,
+  .domain-assets-search-field, .asset-config-search-field
+) input {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .templates-search, .scans-search, .vulnerabilities-search-field,
+  .domain-assets-search-field, .asset-config-search-field
+):focus-within input {
+  border-color: var(--deep-focus);
+  box-shadow: 0 0 0 3px var(--deep-accent-soft);
+}
+
+/* Vulnerability filters stay unframed and use restrained deep-theme controls. */
+html[data-theme='deep'] .vulnerabilities-filter-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-trigger:not(.vulnerabilities-bulk-action-trigger) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-trigger:not(.vulnerabilities-bulk-action-trigger):is(:hover, :focus-visible, .active) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-menu {
+  top: calc(100% + 8px);
+  padding: 6px;
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--deep-shadow-menu);
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-menu.is-tag-menu {
+  padding: 8px;
+}
+
+html[data-theme='deep'] .vulnerabilities-tag-menu-search input {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-strong);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 400;
+}
+
+html[data-theme='deep'] .vulnerabilities-tag-menu-search input:focus {
+  border-color: var(--deep-focus);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-option {
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 500;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-option:is(:hover, :focus-visible, .selected) {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-option-label {
+  color: inherit;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-check {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-check.selected {
+  border-color: var(--deep-accent);
+  background: var(--deep-accent);
+}
+
+html[data-theme='deep'] .vulnerabilities-selected-tag {
+  border: 1px solid #b8cee0;
+  border-radius: var(--radius-sm);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  font-weight: 600;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-selected-tag:hover {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-selected-tag small {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerabilities-pagination, .scans-pagination, .domain-assets-pagination,
+  .templates-pagination, .asset-config-pagination
+) {
+  border-color: var(--line-soft);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .asset-config-tab, .asset-config-row-action, .asset-config-panel-link,
+  .asset-config-filter-trigger, .scans-filter-chip, .asset-config-panel-head-chip,
+  .scans-status-filter-trigger, .scans-risk-filter-trigger,
+  .vulnerabilities-pagination-arrow, .domain-assets-pagination-arrow,
+  .asset-config-pagination-arrow, .vulnerabilities-clear-button
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .asset-config-tab.active {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .asset-config-filter-trigger:is(:hover, :focus-visible, .active) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .asset-config-filter-option {
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .asset-config-filter-option:hover {
+  color: var(--ink-strong);
+  background: var(--surface-2);
+}
+
+html[data-theme='deep'] .asset-config-filter-option.selected {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .asset-config-filter-check {
+  border: 1px solid var(--ink-soft);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .asset-config-filter-check.selected {
+  border-color: var(--deep-control-accent);
+  background: var(--deep-control-accent);
+}
+
+html[data-theme='deep'] .asset-config-filter-check.selected::after {
+  border-color: #ffffff;
+}
+
+/* Host and domain inventories share the same filter controls and dialog. */
+html[data-theme='deep'] :is(.domain-assets-dialog-head, .domain-assets-dialog-actions) {
+  border-color: var(--line-soft);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .domain-assets-dialog-body {
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .domain-assets-dialog-field > span {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .domain-assets-dialog-field small {
+  color: var(--deep-danger);
+  font-weight: 500;
+}
+
+html[data-theme='deep'] :is(
+  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-dialog-close,
+  .domain-assets-dialog-button:where(.is-secondary), .domain-assets-filter-option,
+  .domain-assets-value-option
+):hover:where(:not(:disabled)) {
+  border-color: var(--deep-accent);
+  color: var(--ink-strong);
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .domain-assets-filter-chip, .domain-assets-filter-option.selected,
+  .domain-assets-value-option.selected
+) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-chip,
+  .domain-assets-dialog-close, .domain-assets-dialog-button,
+  .domain-assets-filter-option, .domain-assets-value-option
+):focus-visible {
+  outline: 2px solid var(--deep-focus);
+  outline-offset: 2px;
+}
+
+html[data-theme='deep'] .domain-assets-filter-chip-remove {
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  color: var(--deep-accent);
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .domain-assets-filter-chip-remove:is(:hover, :focus-visible) {
+  border-color: var(--deep-accent);
+  color: #ffffff;
+  background: var(--deep-control-accent);
+}
+
+html[data-theme='deep'] .domain-assets-filter-option-check {
+  border: 1px solid var(--ink-soft);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .domain-assets-filter-option-check.selected {
+  border-color: var(--deep-control-accent);
+  background: var(--deep-control-accent);
+}
+
+html[data-theme='deep'] .domain-assets-filter-option-check.selected::after {
+  border-color: #ffffff;
+}
+
+html[data-theme='deep'] .asset-config-status-pill {
+  display: inline-flex;
+  border-width: 1px;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .asset-config-status-pill.is-enabled {
+  justify-content: flex-end;
+  border-color: var(--deep-status-enabled);
+  background: var(--deep-status-enabled);
+}
+
+html[data-theme='deep'] .asset-config-status-pill.is-disabled {
+  border-color: var(--deep-status-disabled);
+  background: var(--deep-status-disabled);
+}
+
+html[data-theme='deep'] :is(
+  .asset-config-status-pill.is-enabled, .asset-config-status-pill.is-disabled
+) .asset-config-status-dot {
+  border: 0;
+  background: #ffffff;
+}
+
+html[data-theme='deep'] :is(.scan-create-step, .scan-create-step-index) {
+  border-radius: var(--radius-md);
+}
+
+html[data-theme='deep'] :is(.scan-create-step:hover, .settings-user-row:hover) {
+  transform: none;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .plan-pill, .score-badge, .severity-pill, .detection-chip, .templates-severity-pill,
+  .templates-selected-tag, .scan-template-library-selected-tag,
+  .template-detail-ai-badge, .template-detail-tag-badge, .vuln-severity-pill,
+  .vuln-meta-chip, .vuln-count-badge, .vuln-filter-badge, .scans-tab-badge,
+  .scans-severity-badge, .scan-create-eyebrow, .scan-create-form-badge,
+  .scan-create-ai-trigger-badge, .scan-template-row-state,
+  .settings-panel-kicker, .settings-theme-current, .scans-page-saved-chip
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--surface-2);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] .plan-pill {
+  border: 0;
+  background: transparent;
+}
+
+html[data-theme='deep'] :is(.tone-critical, .severity-critical) {
+  color: var(--deep-danger);
+}
+
+html[data-theme='deep'] :is(.tone-high, .tone-medium) {
+  color: var(--deep-warning);
+}
+
+html[data-theme='deep'] .tone-low {
+  color: var(--deep-accent);
+}
+
+html[data-theme='deep'] :is(
+  .template-severity-critical, .severity-pill.critical,
+  .templates-severity-pill.critical, .vuln-severity-pill.critical,
+  .vulnerabilities-severity-pill.is-critical, .domain-assets-risk-pill.is-critical
+) {
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+  border-color: #fecdd3;
+}
+
+html[data-theme='deep'] :is(
+  .template-severity-high, .template-severity-medium, .severity-pill.high,
+  .severity-pill.medium, .vulnerabilities-severity-pill.is-high,
+  .vulnerabilities-severity-pill.is-medium, .domain-assets-risk-pill.is-high,
+  .domain-assets-risk-pill.is-medium
+) {
+  color: var(--deep-warning);
+  background: var(--deep-warning-soft);
+  border-color: #fde68a;
+}
+
+html[data-theme='deep'] :is(
+  .template-severity-low, .template-severity-info,
+  .vulnerabilities-severity-pill.is-low, .vulnerabilities-severity-pill.is-info,
+  .domain-assets-risk-pill.is-low, .domain-assets-risk-pill.is-info
+) {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  border-color: #c8deef;
+}
+
+html[data-theme='deep'] :is(.score-badge, .settings-alert.is-success) {
+  color: var(--deep-success);
+  background: var(--deep-success-soft);
+}
+
+/* Intelligence badges use severity-* classes, independently of generic chips. */
+html[data-theme='deep'] .newest-card .severity-pill.severity-critical {
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+  border-color: #fecdd3;
+}
+
+html[data-theme='deep'] .newest-card .severity-pill.severity-high {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+html[data-theme='deep'] .newest-card .severity-pill.severity-medium {
+  color: var(--deep-warning);
+  background: var(--deep-warning-soft);
+  border-color: #fde68a;
+}
+
+html[data-theme='deep'] .newest-card .severity-pill.severity-low {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  border-color: #c8deef;
+}
+
+html[data-theme='deep'] .newest-card .severity-pill.severity-info {
+  color: var(--deep-success);
+  background: var(--deep-success-soft);
+  border-color: #bbf7d0;
+}
+
+html[data-theme='deep'] .newest-card .severity-pill.severity-unknown {
+  color: var(--ink);
+  background: var(--surface-2);
+  border-color: var(--line-soft);
+}
+
+html[data-theme='deep'] :is(
+  .settings-alert.is-error, .settings-row-action.is-danger,
+  .settings-button--danger, .template-detail-primary-button.is-danger,
+  .scan-task-detail-danger-button
+) {
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+  border: 1px solid #fecdd3;
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .settings-theme-card, .settings-toggle-row, .settings-user-row,
+  .settings-detail-list div, .scan-create-step, .scan-create-step-index,
+  .scan-create-switch-track, .scan-create-switch-thumb, .scan-create-select-check,
+  .scans-severity-group, .scans-severity-badge + .scans-severity-badge
+) {
+  border-width: 1px;
+  border-color: var(--line-soft);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.settings-theme-card, .settings-toggle-row) {
+  border-radius: var(--radius-md);
+}
+
+html[data-theme='deep'] :is(.settings-theme-card:hover, .settings-theme-card.active) {
+  border-color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(.settings-switch, .settings-toggle-row:hover .settings-switch) {
+  border: 1px solid #94a3b8;
+  background: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .settings-switch::after {
+  border: 0;
+  background: #ffffff;
+}
+
+html[data-theme='deep'] .settings-switch-input:checked + .settings-switch {
+  border-color: var(--deep-accent);
+  background: var(--deep-accent);
+}
+
+html[data-theme='deep'] .settings-switch-input:focus-visible + .settings-switch {
+  outline: 2px solid var(--deep-focus);
+}
+
+html[data-theme='deep'] .settings-theme-card:focus-within {
+  outline: 2px solid var(--deep-focus);
+  outline-offset: 3px;
+}
+
+html[data-theme='deep'] .settings-theme-swatches span {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+html[data-theme='deep'] .settings-save-bar.is-dirty {
+  border-color: #c8deef;
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .settings-save-bar p {
+  font-weight: 400;
+}
+
+html[data-theme='deep'] .easter-egg-button::after {
+  display: none;
+}
+
+html[data-theme='deep'] :is(.scan-create-step.is-active, .scan-create-switch.is-on) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(
+  .scan-create-step.is-active .scan-create-step-index,
+  .scan-create-switch.is-on .scan-create-switch-track,
+  .scan-create-select-check.is-selected
+) {
+  border-color: var(--deep-accent);
+  color: #ffffff;
+  background: var(--deep-accent);
+}
+
+html[data-theme='deep'] .scan-create-switch-thumb {
+  background: var(--surface);
+}
+
+html[data-theme='deep'] :is(
+  .api-key, .template-detail-markdown pre, .template-detail-markdown code,
+  .template-detail-markdown blockquote, .scan-task-detail-log-panel
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.template-detail-markdown pre, .scan-task-detail-log-panel) {
+  border-color: #24374d;
+  color: #cbd5e1;
+  background: var(--deep-nav);
+}
+
+html[data-theme='deep'] .template-detail-markdown pre code {
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+
+html[data-theme='deep'] :is(.scans-severity-tooltip, .scans-chip-tooltip, .scan-create-field-tooltip) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--deep-shadow-menu);
+}
+
+/* Task overview: align row feedback and risk distribution with the asset inventory. */
+html[data-theme='deep'] .scans-page .scans-table-row:hover {
+  background: #f0f7fc;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .scans-page .scans-table-row.selected {
+  background: var(--deep-accent-soft);
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .scans-page .scans-table-row.selected:hover {
+  background: #deedf7;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .scans-page .scans-table-row:focus-visible {
+  outline: 2px solid var(--deep-focus);
+  outline-offset: -3px;
+  background: #f0f7fc;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .domain-assets-page .domain-assets-table-row:hover {
+  background: #f0f7fc;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .domain-assets-page .domain-assets-table-row.selected {
+  background: var(--deep-accent-soft);
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .domain-assets-page .domain-assets-table-row.selected:hover {
+  background: #deedf7;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .domain-assets-page .domain-assets-table-row:focus-visible {
+  outline: 2px solid var(--deep-focus);
+  outline-offset: -3px;
+  background: #f0f7fc;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .scans-page .scans-risk-chip:is(.active, [aria-pressed='true']) {
+  border-color: var(--deep-accent);
+  color: #ffffff;
+  background: var(--deep-accent);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .scans-page .scans-risk-chip:is(.active, [aria-pressed='true']):hover {
+  border-color: var(--deep-accent-hover);
+  color: #ffffff;
+  background: var(--deep-accent-hover);
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill {
+  justify-content: center;
+  gap: 7px;
+  min-width: 72px;
+  min-height: 28px;
+  padding: 0 9px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
+  flex: 0 0 auto;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-success {
+  border-color: #86c9a0;
+  color: #166534;
+  background: #edf7f2;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-running {
+  border-color: #7cc1de;
+  color: #075985;
+  background: #e8f1f8;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-pending {
+  border-color: #aebccb;
+  color: #475569;
+  background: #f1f5f9;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-paused {
+  border-color: #e7c46a;
+  color: #854d0e;
+  background: #fffbeb;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-error {
+  border-color: #f0a1ad;
+  color: #be123c;
+  background: #fff1f2;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-warning {
+  border-color: #a8a29e;
+  color: #57534e;
+  background: #f5f5f4;
+}
+
+html[data-theme='deep'] .scans-page .scan-status-pill.is-neutral {
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-group {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge:last-child {
+  border-radius: 0 5px 5px 0;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge + .scans-severity-badge {
+  border-left: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge.is-critical {
+  color: #9f3642;
+  background: #ffe6e8;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge.is-high {
+  color: #b35b07;
+  background: #ffedd8;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge.is-medium {
+  color: #9b7400;
+  background: #fff3d8;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-badge.is-low {
+  color: #325fcb;
+  background: #e9f1ff;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-tooltip {
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: var(--radius-sm);
+  color: var(--ink-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-flat-lg);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .scans-page .scans-severity-tooltip::after {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(15, 23, 42, 0.14);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.14);
+  background: var(--surface);
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Scan detail uses the same semantic status system in the hero and summary panel. */
+html[data-theme='deep'] :is(
+  .scan-task-detail-status,
+  .scan-task-detail-info-row.is-emphasis strong
+) {
+  gap: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status,
+  .scan-task-detail-info-row.is-emphasis strong
+)::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
+  flex: 0 0 auto;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-success,
+  .scan-task-detail-info-row.is-success strong
+) {
+  border-color: #86c9a0;
+  color: #166534;
+  background: #edf7f2;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-running,
+  .scan-task-detail-info-row.is-running strong
+) {
+  border-color: #7cc1de;
+  color: #075985;
+  background: #e8f1f8;
+}
+
+html[data-theme='deep'] .scan-task-detail-status.is-running::before {
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-pending,
+  .scan-task-detail-info-row.is-pending strong
+) {
+  border-color: #aebccb;
+  color: #475569;
+  background: #f1f5f9;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-paused,
+  .scan-task-detail-info-row.is-paused strong
+) {
+  border-color: #e7c46a;
+  color: #854d0e;
+  background: #fffbeb;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-error,
+  .scan-task-detail-info-row.is-error strong
+) {
+  border-color: #f0a1ad;
+  color: #be123c;
+  background: #fff1f2;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-warning,
+  .scan-task-detail-info-row.is-warning strong
+) {
+  border-color: #a8a29e;
+  color: #57534e;
+  background: #f5f5f4;
+}
+
+html[data-theme='deep'] :is(
+  .scan-task-detail-status.is-neutral,
+  .scan-task-detail-info-row.is-neutral strong
+) {
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+/* Vulnerability and scan bulk actions use restrained deep-theme controls. */
+html[data-theme='deep'] .vulnerabilities-bulk-action-trigger {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-trigger:hover {
+  border-color: #afc0d2;
+  color: var(--ink-strong);
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-trigger.active {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-filter-count {
+  min-width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  color: #ffffff;
+  background: var(--deep-accent);
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-menu {
+  padding: 6px;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-option {
+  min-height: 38px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 600;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-option:is(:hover, :focus-visible):not(:disabled) {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-option.is-danger {
+  color: var(--deep-danger);
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-option.is-danger:is(:hover, :focus-visible):not(:disabled) {
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+}
+
+html[data-theme='deep'] .vulnerabilities-bulk-action-option.is-danger .vulnerabilities-bulk-action-icon {
+  color: currentColor;
+}
+
+html[data-theme='deep'] .vulnerabilities-selection-tool {
+  height: 38px;
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerabilities-selection-tool:is(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-overlay,
+  .vulnerability-delete-dialog-overlay
+) {
+  background: var(--deep-overlay);
+  backdrop-filter: none;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog,
+  .vulnerability-delete-dialog
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--deep-shadow-menu);
+}
+
+html[data-theme='deep'] .vulnerability-delete-dialog--danger {
+  border-color: #f0a1ad;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-header h2,
+  .vulnerability-delete-dialog-header h2
+) {
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-header p,
+  .vulnerability-delete-dialog-header p
+) {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-close,
+  .vulnerability-delete-dialog-close
+) {
+  width: 32px;
+  height: 32px;
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-close,
+  .vulnerability-delete-dialog-close
+):is(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--deep-accent);
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerability-status-options {
+  gap: 8px;
+}
+
+html[data-theme='deep'] .vulnerability-status-option {
+  min-height: 46px;
+  border: var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerability-status-option:is(:hover, :focus-visible):not(:disabled) {
+  border-color: #afc0d2;
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .vulnerability-status-option.selected {
+  border-color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .vulnerability-status-option-check {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ink-soft);
+  background: var(--surface);
+}
+
+html[data-theme='deep'] .vulnerability-status-option.selected .vulnerability-status-option-check {
+  border-color: var(--deep-accent);
+}
+
+html[data-theme='deep'] .vulnerability-status-option.selected .vulnerability-status-option-check::after {
+  inset: 3px;
+  background: var(--deep-accent);
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill {
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-neutral {
+  border-color: #cbd5e1;
+  color: #475569;
+  background: #f1f5f9;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-warning {
+  border-color: #e5c66b;
+  color: #7c5d12;
+  background: #fff8e1;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-confirmed {
+  border-color: #86cfa5;
+  color: #166534;
+  background: #ecfdf3;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-ticketed {
+  border-color: #93b7e5;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-fixed {
+  border-color: #7dc8bd;
+  color: #0f766e;
+  background: #f0fdfa;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-false-positive {
+  border-color: #f0a1ad;
+  color: #be123c;
+  background: #fff1f2;
+}
+
+html[data-theme='deep'] .vulnerability-status-dialog .vulnerabilities-status-pill.is-ignored {
+  border-color: #cbd5e1;
+  color: #475569;
+  background: #f8fafc;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-progress,
+  .vulnerability-delete-dialog-progress,
+  .vulnerability-status-dialog-error,
+  .vulnerability-delete-dialog-error,
+  .vulnerability-delete-dialog-warning
+) {
+  border-width: 1px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-progress,
+  .vulnerability-delete-dialog-progress
+) {
+  border-color: #c8deef;
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] :is(
+  .vulnerability-status-dialog-error,
+  .vulnerability-delete-dialog-error,
+  .vulnerability-delete-dialog-warning
+) {
+  border-color: #fecdd3;
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+}
+
+html[data-theme='deep'] .vulnerability-delete-dialog .template-detail-primary-button.is-danger {
+  border-color: var(--deep-danger);
+  color: #ffffff;
+  background: var(--deep-danger);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .vulnerability-delete-dialog .template-detail-primary-button.is-danger:hover:not(:disabled) {
+  border-color: #9f1239;
+  background: #9f1239;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='deep'] *,
+  html[data-theme='deep'] *::before,
+  html[data-theme='deep'] *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
+  }
+}

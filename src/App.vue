@@ -16,7 +16,13 @@ import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
 import { useAppRouter } from './composables/useAppRouter'
-import { setColorMode } from './composables/useColorMode'
+import {
+  applyThemeSettings,
+  cacheThemeSettings,
+  clearCachedThemeSettings,
+  getCachedThemeSettings
+} from './composables/useTheme'
+import { DEFAULT_THEME_SETTINGS } from './constants/themes'
 import { ROUTE_PATHS } from './router/routes'
 import {
   AUTH_SESSION_EXPIRED_EVENT,
@@ -63,19 +69,23 @@ function redirectAuthenticatedLogin() {
   }
 }
 
-function handleLoginSuccess(payload) {
+async function handleLoginSuccess(payload) {
   setAuthSession(payload)
   currentUser.value = updateStoredUser(payload?.user)
   isAuthenticated.value = true
+  isAuthReady.value = false
+  await syncCurrentUserThemeSettings()
   isAuthReady.value = true
-  void syncCurrentUserThemeSettings()
-  redirectAuthenticatedLogin()
+  if (isAuthenticated.value) {
+    redirectAuthenticatedLogin()
+  }
 }
 
 function resetAuthState() {
   themeSettingsAbortController?.abort()
   themeSettingsAbortController = null
-  setColorMode(false)
+  clearCachedThemeSettings()
+  applyThemeSettings(DEFAULT_THEME_SETTINGS)
   clearAuthSession()
   currentUser.value = null
   isAuthenticated.value = false
@@ -86,14 +96,19 @@ async function syncCurrentUserThemeSettings() {
   themeSettingsAbortController?.abort()
   themeSettingsAbortController = new AbortController()
   const controller = themeSettingsAbortController
+  const cachedSettings = getCachedThemeSettings()
+  applyThemeSettings(cachedSettings || DEFAULT_THEME_SETTINGS)
 
   try {
     const data = await getThemeSettings(controller.signal)
     const normalized = normalizeThemeSettings(data)
-    setColorMode(normalized.darkModeEnabled)
+    if (!controller.signal.aborted && themeSettingsAbortController === controller) {
+      applyThemeSettings(normalized)
+      cacheThemeSettings(normalized)
+    }
   } catch (error) {
-    if (error?.name !== 'AbortError') {
-      setColorMode(false)
+    if (error?.name !== 'AbortError' && themeSettingsAbortController === controller) {
+      applyThemeSettings(cachedSettings || DEFAULT_THEME_SETTINGS)
     }
   } finally {
     if (themeSettingsAbortController === controller) {
@@ -125,8 +140,10 @@ async function initializeAuth() {
     const user = await getCurrentUser()
     currentUser.value = updateStoredUser(user)
     isAuthenticated.value = true
-    void syncCurrentUserThemeSettings()
-    redirectAuthenticatedLogin()
+    await syncCurrentUserThemeSettings()
+    if (isAuthenticated.value) {
+      redirectAuthenticatedLogin()
+    }
   } catch {
     resetAuthState()
     redirectToLogin()

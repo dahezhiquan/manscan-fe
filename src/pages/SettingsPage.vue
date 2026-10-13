@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { getThemeSettings, updateThemeSettings } from '../api/settings'
 import { createUser, deleteUser, getUserList, updateUser } from '../api/users'
 import AppShell from '../components/layout/AppShell.vue'
-import { setColorMode } from '../composables/useColorMode'
+import { applyThemeSettings, cacheThemeSettings, getAppliedThemeSettings } from '../composables/useTheme'
+import { THEME_OPTIONS } from '../constants/themes'
 import { iconPath } from '../utils/icons'
 import { normalizeThemeSettings } from '../utils/themeSettings'
 import {
@@ -44,11 +45,6 @@ const SETTINGS_TABS = [
   { id: 'notifications', label: '通知策略', icon: 'shield' }
 ]
 
-const THEME_OPTIONS = [
-  { id: 'cartoon', label: '经典手绘', description: '充满活力的手绘风格主题，适合年轻的使用者', swatches: ['#ffd54f', '#84d7ff', '#ffb6b9'] },
-  { id: 'deep', label: '深邃沉稳', description: '科技深邃风格主题，适合沉稳的使用者', swatches: ['#171f2f', '#2d6cdf', '#7dd3fc'] }
-]
-
 const NOTIFICATION_POLICIES = [
   { id: 'scanFinished', label: '扫描完成通知', description: '任务完成或失败时通知任务创建人。' },
   { id: 'criticalVulnerability', label: '严重漏洞提醒', description: '发现严重漏洞后立即提醒负责人。' },
@@ -56,9 +52,10 @@ const NOTIFICATION_POLICIES = [
 ]
 
 const activeTab = ref('users')
+const initialThemeSettings = getAppliedThemeSettings()
 const settingsState = reactive({
-  selectedTheme: THEME_OPTIONS[0].id,
-  darkModeEnabled: false,
+  selectedTheme: initialThemeSettings.theme,
+  darkModeEnabled: initialThemeSettings.darkModeEnabled,
   scanFinished: true,
   criticalVulnerability: true,
   dailyDigest: false,
@@ -325,6 +322,7 @@ async function fetchThemeSettings(options = {}) {
       settingsState.selectedTheme = normalized.theme
       settingsState.darkModeEnabled = normalized.darkModeEnabled
       updateSavedThemeSnapshot(normalized)
+      cacheThemeSettings(normalized)
       themeSettingsState.loaded = true
       saveState.value = 'idle'
     }
@@ -358,6 +356,7 @@ async function saveThemeSettings() {
     settingsState.selectedTheme = normalized.theme
     settingsState.darkModeEnabled = normalized.darkModeEnabled
     updateSavedThemeSnapshot(normalized)
+    cacheThemeSettings(normalized)
     themeSettingsState.loaded = true
     saveState.value = 'saved'
 
@@ -610,9 +609,9 @@ watch(
 )
 
 watch(
-  () => settingsState.darkModeEnabled,
-  (enabled) => {
-    setColorMode(enabled)
+  () => [settingsState.selectedTheme, settingsState.darkModeEnabled],
+  ([theme, darkModeEnabled]) => {
+    applyThemeSettings({ theme, darkModeEnabled })
   }
 )
 

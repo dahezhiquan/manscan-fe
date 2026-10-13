@@ -297,7 +297,7 @@ const stepFields = {
       key: 'project_path',
       label: 'Project 缓存路径',
       type: 'string',
-      placeholder: '例如：/tmp/manscan/project-cache',
+      placeholder: '默认：data/project',
       tooltip: '指定 project 缓存文件/目录落盘路径，便于复用扫描缓存或按任务隔离。',
       showWhen: (state) => state.project
     },

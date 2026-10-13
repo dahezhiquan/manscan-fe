@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Security Dashboard</title>
+    <script>
+      // Restore confirmed preferences before styles or page content can paint.
+      // Keep the cache format in sync with src/composables/useTheme.js.
+      try {
+        const read = (key) => localStorage.getItem(key) || sessionStorage.getItem(key)
+        const user = JSON.parse(read('manscan-auth-user') || 'null')
+        const cached = JSON.parse(localStorage.getItem('manscan-theme-settings') || 'null')
+        if (
+          read('manscan-auth-access-token') && user?.username && cached &&
+          cached.userId === user.id && cached.username === user.username &&
+          ['cartoon', 'deep'].includes(cached.theme) &&
+          typeof cached.darkModeEnabled === 'boolean'
+        ) {
+          document.documentElement.dataset.theme = cached.theme
+          document.documentElement.dataset.colorMode = cached.darkModeEnabled ? 'dark' : 'light'
+        }
+      } catch {
+        // Invalid or unavailable storage must not prevent the app from loading.
+      }
+    </script>
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app"></div>

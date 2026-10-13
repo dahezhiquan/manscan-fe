@@ -424,6 +424,7 @@ html[data-color-mode='dark'] :where(
   .ghost-icon,
   .icon-button,
   .invite-button,
+  .easter-egg-button,
   .create-button,
   .templates-back,
   .templates-nav-item,
@@ -525,12 +526,30 @@ html[data-color-mode='dark'] :where(
   box-shadow: var(--dark-shadow-flat) !important;
 }
 
+html[data-color-mode='dark'] .easter-egg-button {
+  border-color: rgba(219, 231, 246, 0.48) !important;
+  background:
+    linear-gradient(135deg, #0f172a 0%, #172033 48%, #2a1f3a 100%) !important;
+  color: #f8fafc !important;
+  box-shadow: 2px 2px 0 rgba(219, 231, 246, 0.2) !important;
+}
+
+html[data-color-mode='dark'] .easter-egg-button::after {
+  background: #38bdf8 !important;
+  box-shadow:
+    -13px 12px 0 #22c55e,
+    -26px 2px 0 #fb7185,
+    -5px 21px 0 #a855f7 !important;
+  opacity: 0.78;
+}
+
 html[data-color-mode='dark'] :where(
   .team-switcher:hover,
   .team-switcher[aria-expanded='true'],
   .sidebar-toggle:hover,
   .nav-item:hover,
   .nav-item.active,
+  .easter-egg-button:hover,
   .templates-back:hover,
   .templates-nav-item:hover,
   .templates-nav-item.active,
@@ -657,6 +676,16 @@ html[data-color-mode='dark'] :where(
   border-color: var(--dark-border-strong) !important;
   color: var(--dark-text-strong) !important;
   box-shadow: 0 4px 0 rgba(219, 231, 246, 0.24) !important;
+}
+
+html[data-color-mode='dark'] .easter-egg-button:hover {
+  background:
+    linear-gradient(135deg, #111c31 0%, #1b2a44 48%, #332449 100%) !important;
+  filter: saturate(1.08);
+}
+
+html[data-color-mode='dark'] .easter-egg-button:active {
+  box-shadow: 1px 1px 0 rgba(219, 231, 246, 0.24) !important;
 }
 
 html[data-color-mode='dark'] .scans-upgrade-button,
@@ -1768,7 +1797,6 @@ html[data-color-mode='dark'] :where(
 }
 
 html[data-color-mode='dark'] :where(
-  .newest-card .severity-pill,
   .newest-card .detection-chip,
   .newest-card .panel-footer-button
 ) {
@@ -1776,6 +1804,19 @@ html[data-color-mode='dark'] :where(
   border-color: var(--dark-border) !important;
   color: var(--dark-text) !important;
   box-shadow: none !important;
+}
+
+/* Preserve the critical/high/medium/low palettes defined above for intelligence. */
+html[data-color-mode='dark'] .newest-card .severity-pill.severity-info {
+  background: rgba(20, 83, 45, 0.5) !important;
+  border-color: rgba(134, 239, 172, 0.46) !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-color-mode='dark'] .newest-card .severity-pill.severity-unknown {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #cbd5e1 !important;
 }
 
 html[data-color-mode='dark'] .newest-card .panel-footer-button:hover {
@@ -1841,6 +1882,15 @@ html[data-color-mode='dark'] :where(
   .scan-task-detail-log-row.is-match p
 ) {
   color: var(--match-text) !important;
+}
+
+html[data-color-mode='dark'] :is(
+  .scan-task-detail-log-row.is-match.severity-info,
+  .scan-task-detail-log-row.is-match.severity-low,
+  .scan-task-detail-log-row.is-match.severity-medium,
+  .scan-task-detail-log-row.is-match.severity-high
+) .scan-task-detail-log-meta time {
+  color: #111827 !important;
 }
 
 html[data-color-mode='dark'] :where(
@@ -2048,4 +2098,605 @@ html[data-color-mode='dark'] :where(
   .scan-template-library-skeleton::after
 ) {
   opacity: 0.32;
+}
+
+/* Deep theme keeps its restrained geometry when the independent dark mode is enabled. */
+:root[data-theme='deep'][data-color-mode='dark'] {
+  --line-soft: rgba(148, 163, 184, 0.22);
+  --border-strong: 1px solid var(--line-soft);
+  --shadow-flat: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-flat-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --dark-shadow: var(--shadow-flat-lg);
+  --dark-shadow-flat: var(--shadow-flat);
+  --deep-accent: #7dd3fc;
+  --deep-accent-hover: #bae6fd;
+  --deep-accent-soft: #173047;
+  --deep-danger: #fda4af;
+  --deep-danger-soft: #3a1f2a;
+  --deep-warning: #fcd34d;
+  --deep-warning-soft: #302818;
+  --deep-success: #86efac;
+  --deep-success-soft: #173323;
+  --deep-status-enabled: #22c55e;
+  --deep-status-disabled: #475569;
+  --deep-shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Existing shared dark rules use !important; these scoped exceptions take precedence. */
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  body, .dashboard-shell, .main-content, .templates-shell-main, .templates-page,
+  .template-detail-page, .vuln-page, .scans-page, .asset-config-shell-main,
+  .asset-config-page, .domain-assets-shell-main, .domain-assets-page,
+  .settings-shell-main, .settings-page, .scan-create-page, .scan-task-detail-page
+) {
+  background: var(--dark-page-bg-2) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .sidebar {
+  background: var(--deep-nav) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .nav-item, .sidebar-toggle, .team-switcher, .nav-item:hover
+) {
+  border-width: 1px;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .nav-item.active {
+  background: var(--deep-nav-active) !important;
+  color: #f8fafc !important;
+  box-shadow: inset 3px 0 0 #7dd3fc !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  button, input, textarea, select, .settings-theme-card, .settings-toggle-row,
+  .scan-create-step, .scan-create-step-index, .scans-severity-group,
+  [class$='-badge'], [class$='-chip'], [class$='-pill']
+) {
+  border-width: 1px;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .stat-box, .summary-box, .detection-box
+) {
+  background: var(--dark-surface-2) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .templates-nav-item, .scans-tab, .topbar, .templates-topbar, .scans-topbar
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .templates-nav-item.active, .scans-tab.active
+) {
+  color: var(--deep-accent) !important;
+  border-bottom-color: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .dark-button, .create-button, .template-detail-primary-button,
+  .scans-upgrade-button, .scan-create-primary-button,
+  .settings-button--primary, .scan-task-detail-primary-button,
+  .domain-assets-dialog-button:not(.is-secondary)
+) {
+  border-color: #0e7490 !important;
+  color: #f8fafc !important;
+  background: #075985 !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .settings-theme-card.active, .settings-tab.active, .scan-create-step.is-active
+) {
+  border-color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .settings-switch-input:checked + .settings-switch,
+html[data-theme='deep'][data-color-mode='dark'] .scan-create-switch.is-on .scan-create-switch-track {
+  background: #0369a1 !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .settings-panel-kicker, .settings-theme-current
+) {
+  background: var(--deep-accent-soft) !important;
+  color: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .nav-item:not(.active):not(:hover) {
+  border-color: transparent !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-toolbar {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-filter-trigger:is(:hover, :focus-visible, .active) {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-filter-option {
+  background: transparent !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-filter-option:hover {
+  background: var(--dark-surface-2) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-filter-option.selected {
+  background: var(--deep-accent-soft) !important;
+  color: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-status-pill.is-enabled {
+  border-color: var(--deep-status-enabled) !important;
+  background: var(--deep-status-enabled) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .asset-config-status-pill.is-disabled {
+  border-color: var(--deep-status-disabled) !important;
+  background: var(--deep-status-disabled) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-dialog-head, .domain-assets-dialog-actions
+) {
+  border-color: var(--line-soft) !important;
+  background: var(--dark-surface-2) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-option,
+  .domain-assets-value-option, .domain-assets-dialog-close, .domain-assets-dialog-button.is-secondary
+) {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-option,
+  .domain-assets-value-option, .domain-assets-dialog-close, .domain-assets-dialog-button:where(.is-secondary)
+):hover:where(:not(:disabled)) {
+  border-color: var(--deep-accent) !important;
+  background: var(--dark-surface-2) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-filter-chip, .domain-assets-filter-option.selected, .domain-assets-value-option.selected
+) {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-filter-option.selected, .domain-assets-value-option.selected
+) span:last-child {
+  color: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-dialog-button:not(.is-secondary):hover:not(:disabled) {
+  background: var(--deep-control-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-filter-chip-remove, .domain-assets-filter-option-check
+) {
+  border-color: var(--dark-text-muted) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .domain-assets-filter-chip-remove:hover, .domain-assets-filter-chip-remove:focus-visible,
+  .domain-assets-filter-option-check.selected
+) {
+  border-color: var(--deep-control-accent) !important;
+  color: #ffffff !important;
+  background: var(--deep-control-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-filter-option-check.selected::after {
+  border-color: #ffffff !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-dialog-field small {
+  color: var(--deep-danger) !important;
+}
+
+/* Task overview keeps the same semantic hierarchy in deep dark mode. */
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-table-row:is(:hover, :focus-visible),
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-table-row.selected {
+  background: rgba(14, 165, 233, 0.16) !important;
+  box-shadow: inset 3px 0 0 var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-table-row.selected:hover {
+  background: rgba(14, 165, 233, 0.22) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-page .domain-assets-table-row:is(:hover, :focus-visible),
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-page .domain-assets-table-row.selected {
+  background: rgba(14, 165, 233, 0.16) !important;
+  box-shadow: inset 3px 0 0 var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .domain-assets-page .domain-assets-table-row.selected:hover {
+  background: rgba(14, 165, 233, 0.22) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-risk-chip:is(.active, [aria-pressed='true']) {
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+  background: #075985 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-risk-chip:is(.active, [aria-pressed='true']):hover {
+  border-color: #7dd3fc !important;
+  background: #0369a1 !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill {
+  border-width: 1px !important;
+  border-style: solid !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-success {
+  border-color: rgba(74, 222, 128, 0.52) !important;
+  color: #bbf7d0 !important;
+  background: rgba(20, 83, 45, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-running {
+  border-color: rgba(56, 189, 248, 0.56) !important;
+  color: #bae6fd !important;
+  background: rgba(7, 89, 133, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-pending {
+  border-color: rgba(148, 163, 184, 0.52) !important;
+  color: #dbe7f6 !important;
+  background: rgba(51, 65, 85, 0.76) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-paused {
+  border-color: rgba(251, 191, 36, 0.56) !important;
+  color: #fde68a !important;
+  background: rgba(113, 63, 18, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-error {
+  border-color: rgba(251, 113, 133, 0.58) !important;
+  color: #fecdd3 !important;
+  background: rgba(136, 19, 55, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-warning {
+  border-color: rgba(168, 162, 158, 0.56) !important;
+  color: #e7e5e4 !important;
+  background: rgba(68, 64, 60, 0.72) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scan-status-pill.is-neutral {
+  border-color: rgba(100, 116, 139, 0.58) !important;
+  color: #cbd5e1 !important;
+  background: rgba(30, 41, 59, 0.82) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-severity-group {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-severity-tooltip {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+  color: var(--dark-text-strong) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: var(--deep-shadow-menu) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .scans-page .scans-severity-tooltip::after {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status,
+  .scan-task-detail-info-row.is-emphasis strong
+) {
+  border-width: 1px !important;
+  border-style: solid !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-success,
+  .scan-task-detail-info-row.is-success strong
+) {
+  border-color: rgba(74, 222, 128, 0.52) !important;
+  color: #bbf7d0 !important;
+  background: rgba(20, 83, 45, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-running,
+  .scan-task-detail-info-row.is-running strong
+) {
+  border-color: rgba(56, 189, 248, 0.56) !important;
+  color: #bae6fd !important;
+  background: rgba(7, 89, 133, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-pending,
+  .scan-task-detail-info-row.is-pending strong
+) {
+  border-color: rgba(148, 163, 184, 0.52) !important;
+  color: #dbe7f6 !important;
+  background: rgba(51, 65, 85, 0.76) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-paused,
+  .scan-task-detail-info-row.is-paused strong
+) {
+  border-color: rgba(251, 191, 36, 0.56) !important;
+  color: #fde68a !important;
+  background: rgba(113, 63, 18, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-error,
+  .scan-task-detail-info-row.is-error strong
+) {
+  border-color: rgba(251, 113, 133, 0.58) !important;
+  color: #fecdd3 !important;
+  background: rgba(136, 19, 55, 0.62) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-warning,
+  .scan-task-detail-info-row.is-warning strong
+) {
+  border-color: rgba(168, 162, 158, 0.56) !important;
+  color: #e7e5e4 !important;
+  background: rgba(68, 64, 60, 0.72) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .scan-task-detail-status.is-neutral,
+  .scan-task-detail-info-row.is-neutral strong
+) {
+  border-color: rgba(100, 116, 139, 0.58) !important;
+  color: #cbd5e1 !important;
+  background: rgba(30, 41, 59, 0.82) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-panel {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-panel .vulnerabilities-search-field input,
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-tag-menu-search input {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text-strong) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-panel .vulnerabilities-search-field:focus-within input,
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-tag-menu-search input:focus {
+  border-color: var(--deep-accent) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-trigger:not(.vulnerabilities-bulk-action-trigger) {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-trigger:not(.vulnerabilities-bulk-action-trigger):is(:hover, :focus-visible, .active) {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-menu {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: var(--deep-shadow-menu) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-option {
+  border-color: transparent !important;
+  color: var(--dark-text) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-option:is(:hover, :focus-visible, .selected) {
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-check {
+  border-color: var(--dark-text-muted) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-check.selected {
+  border-color: var(--deep-accent) !important;
+  background: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-selected-tag {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-trigger {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-trigger:hover {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-trigger.active {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-filter-count {
+  border-color: transparent !important;
+  color: #082f49 !important;
+  background: #7dd3fc !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-option {
+  color: var(--dark-text) !important;
+  background: transparent !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-option:is(:hover, :focus-visible):not(:disabled) {
+  border-color: transparent !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-option.is-danger {
+  color: #fda4af !important;
+  background: transparent !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-bulk-action-option.is-danger:is(:hover, :focus-visible):not(:disabled) {
+  color: #fecdd3 !important;
+  background: var(--deep-danger-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-selection-tool {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerabilities-selection-tool:is(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .vulnerability-status-dialog,
+  .vulnerability-delete-dialog
+) {
+  border-color: var(--line-soft) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: var(--deep-shadow-menu) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-delete-dialog--danger {
+  border-color: rgba(251, 113, 133, 0.58) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .vulnerability-status-dialog-close,
+  .vulnerability-delete-dialog-close,
+  .vulnerability-status-option
+) {
+  border-color: var(--line-soft) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-2) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .vulnerability-status-dialog-close,
+  .vulnerability-delete-dialog-close
+):is(:hover, :focus-visible):not(:disabled),
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-status-option:is(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--deep-accent) !important;
+  color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-status-option.selected {
+  border-color: var(--deep-accent) !important;
+  background: var(--deep-accent-soft) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-status-option-check {
+  border-color: var(--dark-text-muted) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-status-option.selected .vulnerability-status-option-check {
+  border-color: var(--deep-accent) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-status-dialog .vulnerabilities-status-pill {
+  border-width: 1px !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .vulnerability-status-dialog-progress,
+  .vulnerability-delete-dialog-progress
+) {
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  color: #bae6fd !important;
+  background: rgba(7, 89, 133, 0.34) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] :is(
+  .vulnerability-status-dialog-error,
+  .vulnerability-delete-dialog-error,
+  .vulnerability-delete-dialog-warning
+) {
+  border-color: rgba(251, 113, 133, 0.46) !important;
+  color: #fecdd3 !important;
+  background: rgba(136, 19, 55, 0.4) !important;
+}
+
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-delete-dialog .template-detail-primary-button.is-danger {
+  border-color: rgba(251, 113, 133, 0.58) !important;
+  color: #fff1f2 !important;
+  background: #9f1239 !important;
+  box-shadow: none !important;
 }
