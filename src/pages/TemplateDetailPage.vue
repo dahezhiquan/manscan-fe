@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getTemplateDetail } from '../api/templates'
 import manscanIcon from '../assets/manscan-icon.png'
 import { templateDetailMock } from '../data/templates'
+import { saveScanTaskTemplateSelectionDraft } from '../utils/scanTaskTemplateSelectionDraft'
 import { mapSeverityTone } from '../utils/template'
 
 const props = defineProps({
@@ -507,6 +508,19 @@ async function shareTemplate() {
   }
 }
 
+function startScanWithCurrentTemplate() {
+  if (!detail.value?.id) {
+    return
+  }
+
+  try {
+    saveScanTaskTemplateSelectionDraft(detail.value)
+    props.navigateTo('/scans/create')
+  } catch (error) {
+    console.error('带入模板创建扫描任务失败:', error)
+  }
+}
+
 onMounted(() => {
   fetchTemplateDetail()
 })
@@ -573,7 +587,14 @@ onBeforeUnmount(() => {
             </svg>
             <span>{{ copiedState === 'share' ? '已复制链接' : '分享' }}</span>
           </button>
-          <button class="template-detail-primary-button">开始扫描</button>
+          <button
+            class="template-detail-primary-button"
+            type="button"
+            :disabled="detailLoading || !detail"
+            @click="startScanWithCurrentTemplate"
+          >
+            开始扫描
+          </button>
         </div>
       </div>
 

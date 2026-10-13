@@ -9,6 +9,7 @@ import {
 import { getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
 import { protocolFilterOptions, severityFilterOptions } from '../data/templates'
 import { consumeScanTaskRecreateDraft } from '../utils/scanTaskRecreateDraft'
+import { consumeScanTaskTemplateSelectionDraft } from '../utils/scanTaskTemplateSelectionDraft'
 import {
   appendMultiValueParam,
   mapSeverityTone,
@@ -759,6 +760,39 @@ function applyRecreateDraft() {
   recreateDraftNotice.value = sourceLabel
     ? `已从扫描任务 ${sourceLabel} 带入配置。`
     : '已带入原扫描配置。'
+}
+
+function applyTemplateSelectionDraft() {
+  let draft = null
+
+  try {
+    draft = consumeScanTaskTemplateSelectionDraft()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '读取模板选择草稿失败。'
+    return
+  }
+
+  const templateId = String(draft?.template_id ?? '').trim()
+
+  if (!templateId) {
+    return
+  }
+
+  form.automatic_scan = false
+  form.include_ids = [templateId]
+  form.tags = []
+  form.severities = []
+  form.protocols = []
+  templateIdKeyword.value = templateId
+  templateTagSearch.value = ''
+  templateSelectedTags.value = []
+  templateSelectedSeverities.value = []
+  templateSelectedProtocols.value = []
+  isAllFilteredTemplatesSelected.value = false
+  activeTemplateFilterMenu.value = ''
+  errorMessage.value = ''
+  activeStep.value = stepDefinitions.findIndex((step) => step.key === 'filters')
+
 }
 
 function mergeStringLists(...values) {
@@ -1608,6 +1642,7 @@ watch(currentCreatorName, syncCurrentCreator, { immediate: true })
 
 onMounted(() => {
   applyRecreateDraft()
+  applyTemplateSelectionDraft()
   fetchTemplateOptions()
   fetchTemplateList(1)
   loadGlobalScanDisabledTargets()

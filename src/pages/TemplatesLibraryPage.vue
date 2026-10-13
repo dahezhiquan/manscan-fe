@@ -21,6 +21,7 @@ import {
   normalizeTagOptions,
   readMultiValueParam
 } from '../utils/template'
+import { saveScanTaskTemplateSelectionDraft } from '../utils/scanTaskTemplateSelectionDraft'
 
 const props = defineProps({
   navigateTo: {
@@ -477,6 +478,15 @@ async function copyTemplateId(templateId) {
 
 function openTemplateDetail(templateId) {
   window.open(`/templates/${templateId}`, '_blank', 'noopener,noreferrer')
+}
+
+function startScanWithTemplate(template) {
+  try {
+    saveScanTaskTemplateSelectionDraft(template)
+    props.navigateTo('/scans/create')
+  } catch (error) {
+    console.error('带入模板创建扫描任务失败:', error)
+  }
 }
 
 function handleDocumentClick(event) {
@@ -942,7 +952,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="templates-actions-cell">
-              <button class="templates-action-button">
+              <button class="templates-action-button" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                   <path d="M7.5 6.5h9" />
                   <path d="M7.5 12h9" />
@@ -953,7 +963,7 @@ onBeforeUnmount(() => {
                 </svg>
                 <span>{{ item.actions[0] }}</span>
               </button>
-              <button class="templates-action-button">
+              <button class="templates-action-button" type="button" @click.stop="startScanWithTemplate(item)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                   <circle cx="12" cy="12" r="6.6" />
                   <circle cx="12" cy="12" r="2.4" />

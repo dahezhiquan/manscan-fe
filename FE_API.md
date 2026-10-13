@@ -419,6 +419,7 @@
   - `no_interactsh=true` 时，前端会阻止同时填写 `interactsh_server` 或 `interactsh_token`，与后端互斥约定保持一致
   - `interactsh_token` 仅在创建请求中提交，前端不会在任务查询页面展示该字段
   - 从扫描详情页点击“重新创建扫描”进入创建页时，前端会先请求 `GET /api/v1/scans/:id/config`，再消费一次性内存草稿并预填表单；草稿中的 `created_by` 会被忽略并改用当前登录用户
+  - 从漏洞模板列表或模板详情页点击“扫描/开始扫描”进入创建页时，前端会消费一次性内存草稿，将对应模板 ID 写入 `include_ids` 并切换到模板选择步骤；该流程不新增后端接口
 - 返回结构：前端使用 `data.task.id`、`data.task.task_no`、`data.task.status`、`data.task_api`
 - 异常分支：
   - 非 2xx 或业务错误时，在页面顶部展示错误文案
