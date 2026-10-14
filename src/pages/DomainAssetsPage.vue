@@ -1,354 +1,3 @@
-<script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { getDomainAssetList } from '../api/domain-assets'
-import AppShell from '../components/layout/AppShell.vue'
-import {
-  DOMAIN_ASSET_FILTER_LABELS,
-  DOMAIN_ASSET_FILTER_OPTIONS,
-  DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS,
-  DOMAIN_ASSET_SEARCH_DEBOUNCE
-} from '../constants/domainAssets'
-import { normalizeDomainAssetListResponse } from '../utils/domainAsset'
-import { formatCount } from '../utils/scanTask'
-import { iconPath } from '../utils/icons'
-
-const props = defineProps({
-  navigateTo: {
-    type: Function,
-    required: true
-  },
-  currentPath: {
-    type: String,
-    default: '/assets/domains'
-  },
-  isSidebarCollapsed: {
-    type: Boolean,
-    default: false
-  },
-  currentUserName: {
-    type: String,
-    default: 'admin'
-  }
-})
-
-const emit = defineEmits(['toggle-sidebar', 'logout'])
-
-const keywordInput = ref('')
-const appliedKeyword = ref('')
-const activeFilters = reactive(createEmptyFilters())
-const isFilterDialogOpen = ref(false)
-const filterDialogRef = ref(null)
-const draftFilterKey = ref(DOMAIN_ASSET_FILTER_OPTIONS[0].key)
-const draftFilterValue = ref('')
-const draftError = ref('')
-const tableRows = ref([])
-const total = ref(0)
-const currentPage = ref(1)
-const pageSize = ref(DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
-const totalPages = ref(1)
-const isPageSizeMenuOpen = ref(false)
-const pageError = ref('')
-const isLoading = ref(true)
-const isRefreshing = ref(false)
-
-let fetchController = null
-let keywordTimer = null
-let currentRequestId = 0
-let isSyncingKeyword = false
-
-const selectedDraftFilter = computed(
-  () => DOMAIN_ASSET_FILTER_OPTIONS.find((item) => item.key === draftFilterKey.value) ?? DOMAIN_ASSET_FILTER_OPTIONS[0]
-)
-const selectedDraftOptions = computed(() => selectedDraftFilter.value.options ?? [])
-const hasActiveFilterChips = computed(() => activeFilterChips.value.length > 0)
-const hasFilters = computed(() => Boolean(appliedKeyword.value || hasActiveFilterChips.value))
-const hasData = computed(() => tableRows.value.length > 0)
-const showInitialLoading = computed(() => isLoading.value && !hasData.value)
-const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
-const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
-const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
-const pageStart = computed(() => {
-  if (!total.value || !tableRows.value.length) {
-    return 0
-  }
-
-  return (currentPage.value - 1) * pageSize.value + 1
-})
-const pageEnd = computed(() => {
-  if (!total.value || !tableRows.value.length) {
-    return 0
-  }
-
-  return Math.min(total.value, pageStart.value + tableRows.value.length - 1)
-})
-const pageSummary = computed(() => {
-  if (!total.value) {
-    return '暂无数据'
-  }
-
-  return `显示 ${pageStart.value} - ${pageEnd.value}，共 ${formatCount(total.value)} 条`
-})
-const activeFilterChips = computed(() =>
-  Object.entries(activeFilters)
-    .filter(([, value]) => String(value ?? '').trim() !== '')
-    .map(([key, value]) => ({
-      key,
-      label: DOMAIN_ASSET_FILTER_LABELS[key] ?? key,
-      valueLabel: formatFilterValue(key, value)
-    }))
-)
-const dialogTitle = computed(() => (activeFilters[draftFilterKey.value] ? '编辑筛选条件' : '添加筛选条件'))
-const canSaveDraft = computed(() => String(draftFilterValue.value ?? '').trim() !== '')
-
-function createEmptyFilters() {
-  return {
-    title: '',
-    region: '',
-    riskLevel: '',
-    hasVulnerability: '',
-    hasComponent: ''
-  }
-}
-
-function buildDomainAssetListParams() {
-  return {
-    page: currentPage.value,
-    page_size: pageSize.value,
-    keyword: appliedKeyword.value,
-    title: activeFilters.title,
-    region: activeFilters.region,
-    risk_level: activeFilters.riskLevel,
-    has_vulnerability: activeFilters.hasVulnerability,
-    has_component: activeFilters.hasComponent
-  }
-}
-
-function scheduleKeywordCommit() {
-  if (isSyncingKeyword) {
-    return
-  }
-
-  const nextKeyword = keywordInput.value.trim()
-  if (nextKeyword === appliedKeyword.value) {
-    return
-  }
-
-  window.clearTimeout(keywordTimer)
-  keywordTimer = window.setTimeout(() => {
-    appliedKeyword.value = nextKeyword
-    currentPage.value = 1
-    void loadDomainAssets()
-  }, DOMAIN_ASSET_SEARCH_DEBOUNCE)
-}
-
-function openFilterDialog(filterKey = '') {
-  const nextFilterKey = filterKey || DOMAIN_ASSET_FILTER_OPTIONS.find((item) => !activeFilters[item.key])?.key || DOMAIN_ASSET_FILTER_OPTIONS[0].key
-  draftFilterKey.value = nextFilterKey
-  draftFilterValue.value = activeFilters[nextFilterKey] || ''
-  draftError.value = ''
-  isFilterDialogOpen.value = true
-  void nextTick(() => {
-    filterDialogRef.value?.focus()
-  })
-}
-
-function closeFilterDialog() {
-  isFilterDialogOpen.value = false
-  draftError.value = ''
-}
-
-function closePageSizeMenu() {
-  isPageSizeMenuOpen.value = false
-}
-
-function handleDocumentClick() {
-  closePageSizeMenu()
-}
-
-function selectDraftFilterKey(filterKey) {
-  if (draftFilterKey.value === filterKey) {
-    return
-  }
-
-  draftFilterKey.value = filterKey
-  draftFilterValue.value = activeFilters[filterKey] || ''
-  draftError.value = ''
-}
-
-function selectDraftFilterValue(value) {
-  draftFilterValue.value = value
-  draftError.value = ''
-}
-
-function saveDraftFilter() {
-  const value = String(draftFilterValue.value ?? '').trim()
-
-  if (!value) {
-    draftError.value = `${selectedDraftFilter.value.label}不能为空`
-    return
-  }
-
-  activeFilters[draftFilterKey.value] = value
-  closeFilterDialog()
-  closePageSizeMenu()
-  currentPage.value = 1
-  void loadDomainAssets()
-}
-
-function removeFilter(filterKey) {
-  activeFilters[filterKey] = ''
-  currentPage.value = 1
-  void loadDomainAssets()
-}
-
-function clearFilters() {
-  isSyncingKeyword = true
-  window.clearTimeout(keywordTimer)
-  keywordInput.value = ''
-  appliedKeyword.value = ''
-  Object.assign(activeFilters, createEmptyFilters())
-  currentPage.value = 1
-  closeFilterDialog()
-  closePageSizeMenu()
-  void loadDomainAssets()
-  window.setTimeout(() => {
-    isSyncingKeyword = false
-  }, 0)
-}
-
-function handleRefresh() {
-  void loadDomainAssets({ forceLoading: !hasData.value })
-}
-
-function goToPreviousPage() {
-  if (currentPage.value <= 1 || isLoading.value || isRefreshing.value) {
-    return
-  }
-
-  currentPage.value -= 1
-  void loadDomainAssets()
-}
-
-function goToNextPage() {
-  if (currentPage.value >= totalPages.value || isLoading.value || isRefreshing.value) {
-    return
-  }
-
-  currentPage.value += 1
-  void loadDomainAssets()
-}
-
-function handlePageSizeChange() {
-  currentPage.value = 1
-  void loadDomainAssets()
-}
-
-function togglePageSizeMenu() {
-  if (isLoading.value || isRefreshing.value) {
-    return
-  }
-
-  closeFilterDialog()
-  isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
-}
-
-function selectPageSize(nextPageSize) {
-  if (pageSize.value === nextPageSize) {
-    closePageSizeMenu()
-    return
-  }
-
-  pageSize.value = nextPageSize
-  closePageSizeMenu()
-  handlePageSizeChange()
-}
-
-function openDomainAssetDetail(row) {
-  const domain = row?.assetAddress && row.assetAddress !== '--' ? row.assetAddress : row?.id
-  if (!domain) {
-    return
-  }
-
-  window.open(`/assets/domains/${encodeURIComponent(domain)}`, '_blank', 'noopener,noreferrer')
-}
-
-function handleDomainAssetKeydown(event, row) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    openDomainAssetDetail(row)
-  }
-}
-
-function stopRequest() {
-  fetchController?.abort()
-  fetchController = null
-}
-
-async function loadDomainAssets(options = {}) {
-  const { forceLoading = false } = options
-
-  stopRequest()
-  const requestId = ++currentRequestId
-  const controller = new AbortController()
-  fetchController = controller
-
-  if (forceLoading || !tableRows.value.length) {
-    isLoading.value = true
-  } else {
-    isRefreshing.value = true
-  }
-
-  pageError.value = ''
-
-  try {
-    const data = await getDomainAssetList(buildDomainAssetListParams(), controller.signal)
-
-    if (requestId !== currentRequestId) {
-      return
-    }
-
-    const normalized = normalizeDomainAssetListResponse(data, currentPage.value, pageSize.value)
-    tableRows.value = normalized.items
-    total.value = normalized.total
-    currentPage.value = normalized.page
-    pageSize.value = normalized.pageSize
-    totalPages.value = normalized.totalPages
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      return
-    }
-
-    pageError.value = error instanceof Error ? error.message : '域名资产加载失败，请稍后重试。'
-  } finally {
-    if (requestId === currentRequestId) {
-      isLoading.value = false
-      isRefreshing.value = false
-      fetchController = null
-    }
-  }
-}
-
-function formatFilterValue(key, value) {
-  const filterOption = DOMAIN_ASSET_FILTER_OPTIONS.find((item) => item.key === key)
-  const selectedOption = filterOption?.options?.find((item) => item.value === value)
-
-  return selectedOption?.shortLabel ?? selectedOption?.label ?? value
-}
-
-watch(keywordInput, scheduleKeywordCommit)
-
-onMounted(() => {
-  document.addEventListener('click', handleDocumentClick)
-  void loadDomainAssets({ forceLoading: true })
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)
-  window.clearTimeout(keywordTimer)
-  stopRequest()
-})
-</script>
-
 <template>
   <AppShell
     :current-path="props.currentPath"
@@ -701,3 +350,378 @@ onBeforeUnmount(() => {
     </template>
   </AppShell>
 </template>
+
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { getDomainAssetList } from '../api/domain-assets'
+import AppShell from '../components/layout/AppShell.vue'
+import {
+  DOMAIN_ASSET_FILTER_LABELS,
+  DOMAIN_ASSET_FILTER_OPTIONS,
+  DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS,
+  DOMAIN_ASSET_RISK_OPTIONS,
+  DOMAIN_ASSET_SEARCH_DEBOUNCE
+} from '../constants/domainAssets'
+import { normalizeDomainAssetListResponse } from '../utils/domainAsset'
+import { formatCount } from '../utils/scanTask'
+import { iconPath } from '../utils/icons'
+import { readEnumRouteFilter } from '../utils/routeFilters'
+
+const props = defineProps({
+  navigateTo: {
+    type: Function,
+    required: true
+  },
+  currentPath: {
+    type: String,
+    default: '/assets/domains'
+  },
+  routeSearch: { type: String, default: '' },
+  isSidebarCollapsed: {
+    type: Boolean,
+    default: false
+  },
+  currentUserName: {
+    type: String,
+    default: 'admin'
+  }
+})
+
+const emit = defineEmits(['toggle-sidebar', 'logout'])
+
+const keywordInput = ref('')
+const appliedKeyword = ref('')
+const activeFilters = reactive(createRouteFilters())
+const isFilterDialogOpen = ref(false)
+const filterDialogRef = ref(null)
+const draftFilterKey = ref(DOMAIN_ASSET_FILTER_OPTIONS[0].key)
+const draftFilterValue = ref('')
+const draftError = ref('')
+const tableRows = ref([])
+const total = ref(0)
+const currentPage = ref(1)
+const pageSize = ref(DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS[0])
+const totalPages = ref(1)
+const isPageSizeMenuOpen = ref(false)
+const pageError = ref('')
+const isLoading = ref(true)
+const isRefreshing = ref(false)
+
+let fetchController = null
+let keywordTimer = null
+let currentRequestId = 0
+let isSyncingKeyword = false
+
+const selectedDraftFilter = computed(
+  () => DOMAIN_ASSET_FILTER_OPTIONS.find((item) => item.key === draftFilterKey.value) ?? DOMAIN_ASSET_FILTER_OPTIONS[0]
+)
+const selectedDraftOptions = computed(() => selectedDraftFilter.value.options ?? [])
+const hasActiveFilterChips = computed(() => activeFilterChips.value.length > 0)
+const hasFilters = computed(() => Boolean(appliedKeyword.value || hasActiveFilterChips.value))
+const hasData = computed(() => tableRows.value.length > 0)
+const showInitialLoading = computed(() => isLoading.value && !hasData.value)
+const showBlockingError = computed(() => Boolean(pageError.value) && !hasData.value && !isLoading.value)
+const showInlineError = computed(() => Boolean(pageError.value) && hasData.value)
+const showEmptyState = computed(() => !showInitialLoading.value && !showBlockingError.value && !hasData.value)
+const pageStart = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+const pageEnd = computed(() => {
+  if (!total.value || !tableRows.value.length) {
+    return 0
+  }
+
+  return Math.min(total.value, pageStart.value + tableRows.value.length - 1)
+})
+const pageSummary = computed(() => {
+  if (!total.value) {
+    return '暂无数据'
+  }
+
+  return `显示 ${pageStart.value} - ${pageEnd.value}，共 ${formatCount(total.value)} 条`
+})
+const activeFilterChips = computed(() =>
+  Object.entries(activeFilters)
+    .filter(([, value]) => String(value ?? '').trim() !== '')
+    .map(([key, value]) => ({
+      key,
+      label: DOMAIN_ASSET_FILTER_LABELS[key] ?? key,
+      valueLabel: formatFilterValue(key, value)
+    }))
+)
+const dialogTitle = computed(() => (activeFilters[draftFilterKey.value] ? '编辑筛选条件' : '添加筛选条件'))
+const canSaveDraft = computed(() => String(draftFilterValue.value ?? '').trim() !== '')
+
+function createEmptyFilters() {
+  return {
+    title: '',
+    region: '',
+    riskLevel: '',
+    hasVulnerability: '',
+    hasComponent: ''
+  }
+}
+
+function createRouteFilters() {
+  return { ...createEmptyFilters(), riskLevel: readEnumRouteFilter(props.routeSearch, 'risk_level', DOMAIN_ASSET_RISK_OPTIONS).join(',') }
+}
+
+function buildDomainAssetListParams() {
+  return {
+    page: currentPage.value,
+    page_size: pageSize.value,
+    keyword: appliedKeyword.value,
+    title: activeFilters.title,
+    region: activeFilters.region,
+    risk_level: activeFilters.riskLevel,
+    has_vulnerability: activeFilters.hasVulnerability,
+    has_component: activeFilters.hasComponent
+  }
+}
+
+function scheduleKeywordCommit() {
+  if (isSyncingKeyword) {
+    return
+  }
+
+  const nextKeyword = keywordInput.value.trim()
+  if (nextKeyword === appliedKeyword.value) {
+    return
+  }
+
+  window.clearTimeout(keywordTimer)
+  keywordTimer = window.setTimeout(() => {
+    appliedKeyword.value = nextKeyword
+    currentPage.value = 1
+    void loadDomainAssets()
+  }, DOMAIN_ASSET_SEARCH_DEBOUNCE)
+}
+
+function openFilterDialog(filterKey = '') {
+  const nextFilterKey = filterKey || DOMAIN_ASSET_FILTER_OPTIONS.find((item) => !activeFilters[item.key])?.key || DOMAIN_ASSET_FILTER_OPTIONS[0].key
+  draftFilterKey.value = nextFilterKey
+  draftFilterValue.value = activeFilters[nextFilterKey] || ''
+  draftError.value = ''
+  isFilterDialogOpen.value = true
+  void nextTick(() => {
+    filterDialogRef.value?.focus()
+  })
+}
+
+function closeFilterDialog() {
+  isFilterDialogOpen.value = false
+  draftError.value = ''
+}
+
+function closePageSizeMenu() {
+  isPageSizeMenuOpen.value = false
+}
+
+function handleDocumentClick() {
+  closePageSizeMenu()
+}
+
+function selectDraftFilterKey(filterKey) {
+  if (draftFilterKey.value === filterKey) {
+    return
+  }
+
+  draftFilterKey.value = filterKey
+  draftFilterValue.value = activeFilters[filterKey] || ''
+  draftError.value = ''
+}
+
+function selectDraftFilterValue(value) {
+  draftFilterValue.value = value
+  draftError.value = ''
+}
+
+function saveDraftFilter() {
+  const value = String(draftFilterValue.value ?? '').trim()
+
+  if (!value) {
+    draftError.value = `${selectedDraftFilter.value.label}不能为空`
+    return
+  }
+
+  activeFilters[draftFilterKey.value] = value
+  closeFilterDialog()
+  closePageSizeMenu()
+  currentPage.value = 1
+  void loadDomainAssets()
+}
+
+function removeFilter(filterKey) {
+  activeFilters[filterKey] = ''
+  currentPage.value = 1
+  void loadDomainAssets()
+}
+
+function clearFilters() {
+  isSyncingKeyword = true
+  window.clearTimeout(keywordTimer)
+  keywordInput.value = ''
+  appliedKeyword.value = ''
+  Object.assign(activeFilters, createEmptyFilters())
+  currentPage.value = 1
+  closeFilterDialog()
+  closePageSizeMenu()
+  void loadDomainAssets()
+  window.setTimeout(() => {
+    isSyncingKeyword = false
+  }, 0)
+}
+
+function handleRefresh() {
+  void loadDomainAssets({ forceLoading: !hasData.value })
+}
+
+function goToPreviousPage() {
+  if (currentPage.value <= 1 || isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  currentPage.value -= 1
+  void loadDomainAssets()
+}
+
+function goToNextPage() {
+  if (currentPage.value >= totalPages.value || isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  currentPage.value += 1
+  void loadDomainAssets()
+}
+
+function handlePageSizeChange() {
+  currentPage.value = 1
+  void loadDomainAssets()
+}
+
+function togglePageSizeMenu() {
+  if (isLoading.value || isRefreshing.value) {
+    return
+  }
+
+  closeFilterDialog()
+  isPageSizeMenuOpen.value = !isPageSizeMenuOpen.value
+}
+
+function selectPageSize(nextPageSize) {
+  if (pageSize.value === nextPageSize) {
+    closePageSizeMenu()
+    return
+  }
+
+  pageSize.value = nextPageSize
+  closePageSizeMenu()
+  handlePageSizeChange()
+}
+
+function openDomainAssetDetail(row) {
+  const domain = row?.assetAddress && row.assetAddress !== '--' ? row.assetAddress : row?.id
+  if (!domain) {
+    return
+  }
+
+  window.open(`/assets/domains/${encodeURIComponent(domain)}`, '_blank', 'noopener,noreferrer')
+}
+
+function handleDomainAssetKeydown(event, row) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    openDomainAssetDetail(row)
+  }
+}
+
+function stopRequest() {
+  fetchController?.abort()
+  fetchController = null
+}
+
+async function loadDomainAssets(options = {}) {
+  const { forceLoading = false } = options
+
+  stopRequest()
+  const requestId = ++currentRequestId
+  const controller = new AbortController()
+  fetchController = controller
+
+  if (forceLoading || !tableRows.value.length) {
+    isLoading.value = true
+  } else {
+    isRefreshing.value = true
+  }
+
+  pageError.value = ''
+
+  try {
+    const data = await getDomainAssetList(buildDomainAssetListParams(), controller.signal)
+
+    if (requestId !== currentRequestId) {
+      return
+    }
+
+    const normalized = normalizeDomainAssetListResponse(data, currentPage.value, pageSize.value)
+    tableRows.value = normalized.items
+    total.value = normalized.total
+    currentPage.value = normalized.page
+    pageSize.value = normalized.pageSize
+    totalPages.value = normalized.totalPages
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return
+    }
+
+    pageError.value = error instanceof Error ? error.message : '域名资产加载失败，请稍后重试。'
+  } finally {
+    if (requestId === currentRequestId) {
+      isLoading.value = false
+      isRefreshing.value = false
+      fetchController = null
+    }
+  }
+}
+
+function formatFilterValue(key, value) {
+  if (key === 'riskLevel') {
+    return value.split(',').map((level) => DOMAIN_ASSET_RISK_OPTIONS.find((item) => item.value === level)?.shortLabel ?? level).join(' / ')
+  }
+  const filterOption = DOMAIN_ASSET_FILTER_OPTIONS.find((item) => item.key === key)
+  const selectedOption = filterOption?.options?.find((item) => item.value === value)
+
+  return selectedOption?.shortLabel ?? selectedOption?.label ?? value
+}
+
+watch(keywordInput, scheduleKeywordCommit)
+
+watch(() => props.routeSearch, async () => {
+  window.clearTimeout(keywordTimer)
+  isSyncingKeyword = true
+  keywordInput.value = ''
+  appliedKeyword.value = ''
+  Object.assign(activeFilters, createRouteFilters())
+  currentPage.value = 1
+  closeFilterDialog()
+  closePageSizeMenu()
+  void loadDomainAssets({ forceLoading: true })
+  await nextTick()
+  isSyncingKeyword = false
+})
+
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
+  void loadDomainAssets({ forceLoading: true })
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  window.clearTimeout(keywordTimer)
+  stopRequest()
+})
+</script>

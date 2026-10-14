@@ -16,6 +16,7 @@ export async function getDomainAssetList(params = {}, signal) {
   appendQueryParam(searchParams, 'risk_level', params.risk_level ?? params.riskLevel)
   appendQueryParam(searchParams, 'has_vulnerability', params.has_vulnerability ?? params.hasVulnerability)
   appendQueryParam(searchParams, 'has_component', params.has_component ?? params.hasComponent)
+  appendQueryParam(searchParams, 'is_alive', params.is_alive ?? params.isAlive)
 
   const query = searchParams.toString()
   const requestUrl = query ? `${DOMAIN_ASSET_LIST_API}?${query}` : DOMAIN_ASSET_LIST_API

@@ -77,35 +77,6 @@ function resolveNavCount(item, { scanCount, vulnerabilityCount }) {
   return item.count
 }
 
-export const vulnerabilityStats = [
-  { key: 'unreviewed', label: '总数', value: '--', tone: 'total' },
-  { key: 'critical', label: '严重', value: 0, tone: 'critical' },
-  { key: 'high', label: '高危', value: 0, tone: 'high' },
-  { key: 'medium', label: '中危', value: 0, tone: 'medium' },
-  { key: 'low', label: '低危', value: 0, tone: 'low' }
-]
-
-export const assetStats = [
-  { value: 0, label: '资产' },
-  { value: 0, label: '服务' },
-  { value: 0, label: '技术栈' },
-  { value: 0, label: '受影响服务' }
-]
-
-export const remediationStats = [
-  { value: '--', label: '严重（14 天 SLA）', tone: 'critical' },
-  { value: '--', label: '高危（60 天 SLA）', tone: 'high' },
-  { value: '--', label: '中危（90 天 SLA）', tone: 'medium' },
-  { value: '0', label: '已修复总数', tone: 'total' }
-]
-
-export const remediationOverviewStats = [
-  { value: 0, label: '待修复' },
-  { value: 0, label: '修复中' },
-  { value: 0, label: '已延期' },
-  { value: 0, label: '已验证' }
-]
-
 export const latestDetections = [
   { value: 68, label: '近 7 天' },
   { value: 212, label: '近 30 天' }

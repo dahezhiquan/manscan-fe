@@ -14,6 +14,8 @@ export async function getHostAssetList(params = {}, signal) {
   appendQueryParam(searchParams, 'os_type', params.os_type ?? params.osType)
   appendQueryParam(searchParams, 'region', params.region)
   appendQueryParam(searchParams, 'risk_level', params.risk_level ?? params.riskLevel)
+  appendQueryParam(searchParams, 'has_vulnerability', params.has_vulnerability ?? params.hasVulnerability)
+  appendQueryParam(searchParams, 'is_alive', params.is_alive ?? params.isAlive)
 
   const query = searchParams.toString()
   const requestUrl = query ? `${HOST_ASSET_LIST_API}?${query}` : HOST_ASSET_LIST_API

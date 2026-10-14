@@ -1,39 +1,33 @@
-<script setup>
-defineProps({
-  stats: {
-    type: Array,
-    default: () => []
-  },
-  navigateTo: {
-    type: Function,
-    default: null
-  }
-})
-</script>
-
 <template>
-  <article
-    class="card stats-card"
-    :class="{ 'stats-card-link': Boolean(navigateTo) }"
-    @click="navigateTo && navigateTo('/vulnerabilities')"
-  >
-    <div class="card-header">
-      <h3>待处理漏洞</h3>
-      <span class="info-icon">i</span>
-    </div>
-
-    <div class="stats-row">
-      <div v-for="item in stats" :key="item.key || item.label" class="stat-box">
-        <div class="stat-value" :class="`tone-${item.tone}`" :title="item.title || ''">
-          {{ item.value }}
-        </div>
-        <div class="stat-label">{{ item.label }}</div>
+  <article class="card dashboard-overview-card" :aria-busy="section.status === 'loading'">
+    <div class="dashboard-card-head">
+      <div>
+        <h3>未审核漏洞</h3>
       </div>
+      <button type="button" class="dashboard-text-button" @click="navigateTo(unreviewedRoute)">查看漏洞 ↗</button>
     </div>
-
-    <div class="category-panel">
-      <h3>按类别查看漏洞</h3>
-      <p>暂未发现漏洞</p>
+    <DashboardDataNotice :states="[section]" @retry="emit('retry')" />
+    <DashboardMetrics :items="metrics" compact />
+    <div v-if="section.data" class="dashboard-severity-track" aria-hidden="true">
+      <span v-for="item in distribution" :key="item.key" :class="`is-${item.tone}`" :style="{ flexGrow: item.count }"></span>
     </div>
   </article>
 </template>
+
+<script setup>
+import { computed } from 'vue'
+import DashboardDataNotice from './DashboardDataNotice.vue'
+import DashboardMetrics from './DashboardMetrics.vue'
+import { DASHBOARD_SEVERITIES } from '../../constants/dashboard'
+import { VULNERABILITY_STATUS_UNREVIEWED } from '../../constants/vulnerabilities'
+import { ROUTE_PATHS } from '../../router/routes'
+
+const props = defineProps({ section: { type: Object, required: true }, navigateTo: { type: Function, required: true } })
+const emit = defineEmits(['retry'])
+const unreviewedRoute = `${ROUTE_PATHS.VULNERABILITIES}?status=${VULNERABILITY_STATUS_UNREVIEWED}`
+const distribution = computed(() => DASHBOARD_SEVERITIES.map((item) => ({ ...item, count: props.section.data?.pending[item.key] ?? null })))
+const metrics = computed(() => [
+  { key: 'total', label: '未审核总数', count: props.section.data?.pending.total ?? null, tone: 'total' },
+  ...distribution.value
+])
+</script>

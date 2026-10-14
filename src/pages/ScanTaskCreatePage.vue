@@ -80,7 +80,7 @@ const DEFAULT_CUSTOM_HEADERS = [
 ]
 
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])
-const AUTOMATIC_SCAN_EXCLUDED_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
+const TEMPLATE_SELECTION_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
 const FILLED_FIELD_COUNT_EXCLUDED_FIELDS = new Set(['created_by'])
 const MB_TO_BYTES = 1024 * 1024
 const SELECT_ALL_TEMPLATE_TIMEOUT = 90000
@@ -184,6 +184,12 @@ const stepFields = {
     }
   ],
   runtime: [
+    {
+      key: 'preflight_fingerprint',
+      label: '前置主动指纹探测',
+      type: 'boolean',
+      tooltip: '默认开启。关闭后跳过扫描前 HTTP／非 HTTP 主动指纹探测，仍保留存活探测和 Wappalyzer 被动识别'
+    },
     {
       key: 'rate_limit',
       label: '每速率窗口请求数',
@@ -667,6 +673,7 @@ function createInitialForm() {
     http_stats: false,
     new_templates: false,
     automatic_scan: false,
+    preflight_fingerprint: true,
     enable_global_matchers_templates: false
   }
 }
@@ -727,7 +734,9 @@ function applyRecreateDraft() {
       }
 
       form[key] = nextValue
-      multiLineDrafts[key] = arrayToLines(nextValue)
+      if (!TEMPLATE_SELECTION_FIELDS.has(key)) {
+        multiLineDrafts[key] = arrayToLines(nextValue)
+      }
       return
     }
 
@@ -1511,12 +1520,12 @@ function buildPayload() {
   })
 
   for (const [key, value] of Object.entries(form)) {
-    if (form.automatic_scan && AUTOMATIC_SCAN_EXCLUDED_FIELDS.has(key)) {
+    if (form.automatic_scan && TEMPLATE_SELECTION_FIELDS.has(key)) {
       continue
     }
 
     if (typeof value === 'boolean') {
-      if (value) {
+      if (value || key === 'preflight_fingerprint') {
         payload[key] = value
       }
       continue
@@ -1629,20 +1638,22 @@ async function submitTask() {
   }
 }
 
-watch(
-  [templateIdKeyword, templateSelectedTags, templateSelectedSeverities, templateSelectedProtocols],
-  () => {
-    clearAllFilteredTemplateSelection()
-    scheduleTemplateFetch()
-  },
-  { deep: true }
-)
-
 watch(currentCreatorName, syncCurrentCreator, { immediate: true })
 
 onMounted(() => {
   applyRecreateDraft()
   applyTemplateSelectionDraft()
+
+  // 回填完成后再监听筛选变化，避免初始化清空原任务的模板选择。
+  watch(
+    [templateIdKeyword, templateSelectedTags, templateSelectedSeverities, templateSelectedProtocols],
+    () => {
+      clearAllFilteredTemplateSelection()
+      scheduleTemplateFetch()
+    },
+    { deep: true }
+  )
+
   fetchTemplateOptions()
   fetchTemplateList(1)
   loadGlobalScanDisabledTargets()
@@ -2100,7 +2111,7 @@ onBeforeUnmount(() => {
                   <h3>{{ field.label }}</h3>
                   <span v-if="field.tooltip" class="scan-create-field-tooltip-anchor" tabindex="0" aria-label="查看字段说明">
                     <span class="scan-create-field-tooltip-icon">?</span>
-                    <span class="scan-create-field-tooltip" role="tooltip">
+                    <span :id="`scan-field-description-${field.key}`" class="scan-create-field-tooltip" role="tooltip">
                       {{ field.tooltip }}
                     </span>
                   </span>
@@ -2113,6 +2124,10 @@ onBeforeUnmount(() => {
               class="scan-create-switch"
               :class="{ 'is-on': form[field.key] }"
               type="button"
+              role="switch"
+              :aria-label="field.label"
+              :aria-checked="form[field.key]"
+              :aria-describedby="field.tooltip ? `scan-field-description-${field.key}` : undefined"
               @click="toggleBooleanField(field)"
             >
               <span class="scan-create-switch-track">

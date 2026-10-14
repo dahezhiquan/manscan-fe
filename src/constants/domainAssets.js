@@ -1,9 +1,11 @@
 export const DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export const DOMAIN_ASSET_SEARCH_DEBOUNCE = 300
 export const DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER = ['critical', 'high', 'medium', 'low']
+export const ASSET_HIGH_RISK_FILTER = 'critical,high'
 
 export const DOMAIN_ASSET_RISK_OPTIONS = [
   { value: '', label: '全部风险等级', shortLabel: '风险等级' },
+  { value: ASSET_HIGH_RISK_FILTER, label: '严重 / 高危风险', shortLabel: '严重 / 高危' },
   { value: 'critical', label: '严重风险', shortLabel: '严重' },
   { value: 'high', label: '高风险', shortLabel: '高危' },
   { value: 'medium', label: '中风险', shortLabel: '中危' },

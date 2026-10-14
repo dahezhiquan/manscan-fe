@@ -413,6 +413,7 @@
   - 前端会按表单仅提交已填写字段
   - `created_by` 固定使用当前登录用户，由前端在提交前写入；创建页不提供手动编辑入口
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
+  - `preflight_fingerprint`: `boolean`，创建页“运行参数”中的“前置主动指纹探测”开关，默认 `true`；开启和关闭均显式提交布尔值，关闭时提交 `false`
   - 高级能力字段：
     - `dast`: `boolean`，启用 DAST/fuzzable 模板
     - `interactsh_server`: `string`，当前任务使用的 Interactsh 服务根地址
@@ -420,6 +421,7 @@
     - `no_interactsh`: `boolean`，禁用当前任务的 Interactsh/OOB 请求
 - 联调注意事项：
   - 当前后端不限制单次任务的目标数量上限
+  - `preflight_fingerprint=false` 仅跳过前置 HTTP／非 HTTP 主动指纹探测；存活探测和 Wappalyzer 被动识别保留，仍受 `offline_http`、`disable_http_probe` 原有开关约束；自动模板映射及其检测模板流程不受影响。后端对省略或 `null` 按开启处理
   - `no_interactsh=true` 时，前端会阻止同时填写 `interactsh_server` 或 `interactsh_token`，与后端互斥约定保持一致
   - `interactsh_token` 仅在创建请求中提交，前端不会在任务查询页面展示该字段
   - 从扫描详情页点击“重新创建扫描”进入创建页时，前端会先请求 `GET /api/v1/scans/:id/config`，再消费一次性内存草稿并预填表单；草稿中的 `created_by` 会被忽略并改用当前登录用户
@@ -448,6 +450,7 @@
   - 前端仅在任务状态不是 `running` 且详情已加载后展示“重新扫描”按钮
   - 点击详情页“重新扫描”按钮后，前端会禁用刷新、暂停/继续和停止按钮，避免动作并发
   - 成功后前端立即在当前页跳转到 `/scans/:newId`，并由新详情页重新加载任务详情和日志流
+  - 后端沿用原任务的 `preflight_fingerprint` 配置，前端无需额外传参
   - `task_api` 建议返回 `/api/v1/scans/:id`，作为 `task.id` 缺失时的兜底解析来源
 
 ### 11. 获取扫描任务可复用配置
@@ -458,14 +461,16 @@
 - 请求参数：
   - 路径参数 `id`: 原扫描任务 ID
 - 返回结构：前端使用 `data.config`
-  - `data.config` 字段口径与创建扫描任务表单字段保持一致，例如 `targets`、`exclude_targets`、`include_ids`、`tags`、`severities`、`protocols`、`automatic_scan`、`store_response`、`custom_headers`、`interactsh_server`、`interactsh_token`、`no_interactsh`、并发/超时/headless/代理等配置字段
+  - `data.config` 字段口径与创建扫描任务表单字段保持一致，例如 `targets`、`exclude_targets`、`include_ids`、`tags`、`severities`、`protocols`、`automatic_scan`、`preflight_fingerprint`、`store_response`、`custom_headers`、`interactsh_server`、`interactsh_token`、`no_interactsh`、并发/超时/headless/代理等配置字段
 - 异常分支：
   - 请求失败时，在扫描详情页顶部展示错误提示
   - 返回配置为空或无法映射到创建页字段时，展示“当前任务缺少可带入创建页的扫描配置。”
 - 联调注意事项：
   - 前端点击“重新创建扫描”时只读取配置并跳转创建页，不会创建或启动新任务
   - 前端会把 `data.config` 存入一次性内存草稿，创建页读取后立即清理；页面刷新后草稿不会保留
+  - 模板筛选与选中状态一起回填：非自动映射任务未指定 `include_ids`、但指定了 `tags` / `severities` / `protocols` 时，匹配模板恢复为全部选中；指定 `include_ids` 时仅恢复对应模板选中。回填后调整筛选或模板选择，提交以当前选择为准
   - 前端会按创建页字段类型做兼容归一化，例如 JSON 字符串数组、多行字符串数组、布尔值、数字值和响应大小 MB 展示值
+  - `preflight_fingerprint=false` 会回填为关闭，`true` 回填为开启；字段缺失或为 `null` 时沿用创建页默认开启，并在再次提交时保留用户选择
   - `interactsh_token` 会按接口返回值回填到创建页密码输入框
 
 ### 12. 取消扫描任务
@@ -682,14 +687,13 @@
 
 ### 17. 获取漏洞列表
 
-- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新；侧边栏“漏洞”导航徽标和首页仪表盘“待处理漏洞”卡片展示未审核漏洞数
+- 用途：`/vulnerabilities` 漏洞查询页首屏加载、分页、筛选和手动刷新；侧边栏“漏洞”导航徽标展示未审核漏洞数
 - 请求方式：`GET`
 - 路径：`/api/v1/vulnerabilities`
 - 请求参数：
   - `page`: 页码，筛选条件或每页数量变化后重置为 `1`
   - `page_size`: 每页数量，前端当前支持 `10`、`20`、`50`、`100`
-  - 侧边栏和首页仪表盘未审核总数当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`
-  - 首页仪表盘未审核分类数量当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`，并分别附加 `severity=critical|high|medium|info|low`
+  - 侧边栏未审核总数当前实际使用：`page=1`、`page_size=1`、`status=unreviewed`
   - `keyword`: 统一搜索关键字，用于按 `vulnerability_name OR template_id` 模糊匹配
   - `asset_host`: 资产 Host 模糊筛选
   - `status`: 漏洞状态精确筛选，前端当前枚举为 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored`，支持多选
@@ -715,15 +719,16 @@
   - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
   - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
 - 联调注意事项：
-  - 进入页面默认请求 `page=1&page_size=10`
+  - 进入页面默认请求 `page=1&page_size=10`；首页“未审核漏洞”的“查看漏洞”跳转 `/vulnerabilities?status=unreviewed`，首个列表请求即携带 `status=unreviewed`，筛选按钮同步显示“未审核”
   - 后端已支持 `keyword` 参数，匹配逻辑为 `LOWER(vulnerability_name) LIKE %keyword% OR LOWER(template_id) LIKE %keyword%`；该条件应与其他筛选条件做 `AND` 组合
   - 前端“搜索漏洞名称或 Template ID”输入框只会提交 `keyword`，不再自行判断应该传 `vulnerability_name` 还是 `template_id`
+  - 入口 URL 的 `status` 和 `severity` 初始化对应筛选，兼容重复参数和逗号分隔，仅接受现有枚举并去重；优先关注入口为 `/vulnerabilities?status=unreviewed&severity=critical,high`，首个列表请求即发送 `status=unreviewed&severity=critical&severity=high`
   - `tags`、`status`、`severity` 和 `protocol` 均为下拉筛选，多选时前端会发送多个同名 query 参数
   - 漏洞页标签筛选候选来自 `/api/v1/templates/options/tags`；接口失败时回退为前端内置标签选项
   - 漏洞页“扫描任务”筛选候选来自 `/api/v1/scans/options/names`；接口失败时会展示错误提示并允许重试
   - 漏洞页“全选”会按当前已应用筛选条件，以 `page_size=100` 分页拉取所有匹配漏洞的 `items[].id`，用于后续批量操作
   - 侧边栏“漏洞”徽标会单独轮询本接口，间隔约 10 秒，并直接读取 `data.total` 作为未审核漏洞数
-  - 首页仪表盘“待处理漏洞”卡片会在页面挂载时请求未审核总数和 `critical`、`high`、`medium`、`info`、`low` 分类数量，均直接读取 `data.total`；加载中或失败时显示 `--`
+  - 首页统计使用独立的 dashboard 聚合接口（见第 29 节），不再通过漏洞列表分组读取总数；侧边栏徽标仍独立调用本接口
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
   - `severity`、`status`、`protocol` 展示前会统一转为小写 key；未知值按原值兜底展示
   - 漏洞状态展示映射：`unreviewed=未审核`、`confirmed=已确认`、`ticketed=已发单`、`fixed=已修复`、`false_positive=误报`、`ignored=忽略`
@@ -922,7 +927,7 @@
   - `keyword`: 顶部搜索框输入值，用于按域名或资产地址模糊搜索
   - `title`: “站点标题”筛选
   - `region`: “区域”筛选
-  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`
+  - `risk_level`: “风险等级”筛选，支持 `critical`、`high`、`medium`、`low`、`info`；“严重 / 高危”组合使用 `critical,high`，表示最高风险等级属于两者之一
   - `has_vulnerability`: “是否存在漏洞”筛选，前端提交 `true` 或 `false`
   - `has_component`: “是否存在组件”筛选，前端提交 `true` 或 `false`
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
@@ -943,7 +948,8 @@
   - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
   - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
 - 联调注意事项：
-  - 进入页面默认请求 `page=1&page_size=10`
+  - 进入页面默认请求 `page=1&page_size=10`；首页优先关注入口跳转 `/assets/domains?risk_level=critical,high`，首个列表请求携带 `risk_level=critical,high`，筛选 chip 显示“风险等级 严重 / 高危”
+  - 入口 URL 的 `risk_level` 兼容重复参数和逗号分隔，仅接受现有枚举并去重；刷新和浏览器前进 / 后退恢复入口筛选，无 query 的同页导航恢复全部资产。筛选可编辑、单项移除或清空
   - 顶部搜索框防抖提交 `keyword`
   - “添加筛选条件”弹窗一次保存一个筛选项，筛选字段与表格展示列保持一致，已保存条件以 chip 展示，支持单项移除和清空全部
   - “是否存在漏洞”按 `vulnerability_count > 0` 语义筛选；“是否存在组件”按 `component_count > 0` 语义筛选
@@ -1034,7 +1040,7 @@
   - `keyword`: 顶部搜索框输入值，用于按 IP、操作系统类型或关联域名模糊搜索
   - `os_type`: “操作系统类型”筛选
   - `region`: “区域”筛选
-  - `risk_level`: “风险等级”筛选，前端固定枚举为 `critical`、`high`、`medium`、`low`、`info`
+  - `risk_level`: “风险等级”筛选，支持 `critical`、`high`、`medium`、`low`、`info`；“严重 / 高危”组合使用 `critical,high`，表示最高风险等级属于两者之一
 - 返回结构：前端使用 `data.page`、`data.pageSize`、`data.total`、`data.totalPages`、`data.items`
   - `items[].id`
   - `items[].ip_address` 或 `items[].asset_address`
@@ -1053,7 +1059,8 @@
   - 有数据时刷新或筛选失败会保留当前列表，并在列表上方展示错误提示与重试按钮
   - 无数据时展示空状态；存在筛选条件时提供清空筛选入口
 - 联调注意事项：
-  - 进入页面默认请求 `page=1&page_size=10`
+  - 进入页面默认请求 `page=1&page_size=10`；首页优先关注入口跳转 `/assets/hosts?risk_level=critical,high`，首个列表请求携带 `risk_level=critical,high`，筛选 chip 显示“风险等级 严重 / 高危”
+  - 入口 URL 的 `risk_level` 兼容重复参数和逗号分隔，仅接受现有枚举并去重；刷新和浏览器前进 / 后退恢复入口筛选，无 query 的同页导航恢复全部资产。筛选可编辑、单项移除或清空
   - 顶部搜索框防抖提交 `keyword`
   - “添加筛选条件”弹窗一次保存一个筛选项，已保存条件以 chip 展示，支持单项移除和清空全部
   - `risk_level`、`vulnerability_count` 和 `critical_count` / `high_count` / `medium_count` / `low_count` 由后端从漏洞等关联数据聚合返回；前端在“漏洞数量”列按严重、高危、中危、低危四格展示不同等级数量
@@ -1125,3 +1132,45 @@
   - 后端会校验 `ip_address` 合法性；若返回 `40001`，前端展示后端错误信息
   - 保存成功后前端会立即更新当前详情页的 `manual_note` 展示，不额外刷新详情接口
   - 空字符串由后端裁剪并清空备注，前端归一化后展示为“暂无备注”
+
+
+### 29. 首页仪表盘统计（四个独立聚合接口）
+
+- 用途：`/` 首页的未审核漏洞、处理状态、主机和域名风险分布、优先关注、主机排行榜和服务指纹排行榜。
+- 请求方式：四个 `GET` 并行发起，全部需要登录，统一携带 `Authorization: Bearer <access_token>`。
+- 请求参数：全部无参数，不附加分页、时间范围或筛选条件；统计范围为全系统。
+- 接口封装：`src/api/dashboard.js`；响应归一化：`src/utils/dashboard.js`；区块状态：`src/composables/useDashboardOverview.js`。
+
+| 请求路径 | 页面用途 | 原始 `data` 结构 | 归一化结果 |
+| --- | --- | --- | --- |
+| `/api/v1/dashboard/overview` | 未审核漏洞、处理状态、高危开放端口 | `vulnerability_status: { total, unreviewed, confirmed, ticketed, fixed, false_positive, ignored }`；`pending_vulnerabilities: { total, critical, high, medium, low }`；`high_risk_open_ports` | `statuses`、`pending`（补充 `other`）、`highRiskOpenPorts` |
+| `/api/v1/dashboard/asset-risks` | 主机 / 域名风险分布及高风险资产数量 | `hosts`、`domains`，各含 `{ critical, high, medium, low, no_risk, unknown }` | 两组分别整理为 `{ counts, total }`，`total` 为六项之和 |
+| `/api/v1/dashboard/host-rankings` | 漏洞数量 / 开放端口 Top10 主机 | `top_vulnerabilities: [{ ip_address, vulnerability_count }]`；`top_ports: [{ ip_address, port_count }]` | `vulnerabilities`、`ports`，元素为 `{ key, label, count, route }` |
+| `/api/v1/dashboard/service-fingerprints` | 域名应用 / 主机服务指纹 Top10 | `domains: [{ app_name, count }]`；`hosts: [{ service_name, count }]` | `domains`、`hosts`，元素为 `{ key, label, count, route: null }` |
+
+- 返回协议：`{ code: 0, message: "success", data: ... }`，字段定义与 `SERVER_API.md` 的四个 dashboard 接口一致。
+  - 数量必须是非负安全整数（兼容数值字符串）。缺失、`null`、布尔值、负数或非整数视为该区块失败，不转换为零。
+  - 未审核等级数量之和不能超过未审核总数；未审核总数必须等于状态字段 `unreviewed`。已列出的处理状态数量之和不能超过漏洞总数，未识别状态可仅计入总数。
+  - 排行榜字段必须为数组，名称必须为非空且不重复的字符串，数量必须有效；`[]` 为正常空状态，缺失数组为失败。
+  - 排行榜按服务端顺序展示，前端最多取 10 项，不补零、不重新分组或拆分复合指纹。
+- 统计口径：
+  - “未审核漏洞”仅为 `unreviewed`，不包含已确认和已发单。页面仅展示总数和严重、高危、中危、低危四个等级；信息、未知等等级仍计入总数，因此四项之和可能小于总数。
+  - 优先关注的严重 / 高危未审核数量为 `critical + high`；高危开放端口数量直接使用 `high_risk_open_ports`，仅计存活且标记高危的端口记录，不按主机去重。
+  - 资产六类风险包含不存活资产，排除已修复、误报、忽略漏洞，以有效漏洞最高等级分类。`no_risk` 表示无有效漏洞；`unknown` 表示存在有效漏洞但等级均为信息、未知或未识别值，两者独立展示。
+  - 域名按完整端点（含端口）关联，主机按 IP 关联；不进行跨类型资产去重。
+  - 主机漏洞排行包含所有处理状态的漏洞，与资产风险口径不同。端口排行仅统计存活端口，TCP / UDP 分别计数；均只统计已登记主机，不要求主机本身存活。
+  - 指纹仅统计存活且名称非空的记录；域名使用 `app_name`，主机使用 `service_name`，不按主机去重、不按版本拆分。Top10 的数量不等于全部服务总数。
+  - 处理状态为当前库内分布，不表示近期趋势、修复效率或 SLA；无时间筛选。
+- 异常分支：
+  - HTTP 401 / `40101`：沿用统一登录失效处理，清理登录态并返回登录入口。
+  - HTTP 503 / `50301`：聚合查询失败或超时，`data=null`；整个对应区块显示失败，不使用部分响应。
+  - 若返回 HTTP 403 / `40301`：显示联系管理员提示。
+  - 首次加载或失败且无历史结果显示 `--`；排行榜显示加载中或暂不可用，只有成功返回空数组时显示“暂无排行数据”。
+  - 每个接口独立加载、失败和重试，较慢或失败的区块不阻塞其他区块。重试仅请求对应接口；全局刷新同时请求四个接口。
+  - 刷新失败保留该区块上次成功数据并提示；前端单接口 15 秒超时，超时会取消请求。重复加载同一区块和离开页面会取消旧请求，旧响应不能覆盖新结果。
+- 联调注意事项：
+  - 挂载与手动刷新均为四个并行请求，无首页自动轮询；侧边栏扫描和漏洞徽标的现有轮询独立运行。
+  - 后端 5 秒时限仅针对区块数据库查询，不等于端到端耗时；四个接口及其聚合查询不是同一事务快照，扫描入库或状态变动期间可能短暂不同步。
+  - 主机排行项生成编码后的站内 `/assets/hosts/:ipAddress` 详情链接；指纹名称按文本显示，不生成外部链接。
+  - 未审核卡片的“查看漏洞”跳转 `/vulnerabilities?status=unreviewed`，漏洞页从 URL 初始化状态与等级筛选（仅接收已有枚举，支持重复参数和逗号分隔并去重）；刷新及浏览器后退可以恢复入口筛选。同一漏洞页切换到无 query 的导航入口会恢复全部状态。用户仍可在页内清空或修改筛选。优先关注的三个入口分别应用“未审核 + 严重 / 高危漏洞”、“最高风险等级为严重 / 高危的主机”及“最高风险等级为严重 / 高危的域名”筛选；其他资产与漏洞入口跳转现有清单页面。
+  - 首页不展示“你的 API Key”和“快捷操作”卡片。最新漏洞情报沿用原有组件和内容，不调用上述接口。

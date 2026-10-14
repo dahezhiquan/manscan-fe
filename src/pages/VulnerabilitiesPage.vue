@@ -774,10 +774,12 @@ import {
 import { normalizeScanTaskNameOptionsResponse } from '../utils/scanTask'
 import { normalizeProtocolOptions, normalizeTagOptions } from '../utils/template'
 import { iconPath } from '../utils/icons'
+import { readEnumRouteFilter } from '../utils/routeFilters'
 
+const props = defineProps({ routeSearch: { type: String, default: '' } })
 const filtersRef = ref(null)
-const filterInput = ref(createEmptyFilterInput())
-const appliedFilters = ref(createEmptyAppliedFilters())
+const filterInput = ref(createRouteFilterInput())
+const appliedFilters = ref(buildAppliedFilters())
 const activeFilterMenu = ref('')
 const tagKeyword = ref('')
 const tagOptionDefaultLimit = 12
@@ -996,6 +998,13 @@ function createEmptyFilterInput() {
     latestScanTaskName: '',
     protocols: []
   }
+}
+
+function createRouteFilterInput() {
+  const filters = createEmptyFilterInput()
+  filters.statuses = readEnumRouteFilter(props.routeSearch, 'status', VULNERABILITY_STATUS_OPTIONS)
+  filters.severities = readEnumRouteFilter(props.routeSearch, 'severity', VULNERABILITY_SEVERITY_OPTIONS)
+  return filters
 }
 
 function createEmptyAppliedFilters() {
@@ -1791,6 +1800,20 @@ async function loadVulnerabilities(options = {}) {
 }
 
 watch(filterInput, scheduleFilterCommit, { deep: true })
+
+watch(() => props.routeSearch, async () => {
+  window.clearTimeout(filterTimer)
+  isSyncingFilters = true
+  filterInput.value = createRouteFilterInput()
+  appliedFilters.value = buildAppliedFilters()
+  currentPage.value = 1
+  clearVulnerabilitySelection()
+  tagKeyword.value = ''
+  scanTaskKeyword.value = ''
+  void loadVulnerabilities({ forceLoading: true })
+  await nextTick()
+  isSyncingFilters = false
+})
 
 watch([tagKeyword, tagOptions], () => {
   resetTagOptionVisibleCount()

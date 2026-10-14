@@ -1,3 +1,22 @@
+<template>
+  <div v-if="!isAuthReady" class="auth-init-placeholder" aria-hidden="true"></div>
+
+  <LoginPage v-else-if="!isAuthenticated" @login-success="handleLoginSuccess" />
+
+  <component
+    v-else
+    :is="currentView"
+    v-bind="[ROUTE_PATHS.VULNERABILITIES, ROUTE_PATHS.HOST_ASSETS, ROUTE_PATHS.DOMAIN_ASSETS].includes(currentPath) ? { routeSearch: currentSearch } : {}"
+    :navigate-to="navigateTo"
+    :current-path="currentPath"
+    :is-sidebar-collapsed="isSidebarCollapsed"
+    :current-user-name="currentUserName"
+    :current-user-role="currentUserRole"
+    @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed"
+    @logout="handleLogout"
+  />
+</template>
+
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getCurrentUser, logoutCurrentUser } from './api/auth'
@@ -35,7 +54,7 @@ import {
 import { normalizeThemeSettings } from './utils/themeSettings'
 
 const isSidebarCollapsed = ref(false)
-const { currentPath, navigateTo } = useAppRouter()
+const { currentPath, currentSearch, navigateTo } = useAppRouter()
 const isAuthReady = ref(false)
 const isAuthenticated = ref(Boolean(getAuthToken()))
 const currentUser = ref(getStoredUser())
@@ -50,7 +69,7 @@ const currentUserRole = computed(() => currentUser.value?.role || 'user')
 
 function rememberRedirectPath() {
   if (currentPath.value !== ROUTE_PATHS.LOGIN) {
-    redirectAfterLogin.value = currentPath.value
+    redirectAfterLogin.value = `${currentPath.value}${currentSearch.value}`
   }
 }
 
@@ -228,21 +247,3 @@ const currentView = computed(() => {
   return DashboardPage
 })
 </script>
-
-<template>
-  <div v-if="!isAuthReady" class="auth-init-placeholder" aria-hidden="true"></div>
-
-  <LoginPage v-else-if="!isAuthenticated" @login-success="handleLoginSuccess" />
-
-  <component
-    v-else
-    :is="currentView"
-    :navigate-to="navigateTo"
-    :current-path="currentPath"
-    :is-sidebar-collapsed="isSidebarCollapsed"
-    :current-user-name="currentUserName"
-    :current-user-role="currentUserRole"
-    @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed"
-    @logout="handleLogout"
-  />
-</template>

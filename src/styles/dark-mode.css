@@ -2700,3 +2700,18 @@ html[data-theme='deep'][data-color-mode='dark'] .vulnerability-delete-dialog .te
   background: #9f1239 !important;
   box-shadow: none !important;
 }
+
+:root[data-color-mode='dark'] {
+  --dashboard-risk-critical: #fda4af;
+  --dashboard-risk-high: #fdba74;
+  --dashboard-risk-medium: #fcd34d;
+  --dashboard-risk-low: #93c5fd;
+  --dashboard-risk-success: #86efac;
+}
+
+/* Match the dashboard palette despite the earlier shared tone !important rules. */
+html[data-color-mode='dark'] .dashboard-home .tone-critical { color: var(--dashboard-risk-critical) !important; }
+html[data-color-mode='dark'] .dashboard-home .tone-high { color: var(--dashboard-risk-high) !important; }
+html[data-color-mode='dark'] .dashboard-home .tone-medium { color: var(--dashboard-risk-medium) !important; }
+html[data-color-mode='dark'] .dashboard-home .tone-low { color: var(--dashboard-risk-low) !important; }
+html[data-color-mode='dark'] .dashboard-home .tone-info { color: var(--dashboard-risk-success) !important; }

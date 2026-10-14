@@ -78,6 +78,7 @@ const FORM_FIELD_KEYS = [
   'http_stats',
   'new_templates',
   'automatic_scan',
+  'preflight_fingerprint',
   'enable_global_matchers_templates'
 ]
 
@@ -139,6 +140,7 @@ const BOOLEAN_FIELD_KEYS = new Set([
   'http_stats',
   'new_templates',
   'automatic_scan',
+  'preflight_fingerprint',
   'enable_global_matchers_templates'
 ])
 

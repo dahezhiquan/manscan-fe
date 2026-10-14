@@ -3,6 +3,11 @@ export const TEMPLATE_MULTI_VALUE_QUERY_MODE = 'repeat'
 
 export const API_PREFIX = `${API_BASE_URL}/api/v1`
 
+export const DASHBOARD_OVERVIEW_API = `${API_PREFIX}/dashboard/overview`
+export const DASHBOARD_ASSET_RISKS_API = `${API_PREFIX}/dashboard/asset-risks`
+export const DASHBOARD_HOST_RANKINGS_API = `${API_PREFIX}/dashboard/host-rankings`
+export const DASHBOARD_SERVICE_FINGERPRINTS_API = `${API_PREFIX}/dashboard/service-fingerprints`
+
 export const AUTH_CHALLENGE_API = `${API_PREFIX}/auth/challenge`
 export const AUTH_LOGIN_API = `${API_PREFIX}/auth/login`
 export const AUTH_ME_API = `${API_PREFIX}/auth/me`
