@@ -1,5 +1,6 @@
 export const DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 export const DOMAIN_ASSET_SEARCH_DEBOUNCE = 300
+export const DOMAIN_ASSET_SCREENSHOT_HISTORY_PAGE_SIZE = 4
 export const DOMAIN_ASSET_VULNERABILITY_SEVERITY_ORDER = ['critical', 'high', 'medium', 'low']
 export const ASSET_HIGH_RISK_FILTER = 'critical,high'
 

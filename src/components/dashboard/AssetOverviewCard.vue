@@ -26,5 +26,7 @@ const props = defineProps({
   title: { type: String, required: true }, data: { type: Object, default: null },
   listRoute: { type: String, required: true }, navigateTo: { type: Function, required: true }
 })
-const metrics = computed(() => DASHBOARD_ASSET_RISKS.map((item) => ({ ...item, count: props.data?.counts[item.key] ?? null })))
+const metrics = computed(() => DASHBOARD_ASSET_RISKS
+  .filter((item) => item.key !== 'unknown')
+  .map((item) => ({ ...item, count: props.data?.counts[item.key] ?? null })))
 </script>

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getDomainAssetDetail, updateDomainAssetManualNote } from '../api/domain-assets'
 import manscanIcon from '../assets/manscan-icon.png'
+import DomainAssetScreenshots from '../components/domain-assets/DomainAssetScreenshots.vue'
 import {
   buildDomainAssetFlagItems,
   normalizeDomainAssetDetail
@@ -23,7 +24,6 @@ const detailError = ref('')
 const detailData = ref(null)
 const copiedState = ref('')
 const copyEffectTick = ref(0)
-const screenshotFailed = ref(false)
 const isManualNoteDialogOpen = ref(false)
 const manualNoteDraft = ref('')
 const manualNoteError = ref('')
@@ -104,9 +104,6 @@ const evidenceSections = computed(() => {
   ]
 })
 
-const canShowScreenshot = computed(() =>
-  Boolean(detail.value?.screenshotPath) && !screenshotFailed.value
-)
 const manualNoteLength = computed(() => manualNoteDraft.value.length)
 const canSaveManualNote = computed(() =>
   !manualNoteSaving.value && manualNoteLength.value <= MANUAL_NOTE_MAX_LENGTH
@@ -137,14 +134,6 @@ function closeManualNoteDialog() {
 
   isManualNoteDialogOpen.value = false
   manualNoteError.value = ''
-}
-
-function openScreenshot() {
-  if (!detail.value?.screenshotPath) {
-    return
-  }
-
-  window.open(detail.value.screenshotPath, '_blank', 'noopener,noreferrer')
 }
 
 async function copyEvidence(section) {
@@ -204,7 +193,6 @@ async function fetchDomainAssetDetail() {
   const requestId = ++currentRequestId
   detailLoading.value = true
   detailError.value = ''
-  screenshotFailed.value = false
 
   if (!domain.value) {
     detailData.value = null
@@ -447,33 +435,7 @@ onBeforeUnmount(() => {
             </div>
           </article>
 
-          <article class="template-detail-card">
-            <div class="template-detail-section-title with-icon">
-              <span class="template-detail-title-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <rect x="4" y="5" width="16" height="12" rx="2" />
-                  <path d="M8 21h8" />
-                  <path d="M12 17v4" />
-                </svg>
-              </span>
-              <span>页面截图</span>
-            </div>
-
-            <button
-              v-if="canShowScreenshot"
-              class="domain-asset-detail-screenshot"
-              type="button"
-              @click="openScreenshot"
-            >
-              <img
-                :src="detail.screenshotPath"
-                :alt="`${detail.domain} 页面截图`"
-                loading="lazy"
-                @error="screenshotFailed = true"
-              />
-            </button>
-            <p v-else class="template-detail-empty-text domain-asset-detail-empty-copy">暂无页面截图</p>
-          </article>
+          <DomainAssetScreenshots :domain="detail.domain !== '--' ? detail.domain : domain" />
 
           <article class="template-detail-card">
             <div class="template-detail-section-title with-icon">

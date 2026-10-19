@@ -102,10 +102,6 @@ export function normalizeDomainAssetDetail(payload) {
     firstDefined(rawDetail?.vulnerability_count, rawDetail?.vulnerabilityCount, rawDetail?.vuln_count, rawDetail?.vulnCount),
     0
   )
-  const screenshotPath = normalizeScreenshotPath(
-    firstDefined(rawDetail?.screenshot_path, rawDetail?.screenshotPath)
-  )
-
   return {
     domain,
     owner: formatText(rawDetail?.owner),
@@ -118,7 +114,6 @@ export function normalizeDomainAssetDetail(payload) {
     hasAdmin: normalizeBoolean(firstDefined(rawDetail?.has_admin, rawDetail?.hasAdmin)),
     hasUcLogin: normalizeBoolean(firstDefined(rawDetail?.has_uc_login, rawDetail?.hasUcLogin)),
     hasBaiduLogin: normalizeBoolean(firstDefined(rawDetail?.has_baidu_login, rawDetail?.hasBaiduLogin)),
-    screenshotPath,
     manualNote: formatText(firstDefined(rawDetail?.manual_note, rawDetail?.manualNote), '暂无备注'),
     httpStatusCode: formatText(firstDefined(rawDetail?.http_status_code, rawDetail?.httpStatusCode)),
     request: formatCodeText(rawDetail?.request),
@@ -134,6 +129,92 @@ export function normalizeDomainAssetDetail(payload) {
     serviceAssetCountDisplay: formatCount(serviceAssets.length),
     titleHistoryCountDisplay: formatCount(titleHistories.length)
   }
+}
+
+const DOMAIN_ASSET_SCREENSHOT_CONTENT_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp'
+])
+
+export function normalizeDomainAssetScreenshot(record) {
+  const contentType = String(firstDefined(record?.content_type, record?.contentType, '') ?? '')
+    .trim()
+    .toLowerCase()
+  const imageBase64 = String(firstDefined(record?.image_base64, record?.imageBase64, '') ?? '')
+    .trim()
+
+  if (!DOMAIN_ASSET_SCREENSHOT_CONTENT_TYPES.has(contentType)) {
+    throw new Error('截图图片类型无效')
+  }
+
+  if (!imageBase64 || imageBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)) {
+    throw new Error('截图图片数据无效')
+  }
+
+  const capturedDate = String(firstDefined(record?.captured_date, record?.capturedDate, '') ?? '').trim()
+  const fileName = formatText(firstDefined(record?.file_name, record?.fileName), '未命名截图')
+
+  return {
+    domain: formatText(record?.domain),
+    capturedDate,
+    capturedDateDisplay: /^\d{4}-\d{2}-\d{2}$/.test(capturedDate) ? capturedDate : '--',
+    fileName,
+    contentType,
+    imageUrl: `data:${contentType};base64,${imageBase64}`,
+    key: `${capturedDate}|${fileName}`
+  }
+}
+
+export function normalizeDomainAssetScreenshotPage(payload, fallbackPage = 1, fallbackPageSize = 4) {
+  const pageSize = normalizePositiveInteger(firstDefined(payload?.pageSize, payload?.page_size), fallbackPageSize)
+  const total = normalizeNonNegativeInteger(payload?.total, 0)
+  const totalPagesFallback = total > 0 ? Math.ceil(total / pageSize) : 1
+  const items = Array.isArray(payload?.items) ? payload.items : []
+
+  return {
+    items: items.map(normalizeDomainAssetScreenshot),
+    total,
+    page: normalizePositiveInteger(payload?.page, fallbackPage),
+    pageSize,
+    totalPages: normalizePositiveInteger(
+      firstDefined(payload?.totalPages, payload?.total_pages),
+      totalPagesFallback
+    )
+  }
+}
+
+export function buildDomainAssetScreenshotLookupCandidates(domain) {
+  const normalized = String(domain ?? '').trim().replace(/\/+$/, '')
+
+  if (!normalized) {
+    return []
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    const withoutDefaultPort = normalized
+      .replace(/^(https:\/\/[^/?#]+):443(?=\/|$)/i, '$1')
+      .replace(/^(http:\/\/[^/?#]+):80(?=\/|$)/i, '$1')
+
+    return [withoutDefaultPort]
+  }
+
+  const defaultPortMatch = normalized.match(/^(\[[^\]]+\]|[^/?#:]+):(80|443)(\/.*)?$/)
+
+  if (defaultPortMatch) {
+    const [, host, port, path = ''] = defaultPortMatch
+    const primaryProtocol = port === '443' ? 'https' : 'http'
+    const secondaryProtocol = port === '443' ? 'http' : 'https'
+
+    return [
+      `${primaryProtocol}://${host}${path}`,
+      `${primaryProtocol}://${normalized}`,
+      `${secondaryProtocol}://${normalized}`,
+      normalized
+    ]
+  }
+
+  return [`http://${normalized}`, `https://${normalized}`, normalized]
 }
 
 function normalizeServiceAssets(value) {
@@ -215,23 +296,6 @@ function normalizeBoolean(value) {
   }
 
   return null
-}
-
-function normalizeScreenshotPath(value) {
-  const normalized = String(value ?? '').trim()
-  if (!normalized) {
-    return ''
-  }
-
-  if (/^https?:\/\//i.test(normalized)) {
-    return normalized
-  }
-
-  if (normalized.startsWith('/') && !normalized.startsWith('//')) {
-    return normalized
-  }
-
-  return ''
 }
 
 function formatBooleanLabel(value) {

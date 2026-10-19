@@ -1,7 +1,9 @@
 import {
   DOMAIN_ASSET_DETAIL_API,
+  DOMAIN_ASSET_LATEST_SCREENSHOT_API,
   DOMAIN_ASSET_LIST_API,
-  DOMAIN_ASSET_MANUAL_NOTE_API
+  DOMAIN_ASSET_MANUAL_NOTE_API,
+  DOMAIN_ASSET_SCREENSHOTS_API
 } from '../constants/api'
 import { requestJson } from '../utils/http'
 
@@ -47,6 +49,28 @@ export async function updateDomainAssetManualNote(domain, manualNote, signal) {
       domain,
       manual_note: manualNote
     }),
+    signal
+  })
+}
+
+export async function getLatestDomainAssetScreenshot(domain, signal) {
+  const searchParams = new URLSearchParams()
+  appendQueryParam(searchParams, 'domain', domain)
+
+  return requestJson(`${DOMAIN_ASSET_LATEST_SCREENSHOT_API}?${searchParams.toString()}`, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function getDomainAssetScreenshots(domain, params = {}, signal) {
+  const searchParams = new URLSearchParams()
+  appendQueryParam(searchParams, 'domain', domain)
+  appendQueryParam(searchParams, 'page', params.page)
+  appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+
+  return requestJson(`${DOMAIN_ASSET_SCREENSHOTS_API}?${searchParams.toString()}`, {
+    method: 'GET',
     signal
   })
 }

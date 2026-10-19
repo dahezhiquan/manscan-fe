@@ -710,6 +710,16 @@ html[data-theme='deep'] .domain-assets-dialog-body {
   background: var(--surface);
 }
 
+html[data-theme='deep'] .domain-asset-screenshot-viewer-dialog {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: #111827;
+  color: #f8fafc;
+}
+
+html[data-theme='deep'] .domain-asset-screenshot-viewer-dialog h2 {
+  color: #f8fafc;
+}
+
 html[data-theme='deep'] .domain-assets-dialog-field > span {
   color: var(--ink-soft);
   font-weight: 600;
