@@ -6,15 +6,15 @@ import {
   SCAN_ATTACK_TYPE_OPTIONS,
   SCAN_STRATEGY_OPTIONS,
 } from '../constants/scanTasks'
-import { getTemplateDetail, getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
+import { getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
 import { protocolFilterOptions, severityFilterOptions } from '../data/templates'
 import { consumeScanTaskRecreateDraft } from '../utils/scanTaskRecreateDraft'
 import { consumeScanTaskTemplateSelectionDraft } from '../utils/scanTaskTemplateSelectionDraft'
 import {
   isScreenshotTemplate,
   isScanTemplateSelectionValid,
-  isTemplateAllowedForMainScan,
-  migrateLegacyScreenshotSelection
+  migrateLegacyScreenshotSelection,
+  resolveAllTemplateSelectionSubmission
 } from '../utils/scanTaskTemplateCapabilities'
 import {
   appendMultiValueParam,
@@ -89,12 +89,11 @@ const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'
 const TEMPLATE_SELECTION_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
 const ALWAYS_SUBMITTED_BOOLEAN_FIELDS = new Set([
   'preflight_fingerprint',
-  'screenshot_capture',
-  'disable_headless_templates'
+  'screenshot_capture'
 ])
-const FILLED_FIELD_COUNT_EXCLUDED_FIELDS = new Set(['created_by', 'disable_headless_templates'])
+const FILLED_FIELD_COUNT_EXCLUDED_FIELDS = new Set(['created_by'])
 const MB_TO_BYTES = 1024 * 1024
-const SELECT_ALL_TEMPLATE_TIMEOUT = 90000
+const TEMPLATE_PAGE_FETCH_CONCURRENCY = 8
 
 const stepFields = {
   basic: [
@@ -347,12 +346,6 @@ const stepFields = {
       tooltip: '启用主扫描中的浏览器型模板支持。截图采集使用独立的 Headless 子阶段，不受此开关控制。'
     },
     {
-      key: 'disable_headless_templates',
-      label: '禁用 Headless 模板',
-      type: 'boolean',
-      tooltip: '默认开启。开启后，主扫描（包括自动模板映射）排除所有 Headless 模板；独立的截图采集不受影响。'
-    },
-    {
       key: 'page_timeout',
       label: 'Headless 页面超时（秒）',
       type: 'number',
@@ -443,7 +436,6 @@ const templateProtocolOptions = ref(
 )
 const templateListLoading = ref(false)
 const templateOptionLoading = ref(false)
-const selectAllTemplatesLoading = ref(false)
 const isAllFilteredTemplatesSelected = ref(false)
 const templateListError = ref('')
 const templateAutoLockPulse = ref(false)
@@ -468,13 +460,11 @@ const templateListState = ref({
 let templateListAbortController = null
 let templateTagsAbortController = null
 let templateProtocolsAbortController = null
-let selectAllTemplatesAbortController = null
 let templateSearchTimer = null
 let templateAutoLockTimer = null
 let globalScanDisabledAbortController = null
 let globalScanDisabledRequestId = 0
 let templateSelectionValidationAbortController = null
-const templateMetadataById = new Map()
 
 const currentStep = computed(() => stepDefinitions[activeStep.value])
 const currentFields = computed(() => (stepFields[currentStep.value.key] ?? []).filter((field) => isFieldVisible(field)))
@@ -692,7 +682,6 @@ function createInitialForm() {
     dast: false,
     screenshot_capture: false,
     headless: false,
-    disable_headless_templates: true,
     page_timeout: null,
     show_browser: false,
     headless_optional_arguments: [],
@@ -1010,17 +999,6 @@ function buildTemplateListState(data, page, pageSizeFallback = templateListState
   return nextState
 }
 
-function cacheTemplateMetadata(items) {
-  const records = Array.isArray(items) ? items : []
-
-  records.forEach((item) => {
-    const normalized = normalizeTemplateItem(item)
-    if (normalized.id) {
-      templateMetadataById.set(normalized.id, normalized)
-    }
-  })
-}
-
 function formatSeverityLabel(severity) {
   const normalized = String(severity ?? '').trim().toLowerCase()
   const matched = severityFilterOptions.find((item) => item.value === normalized)
@@ -1061,7 +1039,7 @@ function normalizeTemplateItem(item) {
 }
 
 function isTemplateAllowed(template) {
-  return isTemplateAllowedForMainScan(template, form.disable_headless_templates)
+  return !isScreenshotTemplate(template?.id)
 }
 
 function isTemplateInteractionDisabled(template) {
@@ -1181,10 +1159,6 @@ function toggleBooleanField(field) {
   }
 
   form[field.key] = !form[field.key]
-
-  if (field.key === 'disable_headless_templates' && form.disable_headless_templates) {
-    removeKnownDisabledHeadlessTemplates()
-  }
 }
 
 function setScreenshotCaptureEnabled(enabled) {
@@ -1193,13 +1167,6 @@ function setScreenshotCaptureEnabled(enabled) {
   if (form.screenshot_capture && errorMessage.value === templateSelectionError) {
     errorMessage.value = ''
   }
-}
-
-function removeKnownDisabledHeadlessTemplates() {
-  form.include_ids = form.include_ids.filter((templateId) => {
-    const template = templateMetadataById.get(templateId)
-    return !template || isTemplateAllowed(template)
-  })
 }
 
 function goToStep(index) {
@@ -1398,7 +1365,7 @@ function toggleCurrentPageSelection() {
   appendSelectedTemplateIds(currentPageTemplateIds.value)
 }
 
-async function selectAllFilteredTemplates() {
+function selectAllFilteredTemplates() {
   if (isAutomaticScanEnabled.value) {
     return
   }
@@ -1408,61 +1375,15 @@ async function selectAllFilteredTemplates() {
     return
   }
 
-  if (!templateListState.value.total || selectAllTemplatesLoading.value) {
+  if (!templateListState.value.total) {
     return
   }
 
-  selectAllTemplatesLoading.value = true
-  templateListError.value = ''
-  selectAllTemplatesAbortController?.abort()
-  selectAllTemplatesAbortController = new AbortController()
-  const { signal } = selectAllTemplatesAbortController
-  const timeoutId = window.setTimeout(() => {
-    selectAllTemplatesAbortController?.abort()
-  }, SELECT_ALL_TEMPLATE_TIMEOUT)
+  form.include_ids = []
+  isAllFilteredTemplatesSelected.value = true
 
-  try {
-    const allIds = new Set(currentPageTemplateIds.value)
-    const totalPages = Math.max(1, templateListState.value.totalPages)
-
-    for (let page = 1; page <= totalPages; page += 1) {
-      if (isAutomaticScanEnabled.value) {
-        return
-      }
-
-      if (page === templateListState.value.page && currentPageTemplateIds.value.length > 0) {
-        continue
-      }
-
-      const data = await getTemplateList(buildTemplateListParams(page), signal)
-      const pageState = buildTemplateListState(data, page)
-      cacheTemplateMetadata(pageState.items)
-      pageState.items
-        .map((item) => normalizeTemplateItem(item))
-        .filter((template) => isTemplateAllowed(template))
-        .map((template) => template.id)
-        .filter(Boolean)
-        .forEach((id) => allIds.add(id))
-    }
-
-    if (isAutomaticScanEnabled.value) {
-      return
-    }
-
-    appendSelectedTemplateIds([...allIds])
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      templateListError.value = '全部全选已中断，请稍后重试。'
-    } else {
-      console.error('全选模板失败:', error)
-      templateListError.value = '全部全选失败，请稍后重试。'
-    }
-  } finally {
-    window.clearTimeout(timeoutId)
-    if (selectAllTemplatesAbortController?.signal === signal) {
-      selectAllTemplatesAbortController = null
-      selectAllTemplatesLoading.value = false
-    }
+  if (errorMessage.value === templateSelectionError) {
+    errorMessage.value = ''
   }
 }
 
@@ -1525,8 +1446,6 @@ async function fetchTemplateList(page = 1) {
   try {
     const data = await getTemplateList(buildTemplateListParams(page), templateListAbortController.signal)
     templateListState.value = buildTemplateListState(data, page)
-    cacheTemplateMetadata(templateListState.value.items)
-    removeKnownDisabledHeadlessTemplates()
   } catch (error) {
     if (error.name !== 'AbortError') {
       console.error('加载模板列表失败:', error)
@@ -1643,43 +1562,42 @@ function buildPayload() {
   return payload
 }
 
-async function fetchAllFilteredTemplateRecords(signal) {
-  const recordsById = new Map()
-  const firstData = await getTemplateList(buildTemplateListParams(1), signal)
-  const firstPage = buildTemplateListState(firstData, 1)
-  const totalPages = Math.max(1, firstPage.totalPages)
-
-  cacheTemplateMetadata(firstPage.items)
-  firstPage.items
+function appendAllowedTemplateIds(target, items) {
+  items
     .map((item) => normalizeTemplateItem(item))
-    .filter((template) => template.id)
-    .forEach((template) => recordsById.set(template.id, template))
-
-  for (let page = 2; page <= totalPages; page += 1) {
-    const data = await getTemplateList(buildTemplateListParams(page), signal)
-    const pageState = buildTemplateListState(data, page, firstPage.pageSize)
-    cacheTemplateMetadata(pageState.items)
-    pageState.items
-      .map((item) => normalizeTemplateItem(item))
-      .filter((template) => template.id)
-      .forEach((template) => recordsById.set(template.id, template))
-  }
-
-  return [...recordsById.values()]
+    .filter((template) => isTemplateAllowed(template))
+    .map((template) => template.id)
+    .filter(Boolean)
+    .forEach((templateId) => target.add(templateId))
 }
 
-async function resolveTemplateMetadata(templateId, signal) {
-  const cached = templateMetadataById.get(templateId)
-  if (cached) {
-    return cached
+async function fetchAllFilteredTemplateIds(signal) {
+  const templateIds = new Set()
+  const currentPageState = templateListState.value
+  const totalPages = Math.max(1, currentPageState.totalPages)
+  const pendingPages = []
+
+  appendAllowedTemplateIds(templateIds, currentPageState.items)
+
+  for (let page = 1; page <= totalPages; page += 1) {
+    if (page !== currentPageState.page) {
+      pendingPages.push(page)
+    }
   }
 
-  const detail = await getTemplateDetail(templateId, signal)
-  const normalized = normalizeTemplateItem(detail)
-  if (normalized.id) {
-    templateMetadataById.set(normalized.id, normalized)
+  for (let index = 0; index < pendingPages.length; index += TEMPLATE_PAGE_FETCH_CONCURRENCY) {
+    const pageBatch = pendingPages.slice(index, index + TEMPLATE_PAGE_FETCH_CONCURRENCY)
+    const responses = await Promise.all(
+      pageBatch.map(async (page) => {
+        const data = await getTemplateList(buildTemplateListParams(page), signal)
+        return buildTemplateListState(data, page, currentPageState.pageSize)
+      })
+    )
+
+    responses.forEach((pageState) => appendAllowedTemplateIds(templateIds, pageState.items))
   }
-  return normalized
+
+  return [...templateIds]
 }
 
 async function prepareTemplateSelectionForSubmission() {
@@ -1700,21 +1618,23 @@ async function prepareTemplateSelectionForSubmission() {
 
   try {
     if (isAllFilteredTemplatesSelected.value) {
-      const records = await fetchAllFilteredTemplateRecords(signal)
-      form.include_ids = records
-        .filter((template) => isTemplateAllowed(template))
-        .map((template) => template.id)
-      clearAllFilteredTemplateSelection()
-    }
+      const selectionSubmission = resolveAllTemplateSelectionSubmission({
+        keyword: templateIdKeyword.value,
+        tags: templateSelectedTags.value,
+        severities: templateSelectedSeverities.value,
+        protocols: templateSelectedProtocols.value,
+        screenshotCapture: form.screenshot_capture
+      })
 
-    if (form.disable_headless_templates) {
-      const resolvedTemplates = await Promise.all(
-        form.include_ids.map((templateId) => resolveTemplateMetadata(templateId, signal))
-      )
-      const allowedIds = resolvedTemplates
-        .filter((template) => isTemplateAllowed(template))
-        .map((template) => template.id)
-      form.include_ids = allowedIds
+      if (selectionSubmission.requiresTemplateIds) {
+        form.include_ids = await fetchAllFilteredTemplateIds(signal)
+      } else {
+        form.include_ids = []
+      }
+
+      form.tags = selectionSubmission.tags
+      form.severities = selectionSubmission.severities
+      form.protocols = selectionSubmission.protocols
     }
   } catch (error) {
     if (error?.name === 'AbortError') {
@@ -1845,7 +1765,6 @@ onBeforeUnmount(() => {
   templateListAbortController?.abort()
   templateTagsAbortController?.abort()
   templateProtocolsAbortController?.abort()
-  selectAllTemplatesAbortController?.abort()
   templateSelectionValidationAbortController?.abort()
   window.clearTimeout(templateSearchTimer)
   window.clearTimeout(templateAutoLockTimer)
@@ -2127,14 +2046,12 @@ onBeforeUnmount(() => {
                       class="scan-create-secondary-button"
                       type="button"
                       :class="{ 'is-locked': isAutomaticScanEnabled }"
-                      :disabled="isAutomaticScanEnabled || templateListLoading || selectAllTemplatesLoading || templateListState.total === 0"
+                      :disabled="isAutomaticScanEnabled || templateListLoading || templateListState.total === 0"
                       @click="selectAllFilteredTemplates"
                     >
                       <span v-if="isAutomaticScanEnabled" class="scan-template-lock-mark" aria-hidden="true">AUTO</span>
                       {{
-                        selectAllTemplatesLoading
-                          ? '全选中...'
-                          : isAllFilteredTemplatesSelected
+                        isAllFilteredTemplatesSelected
                             ? '取消全部全选'
                             : `全部全选（${templateListState.total}）`
                       }}

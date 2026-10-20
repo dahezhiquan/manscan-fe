@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  isHeadlessTemplate,
   isScanTemplateSelectionValid,
-  isTemplateAllowedForMainScan,
-  migrateLegacyScreenshotSelection
+  migrateLegacyScreenshotSelection,
+  resolveAllTemplateSelectionSubmission
 } from '../src/utils/scanTaskTemplateCapabilities.js'
 import {
   consumeScanTaskRecreateDraft,
@@ -22,26 +21,6 @@ test('legacy screenshot template selection migrates to the standalone capture ca
   )
 })
 
-test('main scan selection always excludes screenshot and optionally excludes headless templates', () => {
-  const screenshot = { id: 'screenshot', protocols: ['headless'] }
-  const headlessVulnerability = { id: 'headless-xss', protocols: ['http', 'headless'] }
-  const httpTemplate = { id: 'http-check', protocols: ['http'] }
-
-  assert.equal(isHeadlessTemplate(headlessVulnerability), true)
-  assert.equal(isTemplateAllowedForMainScan(screenshot, true), false)
-  assert.equal(isTemplateAllowedForMainScan(screenshot, false), false)
-  assert.equal(isTemplateAllowedForMainScan(headlessVulnerability, true), false)
-  assert.equal(isTemplateAllowedForMainScan(httpTemplate, true), true)
-  assert.equal(isTemplateAllowedForMainScan(headlessVulnerability, false), true)
-})
-
-test('headless protocol detection tolerates string values and casing differences', () => {
-  assert.equal(isHeadlessTemplate({ protocol: 'HTTP, HEADLESS' }), true)
-  assert.equal(isHeadlessTemplate({ protocols: ['HeadLess'] }), true)
-  assert.equal(isHeadlessTemplate({ protocols: 'http' }), false)
-  assert.equal(isHeadlessTemplate(null), false)
-})
-
 test('standalone screenshot capture satisfies the template selection requirement', () => {
   assert.equal(isScanTemplateSelectionValid(), false)
   assert.equal(isScanTemplateSelectionValid({ screenshotCapture: true }), true)
@@ -50,16 +29,55 @@ test('standalone screenshot capture satisfies the template selection requirement
   assert.equal(isScanTemplateSelectionValid({ allFilteredTemplatesSelected: true }), true)
 })
 
-test('recreate draft preserves standalone screenshot capability fields', () => {
+test('all-template selection only materializes IDs when required to preserve its scope', () => {
+  assert.deepEqual(
+    resolveAllTemplateSelectionSubmission({
+      tags: ['cve'],
+      severities: ['high'],
+      protocols: ['http']
+    }),
+    {
+      requiresTemplateIds: false,
+      tags: ['cve'],
+      severities: ['high'],
+      protocols: ['http']
+    }
+  )
+  assert.deepEqual(
+    resolveAllTemplateSelectionSubmission({
+      keyword: 'spring',
+      tags: ['cve'],
+      severities: ['high'],
+      protocols: ['http']
+    }),
+    {
+      requiresTemplateIds: true,
+      tags: [],
+      severities: [],
+      protocols: []
+    }
+  )
+  assert.equal(
+    resolveAllTemplateSelectionSubmission({ screenshotCapture: true }).requiresTemplateIds,
+    true
+  )
+  assert.equal(
+    resolveAllTemplateSelectionSubmission({
+      severities: ['high'],
+      screenshotCapture: true
+    }).requiresTemplateIds,
+    false
+  )
+})
+
+test('recreate draft preserves screenshot capability and drops the removed headless exclusion field', () => {
   saveScanTaskRecreateDraft({
     targets: ['https://example.com'],
-    screenshot_capture: true,
-    disable_headless_templates: false
+    screenshot_capture: true
   })
 
   assert.deepEqual(consumeScanTaskRecreateDraft()?.form, {
     targets: ['https://example.com'],
-    screenshot_capture: true,
-    disable_headless_templates: false
+    screenshot_capture: true
   })
 })

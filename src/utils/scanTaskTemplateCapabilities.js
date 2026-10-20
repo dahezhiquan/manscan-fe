@@ -4,24 +4,6 @@ export function isScreenshotTemplate(templateId) {
   return String(templateId ?? '').trim().toLowerCase() === SCREENSHOT_TEMPLATE_ID
 }
 
-export function isHeadlessTemplate(template) {
-  const rawProtocols = template?.protocols ?? template?.protocol
-  const protocols = Array.isArray(rawProtocols)
-    ? rawProtocols
-    : String(rawProtocols ?? '').split(',')
-
-  return protocols
-    .some((protocol) => String(protocol).trim().toLowerCase() === 'headless')
-}
-
-export function isTemplateAllowedForMainScan(template, disableHeadlessTemplates) {
-  if (isScreenshotTemplate(template?.id)) {
-    return false
-  }
-
-  return !disableHeadlessTemplates || !isHeadlessTemplate(template)
-}
-
 export function migrateLegacyScreenshotSelection(templateIds, screenshotCapture = false) {
   const normalizedIds = [...new Set(
     (Array.isArray(templateIds) ? templateIds : [])
@@ -47,4 +29,23 @@ export function isScanTemplateSelectionValid({
     screenshotCapture ||
     (Array.isArray(templateIds) && templateIds.length > 0)
   )
+}
+
+export function resolveAllTemplateSelectionSubmission({
+  keyword = '',
+  tags = [],
+  severities = [],
+  protocols = [],
+  screenshotCapture = false
+} = {}) {
+  const hasKeyword = Boolean(String(keyword ?? '').trim())
+  const hasStructuredFilters = tags.length > 0 || severities.length > 0 || protocols.length > 0
+  const requiresTemplateIds = hasKeyword || (Boolean(screenshotCapture) && !hasStructuredFilters)
+
+  return {
+    requiresTemplateIds,
+    tags: requiresTemplateIds ? [] : [...tags],
+    severities: requiresTemplateIds ? [] : [...severities],
+    protocols: requiresTemplateIds ? [] : [...protocols]
+  }
 }
