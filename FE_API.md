@@ -416,6 +416,9 @@
   - `preflight_fingerprint`: `boolean`，创建页“运行参数”中的“前置主动指纹探测”开关，默认 `true`；开启和关闭均显式提交布尔值，关闭时提交 `false`
   - 高级能力字段：
     - `dast`: `boolean`，启用 DAST/fuzzable 模板
+    - `screenshot_capture`: `boolean`，是否在扫描前存活探测完成后采集 HTTP 存活目标截图，默认 `false`；开启和关闭均显式提交
+    - `headless`: `boolean`，是否在主扫描中启用 Headless 模板；与截图采集相互独立
+    - `disable_headless_templates`: `boolean`，是否从主扫描（包括自动模板映射）排除 Headless 模板，默认 `true`；开启和关闭均显式提交
     - `interactsh_server`: `string`，当前任务使用的 Interactsh 服务根地址
     - `interactsh_token`: `string`，当前任务使用的 Interactsh 鉴权 Token，前端按密码输入处理，最长 255 个字符
     - `no_interactsh`: `boolean`，禁用当前任务的 Interactsh/OOB 请求
@@ -424,6 +427,12 @@
   - `preflight_fingerprint=false` 仅跳过前置 HTTP／非 HTTP 主动指纹探测；存活探测和 Wappalyzer 被动识别保留，仍受 `offline_http`、`disable_http_probe` 原有开关约束；自动模板映射及其检测模板流程不受影响。后端对省略或 `null` 按开启处理
   - `no_interactsh=true` 时，前端会阻止同时填写 `interactsh_server` 或 `interactsh_token`，与后端互斥约定保持一致
   - `interactsh_token` 仅在创建请求中提交，前端不会在任务查询页面展示该字段
+  - “屏幕截图”是独立的扫描前资产采集能力；开启后前端将其视为已选择 `screenshot` Headless 模板，可单独满足模板必选校验，也可与自动模板映射同时开启，不会修改 `automatic_scan` 或 `headless`
+  - `screenshot`（页面截图采集（headless））在模板列表中展示为随“高级能力”的“屏幕截图”开关选中，但不会作为主扫描模板写入 `include_ids`；前端通过 `screenshot_capture=true` 提交，由后端独立执行截图子阶段
+  - “禁用 Headless 模板”开启后，前端会在单选、批量选择和提交前基于 `items[].protocols` / 模板详情过滤 Headless 模板；自动模板映射场景由后端根据同名字段执行过滤
+  - 当模板以标签、严重级别或协议筛选条件表示“全部选择”时，前端会在提交前分页取得匹配模板并物化为 `include_ids`，确保 `screenshot` 与受禁用策略影响的 Headless 模板不进入主扫描
+  - 兼容旧任务配置：若配置中的 `include_ids` 含 `screenshot`，前端回填时会迁移为 `screenshot_capture=true` 并从 `include_ids` 移除该模板 ID
+  - `SERVER_API.md` 已包含 `screenshot_capture` 和 `disable_headless_templates`，前端字段、默认值与后端约定保持一致
   - 从扫描详情页点击“重新创建扫描”进入创建页时，前端会先请求 `GET /api/v1/scans/:id/config`，再消费一次性内存草稿并预填表单；草稿中的 `created_by` 会被忽略并改用当前登录用户
   - 从漏洞模板列表或模板详情页点击“扫描/开始扫描”进入创建页时，前端会消费一次性内存草稿，将对应模板 ID 写入 `include_ids` 并切换到模板选择步骤；该流程不新增后端接口
 - 返回结构：前端使用 `data.task.id`、`data.task.task_no`、`data.task.status`、`data.task_api`
@@ -461,7 +470,7 @@
 - 请求参数：
   - 路径参数 `id`: 原扫描任务 ID
 - 返回结构：前端使用 `data.config`
-  - `data.config` 字段口径与创建扫描任务表单字段保持一致，例如 `targets`、`exclude_targets`、`include_ids`、`tags`、`severities`、`protocols`、`automatic_scan`、`preflight_fingerprint`、`store_response`、`custom_headers`、`interactsh_server`、`interactsh_token`、`no_interactsh`、并发/超时/headless/代理等配置字段
+  - `data.config` 字段口径与创建扫描任务表单字段保持一致，例如 `targets`、`exclude_targets`、`include_ids`、`tags`、`severities`、`protocols`、`automatic_scan`、`preflight_fingerprint`、`screenshot_capture`、`disable_headless_templates`、`store_response`、`custom_headers`、`interactsh_server`、`interactsh_token`、`no_interactsh`、并发/超时/headless/代理等配置字段
 - 异常分支：
   - 请求失败时，在扫描详情页顶部展示错误提示
   - 返回配置为空或无法映射到创建页字段时，展示“当前任务缺少可带入创建页的扫描配置。”
@@ -471,6 +480,7 @@
   - 模板筛选与选中状态一起回填：非自动映射任务未指定 `include_ids`、但指定了 `tags` / `severities` / `protocols` 时，匹配模板恢复为全部选中；指定 `include_ids` 时仅恢复对应模板选中。回填后调整筛选或模板选择，提交以当前选择为准
   - 前端会按创建页字段类型做兼容归一化，例如 JSON 字符串数组、多行字符串数组、布尔值、数字值和响应大小 MB 展示值
   - `preflight_fingerprint=false` 会回填为关闭，`true` 回填为开启；字段缺失或为 `null` 时沿用创建页默认开启，并在再次提交时保留用户选择
+  - `screenshot_capture` 和 `disable_headless_templates` 需随任务持久化并原样返回；历史配置缺少字段时，前端分别按 `false` 和 `true` 处理
   - `interactsh_token` 会按接口返回值回填到创建页密码输入框
 
 ### 12. 取消扫描任务
