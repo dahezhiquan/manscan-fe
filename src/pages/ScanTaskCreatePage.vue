@@ -4,6 +4,7 @@ import { createScanTask } from '../api/scans'
 import { getAllAssetConfigCenterItems } from '../api/asset-config'
 import {
   SCAN_ATTACK_TYPE_OPTIONS,
+  SCAN_DEFAULT_ATTACK_TYPE,
   SCAN_STRATEGY_OPTIONS,
 } from '../constants/scanTasks'
 import { getTemplateList, getTemplateProtocols, getTemplateTags } from '../api/templates'
@@ -658,7 +659,7 @@ function createInitialForm() {
     force_attempt_http2: false,
     sni: '',
     allow_local_file_access: false,
-    attack_type: 'batteringram',
+    attack_type: SCAN_DEFAULT_ATTACK_TYPE,
     source_ip: '',
     response_read_size: null,
     response_save_size: null,

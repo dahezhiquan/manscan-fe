@@ -413,6 +413,7 @@
   - 前端会按表单仅提交已填写字段
   - `created_by` 固定使用当前登录用户，由前端在提交前写入；创建页不提供手动编辑入口
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
+  - `attack_type`: `string`，攻击类型；新建任务默认选择全组合模式并提交 `clusterbomb`，重新创建任务时优先使用原任务配置
   - `preflight_fingerprint`: `boolean`，创建页“运行参数”中的“前置主动指纹探测”开关，默认 `true`；开启和关闭均显式提交布尔值，关闭时提交 `false`
   - 高级能力字段：
     - `dast`: `boolean`，启用 DAST/fuzzable 模板
@@ -666,6 +667,7 @@
   - 日志接口返回的 `data.task.tech_count` 会同步刷新详情页“指纹识别数量”
   - `events[].seq` 最好连续递增，前端依赖它做去重和排序
   - 前端当前会用 `direction=before` 拉取日志尾部最近一页，并基于 `next_offset`、`has_more` 向前补载更早日志
+  - 用户在日志顶部触发向前补载时，若本页 `has_more=false`，前端会在插入最后一页后定位到日志顶部；仍有更早日志时继续保持原可见日志位置
   - 运行中任务页在浏览器刷新后，会先拉取尾部最近一页，再使用 `direction=before` 自动回补更早历史日志，避免只拿到最早一批或最后一批事件
   - 对于 `direction=before`，前端会把 `next_offset` 当作“当前页最早一条日志的 seq”，下一次继续原样作为 `offset` 传回
   - 对于 `direction=forward` 或日志流 `offset`，前端会把“最后已处理事件的 seq”作为续传偏移传回，而不是 `seq + 1`

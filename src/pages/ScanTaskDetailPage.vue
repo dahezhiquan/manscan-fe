@@ -13,6 +13,7 @@ import {
   resumeScanTask
 } from '../api/scans'
 import { SCAN_STRATEGY_LABELS } from '../constants/scanTasks'
+import { resolvePrependedLogScrollTop } from '../utils/scanTaskLogScroll'
 import { saveScanTaskRecreateDraft } from '../utils/scanTaskRecreateDraft'
 import { mapSeverityTone } from '../utils/template'
 
@@ -677,8 +678,18 @@ function replaceEvents(nextEvents, { stickToBottom = false } = {}) {
   syncLogScroll(stickToBottom)
 }
 
-function prependEvents(nextEvents) {
+function prependEvents(nextEvents, { scrollToTop = false } = {}) {
   if (nextEvents.length === 0) {
+    if (scrollToTop) {
+      window.requestAnimationFrame(() => {
+        const element = logViewport.value
+
+        if (element) {
+          element.scrollTop = 0
+        }
+      })
+    }
+
     return
   }
 
@@ -700,8 +711,12 @@ function prependEvents(nextEvents) {
       return
     }
 
-    const scrollDelta = element.scrollHeight - previousScrollHeight
-    element.scrollTop = previousScrollTop + scrollDelta
+    element.scrollTop = resolvePrependedLogScrollTop({
+      previousScrollTop,
+      previousScrollHeight,
+      currentScrollHeight: element.scrollHeight,
+      scrollToTop
+    })
   })
 }
 
@@ -958,13 +973,17 @@ async function loadOlderLogs() {
   }
 
   isLoadingOlderLogs.value = true
+  const wasAtTop =
+    (logViewport.value?.scrollTop ?? Number.POSITIVE_INFINITY) <= LOG_SCROLL_PRELOAD_THRESHOLD
 
   try {
     const { payload, events: chunkEvents } = await fetchLogsChunk(offset, LOG_PAGE_SIZE, 'before')
-    prependEvents(chunkEvents)
+    const hasMore = inferHasOlderLogs(payload, offset, chunkEvents)
+
+    prependEvents(chunkEvents, { scrollToTop: wasAtTop && !hasMore })
     updateOlderLogsOffset(payload, chunkEvents)
     updateStreamOffset(payload, chunkEvents)
-    hasOlderLogs.value = inferHasOlderLogs(payload, offset, chunkEvents)
+    hasOlderLogs.value = hasMore
   } catch (error) {
     streamError.value = error instanceof Error ? error.message : '加载更早日志失败。'
   } finally {

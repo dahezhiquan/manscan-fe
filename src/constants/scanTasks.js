@@ -8,6 +8,7 @@ export const ACTIVE_SCAN_STATUSES = new Set(['running', 'pending'])
 export const SCAN_TASK_DELETABLE_STATUSES = new Set(['success', 'failed', 'cancelled', 'paused'])
 
 export const SCAN_SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info']
+export const SCAN_DEFAULT_ATTACK_TYPE = 'clusterbomb'
 
 export const SCAN_STATUS_OPTIONS = [
   { value: '', label: '全部状态' },
