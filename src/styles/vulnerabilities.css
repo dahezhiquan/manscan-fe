@@ -1697,6 +1697,74 @@
   margin-top: 0;
 }
 
+.vulnerability-detail-credential-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.vulnerability-detail-credential-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.24fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 10px 4px;
+}
+
+.vulnerability-detail-credential-row + .vulnerability-detail-credential-row {
+  border-top: 1px solid var(--line-soft);
+}
+
+.vulnerability-detail-credential-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.vulnerability-detail-credential-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.vulnerability-detail-credential-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vulnerability-detail-credential-value {
+  min-width: 0;
+  margin: 0;
+}
+
+.vulnerability-detail-credential-value pre {
+  max-height: 128px;
+  margin: 0;
+  overflow: auto;
+  color: var(--ink-strong);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.template-detail-secondary-button.vulnerability-detail-credential-copy {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
 .vulnerability-detail-tags-cloud {
   margin-top: 16px;
 }
@@ -2376,6 +2444,28 @@
 
   .vulnerability-detail-code-block {
     max-height: 320px;
+  }
+
+  .vulnerability-detail-credential-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px 12px;
+  }
+
+  .vulnerability-detail-credential-label {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 34px;
+  }
+
+  .vulnerability-detail-credential-value {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .vulnerability-detail-credential-copy {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 

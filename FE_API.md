@@ -821,7 +821,7 @@
 
 ### 21. 获取漏洞详情
 
-- 用途：`/vulnerabilities/:id` 漏洞详情页展示漏洞完整业务字段、资产信息、时间线、参考链接和请求响应证据
+- 用途：`/vulnerabilities/:id` 漏洞详情页展示漏洞完整业务字段、资产信息、时间线、Payload、参考链接和请求响应证据
 - 请求方式：`GET`
 - 路径：`/api/v1/vulnerabilities/:id`
 - 请求参数：
@@ -849,6 +849,7 @@
   - `data.product`
   - `data.remediation`
   - `data.reference_links`
+  - `data.payload`
   - `data.detail`
   - `data.vuln_fingerprint`
 - 异常分支：
@@ -859,6 +860,10 @@
   - 列表行点击后跳转到 `/vulnerabilities/:id`，详情页请求 `GET /api/v1/vulnerabilities/:id`
   - `tags` 和 `reference_links` 推荐返回字符串数组；前端也兼容 JSON 字符串或分隔文本
   - `latest_scan_task_id` 会在右侧以 URL 跳转标记展示，点击后在新标签页打开 `/scan/:id`，前端会兼容映射到现有扫描任务详情页
+  - `payload` 保存 Nuclei 命中结果顶层 `meta`；对象和数组会格式化为 JSON 代码面板，原始字符串按文本展示，并支持复制
+  - 当 `payload` 对象包含 `usernames` 或 `passwords` 字段时，前端会在原始 JSON 面板上方分别展示为“账号”和“密码”字段，并支持独立复制；数组值按一行一个值展示和复制
+  - `payload` 没有值时后端返回 `null`，前端展示“暂无 Payload”；漏洞列表接口不读取或展示该字段
+  - `payload` 可能包含命中的账号、密码、Token、注入语句或其他字典值，仅在详情页展示，不写入前端日志或持久化缓存
   - `detail` 如果是对象，前端会读取 `request`、`response`、`curl-command` 并拆成代码面板展示
   - 当 `detail.request` / `detail.response` 是按步骤编号的对象时，前端会按编号升序展示为 `请求 1 / 响应 1 / 请求 2 / 响应 2` 的顺序
   - 当 `detail.request` / `detail.response` 是普通业务对象时，前端会将对象整体格式化为 JSON 代码块展示，不会把对象字段误拆为多步请求/响应
