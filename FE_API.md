@@ -851,6 +851,7 @@
   - `data.product`
   - `data.remediation`
   - `data.reference_links`
+  - `data.extracted-results`
   - `data.payload`
   - `data.detail`
   - `data.vuln_fingerprint`
@@ -861,6 +862,7 @@
 - 联调注意事项：
   - 列表行点击后跳转到 `/vulnerabilities/:id`，详情页请求 `GET /api/v1/vulnerabilities/:id`
   - `tags` 和 `reference_links` 推荐返回字符串数组；前端也兼容 JSON 字符串或分隔文本
+  - `extracted-results` 为后端从 Nuclei 响应中提取的命中结果数组；前端按原顺序合并为单个代码块展示并支持一次性复制，缺失或空数组时展示“暂无提取结果”
   - `latest_scan_task_id` 会在右侧以 URL 跳转标记展示，点击后在新标签页打开 `/scan/:id`，前端会兼容映射到现有扫描任务详情页
   - `payload` 保存 Nuclei 命中结果顶层 `meta`；对象和数组会格式化为 JSON 代码面板，原始字符串按文本展示，并支持复制
   - 当 `payload` 对象包含 `usernames` 或 `passwords` 字段时，前端会在原始 JSON 面板上方分别展示为“账号”和“密码”字段，并支持独立复制；数组值按一行一个值展示和复制

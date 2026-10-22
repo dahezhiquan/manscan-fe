@@ -1681,6 +1681,10 @@
   margin-top: 16px;
 }
 
+.vulnerability-detail-extracted-results {
+  margin-top: 0;
+}
+
 .vulnerability-detail-evidence {
   margin-top: 0;
 }
