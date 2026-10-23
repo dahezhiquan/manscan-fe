@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
+import { readFile } from 'node:fs/promises'
 import { createServer } from 'vite'
 import { buildApiKeyPayload, normalizeApiKey, normalizeApiKeyPage, validateApiKeyForm } from '../src/utils/thirdPartyApiKeys.js'
 
@@ -49,30 +50,39 @@ test('page normalization accepts the backend camelCase pagination fields', () =>
   assert.deepEqual(normalized, { page: 1, pageSize: 10, total: 0, totalPages: 1, items: [] })
 })
 
+test('API Key management does not render a false zero before the first list response', async () => {
+  const component = await readFile(new URL('../src/components/settings/ThirdPartyApiKeyManagement.vue', import.meta.url), 'utf8')
+  assert.match(component, /configuredServiceCount = computed\(\(\) => listState\.loaded \? listState\.total : '—'\)/)
+  assert.match(component, /Object\.assign\(listState, normalizeApiKeyPage\(data\), \{ loaded: true \}\)/)
+  assert.doesNotMatch(component, /已配置 \{\{ listState\.total \}\} 个第三方服务/)
+})
+
 const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true }, appType: 'custom' })
 const api = await server.ssrLoadModule('/src/api/thirdPartyApiKeys.js')
 after(() => server.close())
 
-test('all five APIs use the documented method, path, JSON payload, auth and cancellation signal', async () => {
+test('all six APIs use the documented method, path, JSON payload, auth and cancellation signal', async () => {
   const originalFetch = globalThis.fetch
   const originalWindow = globalThis.window
   const requests = []
   globalThis.window = { localStorage: { getItem: (key) => key === 'manscan-auth-access-token' ? 'test-only-token' : '' } }
   globalThis.fetch = async (url, options) => {
     requests.push({ url, options })
-    return { ok: true, json: async () => ({ code: 0, data: { id: 1 } }) }
+    return { ok: true, json: async () => ({ code: 0, data: String(url).endsWith('/plaintext') ? { key: 'test-provider-key' } : { id: 1 } }) }
   }
   try {
     const signal = new AbortController().signal
     const payload = buildApiKeyPayload(form(), true)
     await api.getThirdPartyApiKeyList({ page: 2, pageSize: 10 }, signal)
     await api.getThirdPartyApiKey(1, signal)
+    assert.equal(await api.getThirdPartyApiKeyPlaintext(1, signal), 'test-provider-key')
     await api.createThirdPartyApiKey(payload, signal)
     await api.updateThirdPartyApiKey(1, buildApiKeyPayload(form({ key: '' }), false), signal)
     await api.deleteThirdPartyApiKey(1, signal)
     assert.deepEqual(requests.map(({ url, options }) => [options.method, url]), [
       ['GET', '/api/v1/third-party-api-keys?page=2&page_size=10'],
       ['GET', '/api/v1/third-party-api-keys/1'],
+      ['GET', '/api/v1/third-party-api-keys/1/plaintext'],
       ['POST', '/api/v1/third-party-api-keys'],
       ['PUT', '/api/v1/third-party-api-keys/1'],
       ['DELETE', '/api/v1/third-party-api-keys/1']
@@ -81,11 +91,14 @@ test('all five APIs use the documented method, path, JSON payload, auth and canc
       assert.equal(options.signal, signal)
       assert.equal(options.headers.get('Authorization'), 'Bearer test-only-token')
     }
-    assert.deepEqual(JSON.parse(requests[2].options.body), payload)
-    assert.equal('key' in JSON.parse(requests[3].options.body), false)
-    assert.equal(requests[2].options.headers.get('Content-Type'), 'application/json')
+    assert.equal(requests[2].options.cache, 'no-store')
+    assert.deepEqual(JSON.parse(requests[3].options.body), payload)
+    assert.equal('key' in JSON.parse(requests[4].options.body), false)
+    assert.equal(requests[3].options.headers.get('Content-Type'), 'application/json')
     globalThis.fetch = async () => ({ ok: false, status: 403, json: async () => ({ code: 40301, message: '无权限', data: null }) })
     await assert.rejects(api.getThirdPartyApiKeyList(), { code: 40301, status: 403 })
+    globalThis.fetch = async () => ({ ok: false, status: 404, json: async () => ({ code: 40401, message: '密钥不存在', data: null }) })
+    await assert.rejects(api.getThirdPartyApiKeyPlaintext(1), { code: 40401, status: 404 })
   } finally {
     globalThis.fetch = originalFetch
     if (originalWindow === undefined) delete globalThis.window

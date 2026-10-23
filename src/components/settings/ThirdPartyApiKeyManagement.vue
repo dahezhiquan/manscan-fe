@@ -2,7 +2,7 @@
   <section class="api-key-manager" aria-label="第三方 API Key 管理">
     <header class="api-key-toolbar">
       <div>
-        <p>已配置 {{ listState.total }} 个第三方服务</p>
+        <p :aria-label="configuredServiceCountLabel">已配置 {{ configuredServiceCount }} 个第三方服务</p>
       </div>
       <div class="api-key-toolbar-actions">
         <button class="settings-button" type="button" :disabled="listState.loading" @click="fetchPage(listState.page)">刷新</button>
@@ -16,39 +16,44 @@
       <button type="button" @click="fetchPage(listState.page)">重试</button>
     </div>
 
-    <div class="api-key-table-wrap" :aria-busy="listState.loading">
-      <table class="api-key-table">
-        <caption class="api-key-visually-hidden">第三方服务 API Key 配置列表</caption>
-        <thead>
-          <tr><th scope="col">平台地址</th><th scope="col">描述</th><th scope="col">限流 / 分钟</th><th scope="col">密钥状态</th><th scope="col">更新时间</th><th scope="col">操作</th></tr>
-        </thead>
-        <tbody v-if="listState.loading"><tr><td colspan="6" class="api-key-table-state"><span role="status">正在加载配置…</span></td></tr></tbody>
-        <tbody v-else-if="!listState.items.length"><tr><td colspan="6" class="api-key-table-state">{{ listState.error ? '配置暂不可用，请重试' : '暂无 API Key 配置，点击“新增 API Key”开始配置。' }}</td></tr></tbody>
-        <tbody v-else>
-          <tr v-for="item in listState.items" :key="item.id">
-            <td><button class="settings-row-action api-key-platform" type="button" :aria-label="`查看 ${item.platformUrl} 的配置详情`" @click="openRecord('detail', item)">{{ item.platformUrl || '--' }}</button></td>
-            <td class="api-key-description">{{ item.description || '--' }}</td>
-            <td>{{ item.rateLimit === 0 ? '不限制' : item.rateLimit }}</td>
-            <td><span class="settings-status-pill" :class="item.keyConfigured ? 'is-enabled' : 'is-disabled'">{{ item.keyConfigured ? '已配置' : '未配置' }}</span></td>
-            <td>{{ formatDate(item.updatedAt) }}</td>
-            <td>
-              <div class="settings-user-row-actions">
-                <button class="settings-row-action" type="button" :aria-label="`编辑 ${item.platformUrl} 的配置`" @click="openRecord('edit', item)">编辑</button>
-                <button class="settings-row-action is-danger" type="button" :aria-label="`删除 ${item.platformUrl} 的配置`" @click="openDelete(item)">删除</button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <footer class="api-key-pagination">
-      <span>第 {{ listState.page }} / {{ listState.totalPages }} 页，{{ rangeStart }}-{{ rangeEnd }} / {{ listState.total }}</span>
-      <div class="api-key-toolbar-actions">
-        <button class="settings-button" type="button" :disabled="listState.page <= 1 || listState.loading" @click="fetchPage(listState.page - 1)">上一页</button>
-        <button class="settings-button" type="button" :disabled="listState.page >= listState.totalPages || listState.loading" @click="fetchPage(listState.page + 1)">下一页</button>
+    <section class="api-key-table-card">
+      <div class="api-key-table-wrap" :aria-busy="listState.loading">
+        <table class="api-key-table">
+          <caption class="api-key-visually-hidden">第三方服务 API Key 配置列表</caption>
+          <thead>
+            <tr><th scope="col">平台地址</th><th scope="col">描述</th><th scope="col">限流 / 分钟</th><th scope="col">密钥</th><th scope="col">更新时间</th><th scope="col">操作</th></tr>
+          </thead>
+          <tbody v-if="listState.loading"><tr><td colspan="6" class="api-key-table-state"><span role="status">正在加载配置…</span></td></tr></tbody>
+          <tbody v-else-if="!listState.items.length"><tr><td colspan="6" class="api-key-table-state">{{ listState.error ? '配置暂不可用，请重试' : '暂无 API Key 配置，点击“新增 API Key”开始配置。' }}</td></tr></tbody>
+          <tbody v-else>
+            <tr v-for="item in listState.items" :key="item.id">
+              <td><button class="settings-row-action api-key-platform" type="button" :aria-label="`查看 ${item.platformUrl} 的配置详情`" @click="openRecord('detail', item)">{{ item.platformUrl || '--' }}</button></td>
+              <td class="api-key-description">{{ item.description || '--' }}</td>
+              <td>{{ item.rateLimit === 0 ? '不限制' : item.rateLimit }}</td>
+              <td>
+                <button v-if="item.keyConfigured" class="settings-row-action" type="button" :aria-label="`查看 ${item.platformUrl} 的 API Key 明文`" @click="openPlaintext(item)">查看</button>
+                <span v-else class="settings-status-pill is-disabled">未配置</span>
+              </td>
+              <td>{{ formatDate(item.updatedAt) }}</td>
+              <td>
+                <div class="settings-user-row-actions">
+                  <button class="settings-row-action" type="button" :aria-label="`编辑 ${item.platformUrl} 的配置`" @click="openRecord('edit', item)">编辑</button>
+                  <button class="settings-row-action is-danger" type="button" :aria-label="`删除 ${item.platformUrl} 的配置`" @click="openDelete(item)">删除</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </footer>
+
+      <footer class="api-key-pagination">
+        <span>第 {{ listState.page }} / {{ listState.totalPages }} 页，{{ rangeStart }}-{{ rangeEnd }} / {{ listState.total }}</span>
+        <div class="api-key-toolbar-actions">
+          <button class="settings-button" type="button" :disabled="listState.page <= 1 || listState.loading" @click="fetchPage(listState.page - 1)">上一页</button>
+          <button class="settings-button" type="button" :disabled="listState.page >= listState.totalPages || listState.loading" @click="fetchPage(listState.page + 1)">下一页</button>
+        </div>
+      </footer>
+    </section>
 
     <dialog ref="dialogElement" class="settings-dialog api-key-dialog" aria-labelledby="api-key-dialog-title" @cancel.prevent="requestClose">
       <header class="settings-dialog-head">
@@ -58,10 +63,19 @@
         </button>
       </header>
 
-      <div v-if="detailLoading" class="settings-dialog-body" role="status">正在加载配置详情…</div>
+      <div v-if="detailLoading" class="settings-dialog-body" role="status">{{ mode === 'plaintext' ? '正在安全读取密钥…' : '正在加载配置详情…' }}</div>
       <div v-else-if="loadError" class="settings-dialog-body">
         <div class="settings-alert is-error" role="alert">{{ loadError }}</div>
-        <button class="settings-button" type="button" @click="loadRecord">重试</button>
+        <button class="settings-button" type="button" @click="retryDialogLoad">重试</button>
+      </div>
+
+      <div v-else-if="mode === 'plaintext'" class="settings-dialog-body">
+        <p class="api-key-plaintext-warning">此密钥会记录查看审计，仅在当前弹窗中临时显示。</p>
+        <code class="api-key-plaintext-value">{{ plaintextKey }}</code>
+        <div v-if="copyMessage" class="settings-alert" :class="copyError ? 'is-error' : 'is-success'" :role="copyError ? 'alert' : 'status'">{{ copyMessage }}</div>
+        <div class="api-key-plaintext-actions">
+          <button class="settings-button settings-button--primary" type="button" @click="copyPlaintext">复制密钥</button>
+        </div>
       </div>
 
       <form v-else-if="isForm" @submit.prevent="submitForm">
@@ -116,7 +130,7 @@
           <dt>平台 URL</dt><dd>{{ selectedItem.platformUrl || '--' }}</dd>
           <dt>描述</dt><dd>{{ selectedItem.description || '--' }}</dd>
           <dt>每分钟限流</dt><dd>{{ selectedItem.rateLimit === 0 ? '不限制' : selectedItem.rateLimit }}</dd>
-          <dt>密钥状态</dt><dd>{{ selectedItem.keyConfigured ? '已配置（不返回密钥）' : '未配置' }}</dd>
+          <dt>密钥状态</dt><dd>{{ selectedItem.keyConfigured ? '已配置' : '未配置' }}</dd>
           <dt>创建时间</dt><dd>{{ formatDate(selectedItem.createdAt) }}</dd>
           <dt>更新时间</dt><dd>{{ formatDate(selectedItem.updatedAt) }}</dd>
         </dl>
@@ -127,11 +141,11 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { createThirdPartyApiKey, deleteThirdPartyApiKey, getThirdPartyApiKey, getThirdPartyApiKeyList, updateThirdPartyApiKey } from '../../api/thirdPartyApiKeys'
+import { createThirdPartyApiKey, deleteThirdPartyApiKey, getThirdPartyApiKey, getThirdPartyApiKeyList, getThirdPartyApiKeyPlaintext, updateThirdPartyApiKey } from '../../api/thirdPartyApiKeys'
 import { API_KEY_LIMITS, buildApiKeyPayload, normalizeApiKey, normalizeApiKeyPage, validateApiKeyForm } from '../../utils/thirdPartyApiKeys'
 
 const PAGE_SIZE = 10
-const DIALOG_TITLES = { create: '新增 API Key', edit: '编辑 API Key', detail: 'API Key 配置详情', delete: '删除 API Key' }
+const DIALOG_TITLES = { create: '新增 API Key', edit: '编辑 API Key', detail: 'API Key 配置详情', delete: '删除 API Key', plaintext: '查看 API Key 明文' }
 const dialogElement = ref(null)
 const mode = ref('')
 const selectedItem = ref(null)
@@ -141,9 +155,12 @@ const saving = ref(false)
 const mutationError = ref('')
 const discardPrompt = ref(false)
 const feedback = ref('')
+const plaintextKey = ref('')
+const copyMessage = ref('')
+const copyError = ref(false)
 const form = reactive(emptyForm())
 const initialForm = ref(JSON.stringify(form))
-const listState = reactive({ items: [], page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1, loading: false, error: '' })
+const listState = reactive({ items: [], page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1, loading: false, loaded: false, error: '' })
 let listController = null
 let detailController = null
 let mutationController = null
@@ -154,6 +171,8 @@ let disposed = false
 
 const dialogTitle = computed(() => DIALOG_TITLES[mode.value] || '')
 const isForm = computed(() => ['create', 'edit'].includes(mode.value))
+const configuredServiceCount = computed(() => listState.loaded ? listState.total : '—')
+const configuredServiceCountLabel = computed(() => listState.loaded ? `已配置 ${listState.total} 个第三方服务` : '已配置的第三方服务数量正在加载')
 const rangeStart = computed(() => listState.total ? (listState.page - 1) * listState.pageSize + 1 : 0)
 const rangeEnd = computed(() => Math.min(listState.page * listState.pageSize, listState.total))
 
@@ -168,6 +187,7 @@ function formatDate(value) {
 
 function errorMessage(error, fallback) {
   if (Number(error?.code) === 40301 || error?.status === 403) return '当前账号没有管理 API Key 的权限，请联系管理员。'
+  if (Number(error?.code) === 40401 && mode.value === 'plaintext') return '该配置未配置密钥或已不存在。'
   if (Number(error?.code) === 40401 || error?.status === 404) return '该配置已不存在，请关闭弹窗并刷新列表。'
   return error instanceof Error ? error.message : fallback
 }
@@ -182,7 +202,7 @@ async function fetchPage(page = listState.page) {
   try {
     const data = await getThirdPartyApiKeyList({ page, pageSize: PAGE_SIZE }, controller.signal)
     if (disposed || requestId !== listRequestId) return
-    Object.assign(listState, normalizeApiKeyPage(data))
+    Object.assign(listState, normalizeApiKeyPage(data), { loaded: true })
     if (listState.page > listState.totalPages) await fetchPage(listState.totalPages)
   } catch (error) {
     if (!disposed && !controller.signal.aborted && requestId === listRequestId) {
@@ -216,6 +236,51 @@ async function openRecord(nextMode, item) {
   detailLoading.value = true
   await showDialog(nextMode, item)
   if (!disposed) await loadRecord()
+}
+
+async function openPlaintext(item) {
+  await showDialog('plaintext', item)
+  if (!disposed) await loadPlaintext()
+}
+
+async function loadPlaintext() {
+  detailController?.abort()
+  const controller = new AbortController()
+  detailController = controller
+  const requestId = ++detailRequestId
+  detailLoading.value = true
+  loadError.value = ''
+  plaintextKey.value = ''
+  copyMessage.value = ''
+  try {
+    const key = await getThirdPartyApiKeyPlaintext(selectedItem.value.id, controller.signal)
+    if (disposed || requestId !== detailRequestId) return
+    plaintextKey.value = key
+  } catch (error) {
+    if (!disposed && !controller.signal.aborted && requestId === detailRequestId) loadError.value = errorMessage(error, '读取 API Key 明文失败，请重试。')
+  } finally {
+    if (!disposed && requestId === detailRequestId) {
+      detailLoading.value = false
+      detailController = null
+    }
+  }
+}
+
+function retryDialogLoad() {
+  if (mode.value === 'plaintext') void loadPlaintext()
+  else void loadRecord()
+}
+
+async function copyPlaintext() {
+  if (!plaintextKey.value) return
+  try {
+    await navigator.clipboard.writeText(plaintextKey.value)
+    copyError.value = false
+    copyMessage.value = '已复制到剪贴板'
+  } catch {
+    copyError.value = true
+    copyMessage.value = '复制失败，请检查浏览器剪贴板权限。'
+  }
 }
 
 async function loadRecord() {
@@ -262,6 +327,9 @@ function closeDialog() {
   loadError.value = ''
   mutationError.value = ''
   discardPrompt.value = false
+  plaintextKey.value = ''
+  copyMessage.value = ''
+  copyError.value = false
 }
 
 async function submitForm() {
@@ -327,6 +395,7 @@ onBeforeUnmount(() => {
   mutationController?.abort()
   dialogElement.value?.close()
   form.key = ''
+  plaintextKey.value = ''
   window.clearTimeout(feedbackTimer)
 })
 </script>
@@ -369,11 +438,15 @@ onBeforeUnmount(() => {
   background: var(--surface);
 }
 
+.api-key-table-card {
+  min-width: 0;
+}
+
 .api-key-table {
   width: 100%;
   min-width: 780px;
   border-collapse: collapse;
-  text-align: left;
+  text-align: center;
 }
 
 .api-key-table th,
@@ -413,7 +486,7 @@ onBeforeUnmount(() => {
 }
 
 .api-key-platform {
-  text-align: left;
+  text-align: center;
 }
 
 .api-key-dialog {
@@ -449,6 +522,33 @@ onBeforeUnmount(() => {
 .api-key-detail-list dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+.api-key-plaintext-warning {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.api-key-plaintext-value {
+  display: block;
+  max-height: min(36dvh, 240px);
+  overflow: auto;
+  padding: 12px;
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.api-key-plaintext-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .api-key-visually-hidden {

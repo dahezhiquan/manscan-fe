@@ -1105,6 +1105,260 @@ html[data-theme='deep'] .domain-assets-page .domain-assets-table-row:focus-visib
   box-shadow: inset 3px 0 0 var(--deep-accent);
 }
 
+/* User management: keep the light surface, but use a restrained navy data-table hierarchy. */
+html[data-theme='deep'] .settings-user-table-card {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow:
+    inset 0 3px 0 var(--deep-nav),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme='deep'] .settings-user-table-head {
+  min-height: 46px;
+  border-bottom: 1px solid #cbd5e1;
+  color: #475569;
+  background: #f1f5f9;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+html[data-theme='deep'] .settings-user-table-row {
+  min-height: 52px;
+  border-bottom-color: #e2e8f0;
+  color: #475569;
+  background: #ffffff;
+  font-weight: 400;
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+html[data-theme='deep'] .settings-user-table-row:nth-child(even) {
+  background: #fbfdff;
+}
+
+html[data-theme='deep'] .settings-user-table-row:hover {
+  background: #f0f7fc;
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .settings-user-table-row strong {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .settings-user-table-row .settings-status-pill {
+  min-height: 24px;
+  min-width: 56px;
+  padding: 0 10px;
+  border-width: 1px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .settings-user-table-row .settings-status-pill.is-enabled {
+  border-color: #bbf7d0;
+  color: var(--deep-success);
+  background: var(--deep-success-soft);
+}
+
+html[data-theme='deep'] .settings-user-table-row .settings-status-pill.is-disabled {
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+html[data-theme='deep'] .settings-user-table-row .settings-status-pill.is-locked {
+  border-color: #fde68a;
+  color: var(--deep-warning);
+  background: var(--deep-warning-soft);
+}
+
+html[data-theme='deep'] .settings-user-row-actions .settings-row-action {
+  min-width: 48px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-color: #cbd5e1;
+  color: #334155;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] .settings-user-row-actions .settings-row-action:hover {
+  border-color: #7dd3fc;
+  color: var(--deep-accent-hover);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .settings-user-row-actions .settings-row-action.is-danger {
+  border-color: #fecdd3;
+  color: var(--deep-danger);
+  background: #ffffff;
+}
+
+html[data-theme='deep'] .settings-user-row-actions .settings-row-action.is-danger:hover {
+  border-color: #fda4af;
+  background: var(--deep-danger-soft);
+}
+
+html[data-theme='deep'] .settings-user-pagination {
+  border-top: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+html[data-theme='deep'] .settings-user-pagination > span {
+  color: #64748b;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] .settings-user-skeleton {
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 42%, #e2e8f0 84%);
+  background-size: 200% 100%;
+}
+
+/* API Key management follows the same light, navy data-table system. */
+html[data-theme='deep'] .api-key-toolbar p {
+  color: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .api-key-table-card {
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  box-shadow:
+    inset 0 3px 0 var(--deep-nav),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme='deep'] .api-key-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+html[data-theme='deep'] .api-key-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #475569;
+}
+
+html[data-theme='deep'] .api-key-table th {
+  height: 46px;
+  padding: 0 12px;
+  border-bottom: 1px solid #cbd5e1;
+  color: #475569;
+  background: #f1f5f9;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+html[data-theme='deep'] .api-key-table td {
+  height: 52px;
+  padding: 8px 12px;
+  border-bottom-color: #e2e8f0;
+  color: #475569;
+  background: transparent;
+  font-weight: 400;
+}
+
+html[data-theme='deep'] .api-key-table tbody tr:nth-child(even) {
+  background: #fbfdff;
+}
+
+html[data-theme='deep'] .api-key-table tbody tr:hover {
+  background: #f0f7fc;
+}
+
+html[data-theme='deep'] .api-key-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 var(--deep-accent);
+}
+
+html[data-theme='deep'] .api-key-table :is(th, td):first-child,
+html[data-theme='deep'] .api-key-table :is(th, td):nth-child(2) {
+  text-align: left;
+}
+
+html[data-theme='deep'] .api-key-platform {
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--ink-strong);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 600;
+  text-align: left;
+}
+
+html[data-theme='deep'] .api-key-platform:hover {
+  color: var(--deep-accent-hover);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+html[data-theme='deep'] .api-key-table .settings-status-pill {
+  min-height: 24px;
+  min-width: 56px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #64748b;
+  background: #f8fafc;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+html[data-theme='deep'] .api-key-table .settings-row-action:not(.api-key-platform) {
+  min-width: 48px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-color: #cbd5e1;
+  color: #334155;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+html[data-theme='deep'] .api-key-table .settings-row-action:not(.api-key-platform):hover {
+  border-color: #7dd3fc;
+  color: var(--deep-accent-hover);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .api-key-table .settings-row-action.is-danger {
+  border-color: #fecdd3;
+  color: var(--deep-danger);
+  background: #ffffff;
+}
+
+html[data-theme='deep'] .api-key-table .settings-row-action.is-danger:hover {
+  border-color: #fda4af;
+  background: var(--deep-danger-soft);
+}
+
+html[data-theme='deep'] .api-key-table-state {
+  height: 180px;
+  color: #64748b;
+}
+
+html[data-theme='deep'] .api-key-pagination {
+  padding: 12px 14px;
+  border-top: 1px solid #cbd5e1;
+  color: #64748b;
+  background: #f8fafc;
+  font-weight: 500;
+}
+
 html[data-theme='deep'] .scans-page .scans-risk-chip:is(.active, [aria-pressed='true']) {
   border-color: var(--deep-accent);
   color: #ffffff;
