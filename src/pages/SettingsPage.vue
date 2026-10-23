@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { getThemeSettings, updateThemeSettings } from '../api/settings'
 import { createUser, deleteUser, getUserList, updateUser } from '../api/users'
+import ThirdPartyApiKeyManagement from '../components/settings/ThirdPartyApiKeyManagement.vue'
 import AppShell from '../components/layout/AppShell.vue'
 import { applyThemeSettings, cacheThemeSettings, getAppliedThemeSettings } from '../composables/useTheme'
 import { THEME_OPTIONS } from '../constants/themes'
@@ -41,6 +42,7 @@ const emit = defineEmits(['toggle-sidebar', 'logout'])
 
 const SETTINGS_TABS = [
   { id: 'users', label: '用户管理', icon: 'server' },
+  { id: 'apiKeys', label: 'API Key 管理', icon: 'shield' },
   { id: 'theme', label: '主题管理', icon: 'editor' },
   { id: 'notifications', label: '通知策略', icon: 'shield' }
 ]
@@ -120,12 +122,13 @@ const userFeedbackMessage = ref('')
 
 const isAdminUser = computed(() => props.currentUserRole === 'admin')
 const visibleSettingsTabs = computed(() =>
-  SETTINGS_TABS.filter((item) => item.id !== 'users' || isAdminUser.value)
+  SETTINGS_TABS.filter((item) => !['users', 'apiKeys'].includes(item.id) || isAdminUser.value)
 )
 const activeTabMeta = computed(
   () => visibleSettingsTabs.value.find((item) => item.id === activeTab.value) ?? visibleSettingsTabs.value[0]
 )
 const isThemeTabActive = computed(() => activeTab.value === 'theme')
+const isApiKeysTabActive = computed(() => activeTab.value === 'apiKeys')
 const enabledNotificationCount = computed(() =>
   NOTIFICATION_POLICIES.filter((item) => Boolean(settingsState[item.id])).length
 )
@@ -674,7 +677,11 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div v-if="activeTab === 'users'" class="settings-user-management">
+            <div v-if="activeTab === 'apiKeys'" class="settings-api-key-management">
+              <ThirdPartyApiKeyManagement v-if="isAdminUser" />
+            </div>
+
+            <div v-else-if="activeTab === 'users'" class="settings-user-management">
               <div v-if="userFeedbackMessage" class="settings-alert is-success" role="status">
                 {{ userFeedbackMessage }}
               </div>
@@ -858,7 +865,7 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <div v-if="activeTab !== 'users'" class="settings-save-bar" :class="{ 'is-dirty': isDirty }">
+          <div v-if="activeTab !== 'users' && !isApiKeysTabActive" class="settings-save-bar" :class="{ 'is-dirty': isDirty }">
             <div>
               <strong>{{ isDirty ? '有未保存的设置' : '设置已同步' }}</strong>
               <p>{{ saveBarDescription }}</p>
