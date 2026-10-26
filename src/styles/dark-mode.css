@@ -90,7 +90,8 @@ html[data-color-mode='dark'] :where(
   .settings-shell-main,
   .settings-page,
   .scan-create-page,
-  .scan-task-detail-page
+  .scan-task-detail-page,
+  .scheduled-jobs-page
 ) {
   color: var(--dark-text);
   background:
@@ -109,7 +110,8 @@ html[data-color-mode='dark'] :where(
   .domain-assets-page,
   .settings-page,
   .scan-create-page,
-  .scan-task-detail-page
+  .scan-task-detail-page,
+  .scheduled-jobs-page
 )::before {
   opacity: 0.14;
   background:
@@ -130,7 +132,8 @@ html[data-color-mode='dark'] :where(
   .domain-assets-page,
   .settings-page,
   .scan-create-page,
-  .scan-task-detail-page
+  .scan-task-detail-page,
+  .scheduled-jobs-page
 ) * {
   border-color: var(--dark-border);
 }
@@ -2859,3 +2862,80 @@ html[data-color-mode='dark'] .dashboard-home .tone-high { color: var(--dashboard
 html[data-color-mode='dark'] .dashboard-home .tone-medium { color: var(--dashboard-risk-medium) !important; }
 html[data-color-mode='dark'] .dashboard-home .tone-low { color: var(--dashboard-risk-low) !important; }
 html[data-color-mode='dark'] .dashboard-home .tone-info { color: var(--dashboard-risk-success) !important; }
+
+/* Scheduled jobs keeps the same component geometry in dark mode while using the shared dark surfaces. */
+html[data-color-mode='dark'] :where(
+  .scheduled-jobs-topbar,
+  .scheduled-jobs-list-panel,
+  .scheduled-jobs-detail-panel,
+  .scheduled-jobs-progress-card,
+  .scheduled-jobs-runs,
+  .scheduled-jobs-config,
+  .scheduled-jobs-dialog
+) {
+  background: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-topbar {
+  background: linear-gradient(180deg, rgba(17, 29, 50, 0.98), rgba(21, 41, 61, 0.96)) !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scheduled-job-row,
+  .scheduled-jobs-meta-grid > div,
+  .scheduled-runs-table,
+  .scheduled-runs-head,
+  .scheduled-jobs-config pre,
+  .scheduled-jobs-pagination button,
+  .scheduled-jobs-dialog header > button,
+  .scheduled-jobs-secondary,
+  .scheduled-jobs-icon-button
+) {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] :where(
+  .scheduled-job-row:hover,
+  .scheduled-job-row.active,
+  .scheduled-run-row:hover,
+  .scheduled-jobs-secondary:hover,
+  .scheduled-jobs-icon-button:hover,
+  .scheduled-jobs-pagination button:hover:not(:disabled),
+  .scheduled-jobs-dialog header > button:hover
+) {
+  background: var(--dark-blue-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-primary {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.9), rgba(37, 99, 235, 0.82)) !important;
+  border-color: rgba(125, 211, 252, 0.54) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.16) !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-danger {
+  background: var(--dark-red-soft) !important;
+  border-color: rgba(248, 113, 113, 0.44) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-feedback {
+  background: var(--dark-green-soft) !important;
+  border-color: var(--dark-border-strong) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-overlay {
+  background: rgba(2, 6, 23, 0.72) !important;
+}

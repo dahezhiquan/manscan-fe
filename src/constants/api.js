@@ -37,6 +37,23 @@ export const ASSET_CONFIG_CENTER_LIST_API = ASSET_CONFIG_CENTER_API
 export const ASSET_CONFIG_CENTER_SMALL_CATEGORY_OPTIONS_API = `${ASSET_CONFIG_CENTER_API}/options/small-categories`
 export const VULNERABILITY_LIST_API = `${API_PREFIX}/vulnerabilities`
 export const VULNERABILITY_BATCH_STATUS_API = `${VULNERABILITY_LIST_API}/status`
+export const SCHEDULED_JOBS_API = `${API_PREFIX}/scheduled-jobs`
+
+export function buildScheduledJobApi(jobId) {
+  return `${SCHEDULED_JOBS_API}/${encodeURIComponent(jobId)}`
+}
+
+export function buildScheduledJobRunsApi(jobId) {
+  return `${buildScheduledJobApi(jobId)}/runs`
+}
+
+export function buildScheduledJobTriggerApi(jobId) {
+  return `${buildScheduledJobApi(jobId)}/trigger`
+}
+
+export function buildScheduledJobRunApi(runId) {
+  return `${API_PREFIX}/scheduled-job-runs/${encodeURIComponent(runId)}`
+}
 
 export function buildVulnerabilityDetailApi(vulnerabilityId) {
   return `${VULNERABILITY_LIST_API}/${encodeURIComponent(vulnerabilityId)}`

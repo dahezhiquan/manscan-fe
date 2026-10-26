@@ -50,6 +50,10 @@ export function iconPath(name) {
       <path d="M4.5 5.5v4h4"/>
       <path d="M12 8v4l2.8 1.8"/>
     `,
+    clock: `
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="M12 7.5v4.8l3.2 1.8"/>
+    `,
     leaderboard: `
       <path d="M6 17V9"/>
       <path d="M12 17V6"/>

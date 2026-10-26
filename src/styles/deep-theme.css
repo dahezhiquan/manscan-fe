@@ -58,7 +58,7 @@ html[data-theme='deep'] :is(
   .dashboard-shell, .main-content, .templates-shell-main, .templates-page,
   .template-detail-page, .vuln-page, .scans-page, .asset-config-shell-main,
   .asset-config-page, .domain-assets-shell-main, .domain-assets-page,
-  .settings-shell-main, .settings-page, .scan-create-page, .scan-task-detail-page
+  .settings-shell-main, .settings-page, .scan-create-page, .scan-task-detail-page, .scheduled-jobs-shell-main, .scheduled-jobs-page
 ) {
   color: var(--ink);
   background: var(--paper);
@@ -67,7 +67,7 @@ html[data-theme='deep'] :is(
 html[data-theme='deep'] :is(
   .dashboard-shell, .templates-page, .template-detail-page, .vuln-page,
   .scans-page, .asset-config-page, .domain-assets-page, .settings-page,
-  .scan-create-page, .scan-task-detail-page,
+  .scan-create-page, .scan-task-detail-page, .scheduled-jobs-page,
   .stat-box, .summary-box, .detection-box
 )::before,
 html[data-theme='deep'] :is(.stat-box, .summary-box, .detection-box)::after {
@@ -207,6 +207,8 @@ html[data-theme='deep'] :is(
   .scan-create-hero, .scan-create-checklist-card, .scan-create-steps,
   .scan-create-form-card, .scan-create-field, .scan-template-library-panel,
   .scan-task-detail-card, .scan-task-detail-info-card, .scan-task-detail-panel,
+  .scheduled-jobs-topbar, .scheduled-jobs-list-panel, .scheduled-jobs-detail-panel,
+  .scheduled-jobs-progress-card, .scheduled-jobs-runs, .scheduled-jobs-config, .scheduled-jobs-dialog,
   .scan-task-detail-hero, .scan-task-detail-progress-card,
   .template-detail-info-box, .template-detail-metric-box,
   .template-detail-query-box, .template-detail-code-shell,
@@ -389,6 +391,84 @@ html[data-theme='deep'] :is(
   font-weight: 600;
   text-shadow: none;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+html[data-theme='deep'] :is(
+  .scheduled-jobs-primary,
+  .scheduled-jobs-secondary,
+  .scheduled-jobs-danger,
+  .scheduled-jobs-icon-button,
+  .scheduled-jobs-pagination button,
+  .scheduled-jobs-dialog header > button
+) {
+  border: var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 600;
+  text-shadow: none;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+html[data-theme='deep'] .scheduled-jobs-primary {
+  border-color: var(--deep-accent);
+  color: #ffffff;
+  background: var(--deep-accent);
+}
+
+html[data-theme='deep'] .scheduled-jobs-danger {
+  border-color: #f2b8c2;
+  color: var(--deep-danger);
+  background: var(--deep-danger-soft);
+}
+
+html[data-theme='deep'] :is(
+  .scheduled-jobs-secondary,
+  .scheduled-jobs-icon-button,
+  .scheduled-jobs-pagination button,
+  .scheduled-jobs-dialog header > button
+):hover:not(:disabled) {
+  border-color: #afc0d2;
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .scheduled-jobs-primary:hover:not(:disabled) {
+  border-color: var(--deep-accent-hover);
+  color: #ffffff;
+  background: var(--deep-accent-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .scheduled-jobs-danger:hover:not(:disabled) {
+  border-color: #e09aa8;
+  color: var(--deep-danger);
+  background: #ffe5e9;
+}
+
+html[data-theme='deep'] :is(
+  .scheduled-job-row,
+  .scheduled-jobs-meta-grid > div,
+  .scheduled-runs-table,
+  .scheduled-jobs-config pre
+) {
+  border-color: var(--line-soft);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] :is(.scheduled-job-row:hover, .scheduled-job-row.active, .scheduled-run-row:hover) {
+  border-color: #afc0d2;
+  background: var(--deep-accent-soft);
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-theme='deep'] .scheduled-runs-head {
+  background: var(--surface-2);
 }
 
 html[data-theme='deep'] button:hover {

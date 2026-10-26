@@ -1303,3 +1303,13 @@
   - 主机排行项生成编码后的站内 `/assets/hosts/:ipAddress` 详情链接；指纹名称按文本显示，不生成外部链接。
   - 未审核卡片的“查看漏洞”跳转 `/vulnerabilities?status=unreviewed`，漏洞页从 URL 初始化状态与等级筛选（仅接收已有枚举，支持重复参数和逗号分隔并去重）；刷新及浏览器后退可以恢复入口筛选。同一漏洞页切换到无 query 的导航入口会恢复全部状态。用户仍可在页内清空或修改筛选。优先关注的三个入口分别应用“未审核 + 严重 / 高危漏洞”、“最高风险等级为严重 / 高危的主机”及“最高风险等级为严重 / 高危的域名”筛选；其他资产与漏洞入口跳转现有清单页面。
   - 首页不展示“你的 API Key”和“快捷操作”卡片。最新漏洞情报沿用原有组件和内容，不调用上述接口。
+## 定时任务管理
+
+- 用途：`/scheduled-jobs` 页面查询定时任务、查看详情和执行记录，并在执行期间轮询展示进度。
+- 接口封装：`src/api/scheduledJobs.js`；请求统一使用 `src/utils/http.js` 自动携带登录令牌。
+- 列表：`GET /api/v1/scheduled-jobs?page=&page_size=`，读取分页 `items`、`total`、`page_size`、`total_pages`；当前页面不提供搜索条件。
+- 详情：`GET /api/v1/scheduled-jobs/:id`，展示名称、类型、Cron、时区、开关、并发策略、最近执行状态与配置 JSON。
+- 管理员写操作：`PUT /api/v1/scheduled-jobs/:id`、`DELETE /api/v1/scheduled-jobs/:id`、`POST /api/v1/scheduled-jobs/:id/trigger`。当前前端不提供新建任务入口；编辑表单会校验必填字段和 `config_json` 合法性，后端仍是最终权限与参数校验方。
+- 执行记录：`GET /api/v1/scheduled-jobs/:id/runs?page=&page_size=`；单次详情：`GET /api/v1/scheduled-job-runs/:run_id`。
+- 动态进度：列表中存在 `queued` 或 `running` 记录时，前端每 3 秒请求单次执行详情；状态变为终态后停止轮询并刷新记录。`progress_total=0` 时显示“进度暂不可计算”。
+- 异常分支：沿用统一 HTTP 错误和登录失效处理；列表、详情、记录分别展示加载、空态和错误状态，管理员按钮对普通用户隐藏。

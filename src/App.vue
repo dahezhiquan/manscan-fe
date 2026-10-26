@@ -30,6 +30,7 @@ import HostAssetsPage from './pages/HostAssetsPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import ScansDashboardPage from './pages/ScansDashboardPage.vue'
 import SettingsPage from './pages/SettingsPage.vue'
+import ScheduledJobsPage from './pages/ScheduledJobsPage.vue'
 import TemplateDetailPage from './pages/TemplateDetailPage.vue'
 import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
@@ -206,6 +207,10 @@ const currentView = computed(() => {
 
   if (currentPath.value === '/settings') {
     return SettingsPage
+  }
+
+  if (currentPath.value === '/scheduled-jobs') {
+    return ScheduledJobsPage
   }
 
   if (currentPath.value.startsWith('/assets/domains/')) {

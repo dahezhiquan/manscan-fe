@@ -5,7 +5,6 @@
         <p :aria-label="configuredServiceCountLabel">已配置 {{ configuredServiceCount }} 个第三方服务</p>
       </div>
       <div class="api-key-toolbar-actions">
-        <button class="settings-button" type="button" :disabled="listState.loading" @click="fetchPage(listState.page)">刷新</button>
         <button class="settings-button settings-button--primary" type="button" @click="openCreate">新增 API Key</button>
       </div>
     </header>

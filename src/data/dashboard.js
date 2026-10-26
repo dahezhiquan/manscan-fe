@@ -4,7 +4,8 @@ export const primaryNav = [
   { label: '扫描', active: false, count: 0, icon: 'scan', route: '/scans' },
   { label: '域名资产清单', active: false, count: null, icon: 'stack', route: '/assets/domains' },
   { label: '主机资产清单', active: false, count: null, icon: 'server', route: '/assets/hosts' },
-  { label: '资产配置中心', active: false, count: null, icon: 'server', route: '/assets/config' }
+  { label: '资产配置中心', active: false, count: null, icon: 'server', route: '/assets/config' },
+  { label: '定时任务', active: false, count: null, icon: 'clock', route: '/scheduled-jobs' }
 ]
 
 export const secondaryNav = [
@@ -47,6 +48,10 @@ export function getNavigationState(path = '/', options = {}) {
 
     if (route === '/assets/hosts') {
       return path === '/assets/hosts' || path.startsWith('/assets/hosts')
+    }
+
+    if (route === '/scheduled-jobs') {
+      return path === '/scheduled-jobs'
     }
 
     return path === route
