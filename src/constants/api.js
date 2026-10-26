@@ -51,6 +51,10 @@ export function buildScheduledJobTriggerApi(jobId) {
   return `${buildScheduledJobApi(jobId)}/trigger`
 }
 
+export function buildScheduledJobStopApi(jobId) {
+  return `${buildScheduledJobApi(jobId)}/stop`
+}
+
 export function buildScheduledJobRunApi(runId) {
   return `${API_PREFIX}/scheduled-job-runs/${encodeURIComponent(runId)}`
 }

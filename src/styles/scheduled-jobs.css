@@ -183,6 +183,20 @@
   gap: 12px;
 }
 
+.scheduled-jobs-progress-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scheduled-jobs-cancel-button {
+  min-height: 34px;
+  padding: 0 11px;
+  font-size: 12px;
+}
+
 .scheduled-jobs-panel-head h2 {
   font-size: 21px;
 }
@@ -439,8 +453,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 26px;
-  padding: 0 9px;
+  justify-self: center;
+  min-height: 22px;
+  padding: 0 8px;
   border: 2px solid currentColor;
   border-radius: 999px;
   font-size: 11px;
@@ -469,11 +484,51 @@
 .scheduled-jobs-progress-copy strong { color: var(--line); font-size: 14px; font-weight: 900; }
 
 .scheduled-runs-table { margin-top: 12px; overflow: hidden; border: 2px solid var(--line-soft); border-radius: 14px; }
-.scheduled-runs-head,
-.scheduled-run-row { display: grid; grid-template-columns: 1.1fr 1.5fr 0.7fr 20px; gap: 10px; align-items: center; padding: 11px 12px; font-size: 12px; }
+.scheduled-run-row { display: grid; grid-template-columns: 1.1fr 1.5fr 0.7fr 112px; gap: 10px; align-items: center; padding: 11px 12px; font-size: 12px; }
+.scheduled-runs-head { display: grid; grid-template-columns: 1.1fr 1.5fr 0.7fr 112px; gap: 10px; align-items: center; padding: 11px 12px; text-align: center; }
 .scheduled-runs-head { color: var(--ink-soft); background: var(--surface-2); font-size: 11px; font-weight: 900; }
-.scheduled-run-row { width: 100%; border-top: 2px solid var(--line-soft); color: var(--ink); font-weight: 700; text-align: left; transition: background-color 0.18s ease; }
+.scheduled-run-row { width: 100%; border-top: 2px solid var(--line-soft); color: var(--ink); font-weight: 700; transition: background-color 0.18s ease; }
 .scheduled-run-row:hover { background: var(--surface-3); }
+
+.scheduled-run-row-main {
+  display: grid;
+  grid-template-columns: 1.1fr 1.5fr 0.7fr;
+  grid-column: 1 / span 3;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.scheduled-run-log-button {
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.scheduled-jobs-failure-dialog { width: min(560px, 100%); }
+.scheduled-failure-log-meta { margin: 10px 0 0; }
+.scheduled-failure-log {
+  max-height: min(46vh, 360px);
+  overflow: auto;
+  margin: 14px 0 18px;
+  padding: 13px;
+  border: 2px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 12px/1.6 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 .scheduled-jobs-config pre { max-height: 180px; overflow: auto; margin: 12px 0 0; padding: 13px; border: 2px solid var(--line-soft); border-radius: 14px; background: var(--surface-2); color: var(--ink); font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .scheduled-jobs-inline-error { margin: 10px 0 0; font-size: 12px; font-weight: 800; line-height: 1.5; }
@@ -730,10 +785,11 @@
   .scheduled-jobs-detail-head { flex-direction: column; }
   .scheduled-jobs-actions { width: 100%; justify-content: flex-start; }
   .scheduled-jobs-progress-copy { align-items: flex-start; flex-direction: column; }
-  .scheduled-runs-head,
-  .scheduled-run-row { grid-template-columns: 1fr 1fr 0.6fr 16px; padding-inline: 8px; }
+  .scheduled-runs-head { grid-template-columns: 1fr 1fr 0.6fr 100px; padding-inline: 8px; }
+  .scheduled-run-row { grid-template-columns: 1fr 1fr 0.6fr 100px; padding-inline: 8px; }
+  .scheduled-run-row-main { grid-template-columns: 1fr 1fr 0.6fr; }
   .scheduled-runs-head span:nth-child(2),
-  .scheduled-run-row span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scheduled-run-row-main span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 @media (max-width: 440px) {

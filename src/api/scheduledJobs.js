@@ -3,6 +3,7 @@ import {
   buildScheduledJobApi,
   buildScheduledJobRunApi,
   buildScheduledJobRunsApi,
+  buildScheduledJobStopApi,
   buildScheduledJobTriggerApi
 } from '../constants/api'
 import { requestJson } from '../utils/http'
@@ -29,6 +30,10 @@ export function deleteScheduledJob(jobId, signal) {
 
 export function triggerScheduledJob(jobId, signal) {
   return requestJson(buildScheduledJobTriggerApi(jobId), { method: 'POST', signal })
+}
+
+export function stopScheduledJob(jobId, signal) {
+  return requestJson(buildScheduledJobStopApi(jobId), { method: 'POST', signal })
 }
 
 export async function getScheduledJobRuns(jobId, params = {}, signal) {

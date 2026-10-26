@@ -169,6 +169,10 @@
   align-items: start;
 }
 
+.settings-notification-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .settings-user-list,
 .settings-toggle-list {
   display: flex;
@@ -717,7 +721,7 @@
 }
 
 .settings-switch-input:checked + .settings-switch::after {
-  transform: translate(20px, -50%);
+  transform: translate(16px, -50%);
 }
 
 .settings-switch-input:focus-visible + .settings-switch {

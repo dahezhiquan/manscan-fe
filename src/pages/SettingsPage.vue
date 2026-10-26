@@ -60,9 +60,7 @@ const settingsState = reactive({
   darkModeEnabled: initialThemeSettings.darkModeEnabled,
   scanFinished: true,
   criticalVulnerability: true,
-  dailyDigest: false,
-  notifyChannel: 'email',
-  notifyThreshold: 'high'
+  dailyDigest: false
 })
 const savedSnapshot = ref(JSON.stringify(settingsState))
 const saveState = ref('idle')
@@ -129,9 +127,6 @@ const activeTabMeta = computed(
 )
 const isThemeTabActive = computed(() => activeTab.value === 'theme')
 const isApiKeysTabActive = computed(() => activeTab.value === 'apiKeys')
-const enabledNotificationCount = computed(() =>
-  NOTIFICATION_POLICIES.filter((item) => Boolean(settingsState[item.id])).length
-)
 const isDirty = computed(() => JSON.stringify(settingsState) !== savedSnapshot.value)
 const canSaveSettings = computed(() =>
   isDirty.value && saveState.value !== 'saving' && !(isThemeTabActive.value && themeSettingsState.loading)
@@ -834,33 +829,6 @@ onBeforeUnmount(() => {
                   <input v-model="settingsState[policy.id]" type="checkbox" class="settings-switch-input" />
                   <span class="settings-switch" aria-hidden="true"></span>
                 </label>
-              </div>
-
-              <div class="settings-detail-panel">
-                <div class="settings-panel-head">
-                  <div>
-                    <span class="settings-panel-kicker">Policy</span>
-                    <h2>{{ enabledNotificationCount }} 项启用</h2>
-                  </div>
-                </div>
-                <div class="settings-form-grid">
-                  <label class="settings-field">
-                    <span>通知渠道</span>
-                    <select v-model="settingsState.notifyChannel">
-                      <option value="email">邮件</option>
-                      <option value="webhook">Webhook</option>
-                      <option value="both">邮件 + Webhook</option>
-                    </select>
-                  </label>
-                  <label class="settings-field">
-                    <span>提醒阈值</span>
-                    <select v-model="settingsState.notifyThreshold">
-                      <option value="critical">严重及以上</option>
-                      <option value="high">高危及以上</option>
-                      <option value="medium">中危及以上</option>
-                    </select>
-                  </label>
-                </div>
               </div>
             </div>
           </section>
