@@ -415,6 +415,12 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.api-key-pagination {
+  margin-top: 10px;
+  padding: 12px 4px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
 .api-key-toolbar p {
   margin: 0;
   color: var(--line);

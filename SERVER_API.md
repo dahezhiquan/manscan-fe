@@ -2751,21 +2751,22 @@ curl -G "http://127.0.0.1:8686/api/v1/domain-assets/screenshots" \
 
 ## 40. 定时任务
 
-定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；未配置 `api_key_id` 时使用 `GITHUB_TOKEN`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
+定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器读取该文件并逐行查询 ProjectDiscovery VulnX API，更新五张漏洞情报表。未配置 `api_key_id` 时分别使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
 
 ### 查询定时任务列表
 
 - 请求方法和路径：`GET /api/v1/scheduled-jobs`
 - 请求参数：`page`、`page_size`（可选，默认 1、10，`page_size` 最大 100）、`keyword`（可选，按名称、描述和类型模糊查询）。
-- 响应格式：`data` 为分页对象，任务字段包括 `id`、`name`、`description`、`job_type`、`cron_expr`、`timezone`、`enabled`、`api_key_id`、`config_json`、`concurrency_policy`、`timeout_seconds`、`next_run_at`、`last_run_at`、`last_status` 和 `last_error`。
+- 响应格式：`data` 为分页对象，任务字段包括 `id`、`name`、`description`、`output_description`、`job_type`、`cron_expr`、`timezone`、`enabled`、`api_key_id`、`config_json`、`concurrency_policy`、`timeout_seconds`、`next_run_at`、`last_run_at`、`last_status` 和 `last_error`。`output_description` 是任务产出内容说明，未设置时为空字符串。
 - `next_run_at` 按任务时区计算：服务启动注册任务、修改计划或启用任务时写入，每次自动触发时刷新为下一次计划时间，不等待任务执行完成；禁用任务时清空（响应省略该字段）。手动触发不改变定时计划。此规则同样适用于任务详情和编辑响应；前端需重新查询接口获取最新值。
 - 错误码：`40101` 未登录；`40001` 分页参数不合法；`50001` 查询失败。
+- 数据库升级：已有数据库需执行 `docs/SQL/alter_manscan_scheduled_jobs_add_output_description.sql`；新建数据库使用更新后的 `docs/SQL/create_manscan_scheduled_jobs.sql`。
 - 使用示例：`curl -H 'Authorization: Bearer <access_token>' 'http://127.0.0.1:8686/api/v1/scheduled-jobs?page=1&page_size=20'`
 
 ### 新增定时任务
 
 - 请求方法和路径：`POST /api/v1/scheduled-jobs`
-- 请求参数：JSON body。必填 `name`、`job_type`、`cron_expr`、`config_json`；可选 `description`、`timezone`（默认 `Asia/Shanghai`）、`enabled`（默认 true）、`api_key_id`、`concurrency_policy`（`forbid`/`allow`，默认 `forbid`）、`timeout_seconds`（整数，0-2592000 秒，最多 30 天，默认 0，0 表示不限制单次任务执行时长）。`config_json` 必须是合法 JSON，最大 1 MiB。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
+- 请求参数：JSON body。必填 `name`、`job_type`、`cron_expr`、`config_json`；可选 `description`、`output_description`（任务产出内容描述，最长 512 字符，默认空字符串）、`timezone`（默认 `Asia/Shanghai`）、`enabled`（默认 true）、`api_key_id`、`concurrency_policy`（`forbid`/`allow`，默认 `forbid`）、`timeout_seconds`（整数，0-2592000 秒，最多 30 天，默认 0，0 表示不限制单次任务执行时长）。`config_json` 必须是合法 JSON，最大 1 MiB。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
 - 响应格式：HTTP 200，`data` 为新任务对象。
 - 错误码：`40001` 参数、Cron、时区、并发策略或任务配置不合法；`40101` 未登录；`40301` 非管理员；`50001` 保存或注册失败。
 - 使用示例：
@@ -2780,7 +2781,7 @@ curl -X POST -H 'Authorization: Bearer <access_token>' -H 'Content-Type: applica
 
 - 请求方法和路径：`GET /api/v1/scheduled-jobs/:id`、`PUT /api/v1/scheduled-jobs/:id`、`DELETE /api/v1/scheduled-jobs/:id`。
 - 路径参数：`id` 为正整数。
-- 编辑请求：字段与新增相同，`enabled` 必填；`timeout_seconds` 范围为 0-2592000 秒（最多 30 天），0 表示不限制单次任务执行时长；修改 Cron、时区或开关会立即重新注册或移除进程内调度。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
+- 编辑请求：字段与新增相同，`enabled` 必填；`output_description` 可选，最长 512 字符；`timeout_seconds` 范围为 0-2592000 秒（最多 30 天），0 表示不限制单次任务执行时长；修改 Cron、时区或开关会立即重新注册或移除进程内调度。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
 - 响应格式：查询和编辑 HTTP 200，`data` 为任务对象；删除 HTTP 200，`data` 为 `{ "id": <id> }`。
 - 错误码：`40001` 参数不合法；`40101` 未登录；`40301` 编辑/删除非管理员；`40401` 任务不存在；`50001` 数据库或调度注册失败。
 - 使用示例：`curl -X PUT -H 'Authorization: Bearer <access_token>' -H 'Content-Type: application/json' -d '{"name":"数据同步","job_type":"example.sync","cron_expr":"*/10 * * * *","config_json":"{}","enabled":false}' 'http://127.0.0.1:8686/api/v1/scheduled-jobs/1'`
@@ -2830,6 +2831,8 @@ curl -L -OJ \
 
 服务启动时从数据库加载 `enabled=1` 的任务。业务代码通过 `JobHandlerRegistry.Register` 注册具体处理器；处理器实现 `Type`、`Validate` 和 `Execute`，在 `Execute` 中通过 `ProgressReporter.Report` 写入阶段、当前值、总量和说明。API Key 仅保存关联 ID，具体处理器按需通过现有 API Key 服务读取并解密，不在定时任务表中保存明文密钥。
 
+需要发出外部请求的处理器必须复用服务启动时创建并注入的 `service.APIKeyRateLimiter`：配置 `api_key_id` 时，在每一次实际请求前调用 `Wait(ctx, apiKeyID)`，包括额外遍历、回退和重试请求。不得为单个任务或执行实例独立创建限流器，否则无法共享额度。限流配置读取失败时返回错误，不绕过限流发送请求。
+
 ### 内置任务：CVE 文件名同步
 
 - `job_type`：`cve_file_names.sync`
@@ -2837,7 +2840,26 @@ curl -L -OJ \
 - `config_json`：可选 `{"ref":"main"}`，用于指定 GitHub 分支、标签或提交 SHA；为空时使用 `main`。
 - 输出：成功获取完整列表后，使用临时文件原子替换 `data/tmp/cve_data/cves.txt`，失败时保留上一次成功文件。
 - 产出：成功执行后，在本次执行记录的 `output_path` 字段写入固定路径 `data/tmp/cve_data/cves.txt`，前端可使用“产出下载”按钮调用执行记录产出下载接口。
+- 限流：当任务配置 `api_key_id` 且该 API Key 的 `rate_limit_per_minute=N` 大于 `0` 时，请求按至少 `60/N` 秒的间隔放行，不允许突发透支。同一服务进程内，相同 API Key ID 的所有任务及并发执行实例（包括自动和手动触发）共享额度，不同 API Key ID 相互独立；根目录、递归 Tree、截断回退和后续子树请求均参与限流。未配置 API Key 或限流值为 `0` 时不启用服务端限流，但仍受 GitHub 自身限流策略约束。
+- 配置变更与取消：每次请求以及等待唤醒后重新读取当前 API Key 限流值；已有等待在下一次检查时采用新值。等待计入任务的 `timeout_seconds`，支持取消和超时，等待期间取消不预占后续额度，获取列表失败时保留上一次成功文件。
+- 共享范围：限流状态保存在当前服务进程内，重启后清空；多个服务进程或实例之间不共享额度。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_cve_file_names.sql`，可重复执行，不会重复插入同一 `job_type`。
+
+### 内置任务：全量 VulnX 漏洞更新
+
+- `job_type`：`vulnx_vulnerability.sync`
+- 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`，每天凌晨 00:30 执行；应安排在 CVE 文件名同步（00:00）之后。
+- 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnx_vulnerability_sync.sql`，默认启用并使用环境变量 API Key；可在定时任务管理中关联 `api_key_id` 以启用按 Key 限流。脚本按 `job_type` 判断，可重复执行。
+- `config_json`：使用 `{}`；任务固定读取服务根目录下 `data/tmp/cve_data/cves.txt`，逐行去重并过滤非法 CVE 编号。
+- API Key：配置 `api_key_id` 时从第三方 API Key 服务读取并解密，按每次请求发送 `X-Api-Key`；未配置 `api_key_id` 时读取环境变量 `PDCP_API_KEY`。建议优先使用 `api_key_id`，以便配置每分钟限额。
+- 限流：配置 `api_key_id` 后，每个 CVE 请求前复用服务启动时创建的共享限流器，按该 Key 的 `rate_limit_per_minute` 放行；同一 Key 的任务和并发执行共享额度，等待支持取消和超时。使用 `PDCP_API_KEY` 环境变量时不启用服务端限流，仍受 ProjectDiscovery API 自身限流约束。
+- 更新范围：每个 CVE 查询 `https://api.projectdiscovery.io/v2/vulnerability/{CVE}`，在一个数据库事务中按 CVE 替换以下五张表的完整快照：
+  - `manscan_vulnerability_intelligence_records`：`data` 中漏洞画像、时间、CVSS、CWE、EPSS、暴露主机数、HackerOne、POC、产品、厂商、修复、严重性、状态、漏洞类型和影响字段。
+  - `manscan_vulnerability_intelligence_components`：`affected_products[]` 的 CPE、类别、部署方式、行业、产品、摘要和厂商。
+  - `manscan_vulnerability_intelligence_articles`：`citations[]` 的添加时间、来源和 URL。
+  - `manscan_vulnerability_intelligence_pocs`：`pocs[]` 的添加时间、来源和 URL。
+  - `manscan_vulnerability_intelligence_shodan_exposures`：`exposure.values[]` 的产品 ID、暴露主机数和 Shodan 查询语句。
+- 失败策略：单个 CVE 查询、解析或写库失败后最多重试 3 次（最多 4 次尝试），然后继续处理剩余 CVE；最终仍失败的 CVE 每行写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，每次运行开始时清空旧文件。任务进度按每个 CVE 最终处理结果推进；只要存在失败项，最终执行状态为 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
 
 以下接口均要求 JWT 登录且当前用户角色为管理员。API Key 使用 AES-256-GCM 加密后只存入 `manscan_third_party_api_keys.encrypted_key`；数据库不保留明文 Key 列，列表、单条查询及增改删响应均不返回密钥明文或密文，只返回 `key_configured`。如确有必要，可使用下方明文查询接口；该接口是唯一返回明文 Key 的接口。新部署请执行 `docs/SQL/create_manscan_third_party_api_keys.sql`；已有表请先备份并执行 `docs/SQL/alter_manscan_third_party_api_keys_encrypt_key.sql`。迁移会将当前版本的 `api_key` 密文列重命名为 `encrypted_key` 并保留密文；如果数据库中存在早期独立的明文 `key` 列，迁移会删除该列及其中数据。配置密钥丢失或更换后既有密文不可恢复。请求体最大 16 KiB。
 

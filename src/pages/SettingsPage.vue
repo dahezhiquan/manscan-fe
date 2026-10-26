@@ -660,7 +660,6 @@ onBeforeUnmount(() => {
                 <h2>{{ activeTabMeta.label }}</h2>
               </div>
               <div class="settings-panel-actions">
-                <span class="settings-panel-meta">当前用户：{{ props.currentUserName }}</span>
                 <button
                   v-if="activeTab === 'users'"
                   class="settings-button settings-button--primary"

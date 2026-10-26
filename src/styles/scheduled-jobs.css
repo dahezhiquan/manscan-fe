@@ -448,6 +448,7 @@
 .scheduled-jobs-runs,
 .scheduled-jobs-config { padding: 16px; margin-top: 12px; box-shadow: var(--shadow-flat); }
 .scheduled-jobs-section-head h3 { font-size: 17px; }
+.scheduled-jobs-meta-grid strong.scheduled-jobs-output-description { overflow: visible; text-overflow: clip; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .scheduled-run-status {
   display: inline-flex;
@@ -537,6 +538,8 @@
 .scheduled-jobs-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(31, 26, 23, 0.5); }
 .scheduled-jobs-dialog { width: min(680px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 20px; }
 .scheduled-jobs-dialog--compact { width: min(440px, 100%); }
+.scheduled-jobs-error-dialog { width: min(460px, 100%); }
+.scheduled-jobs-error-copy { margin: 14px 0 18px; color: #8f1d35 !important; overflow-wrap: anywhere; }
 .scheduled-jobs-dialog header,
 .scheduled-jobs-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .scheduled-jobs-dialog header > button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--line); font-size: 21px; line-height: 1; }
@@ -565,7 +568,7 @@
 }
 
 .scheduled-jobs-form-select.is-open {
-  z-index: 3;
+  z-index: 30;
 }
 
 .scheduled-jobs-form-select-button {
@@ -637,10 +640,12 @@
 }
 
 .scheduled-jobs-api-key-menu {
-  top: auto;
-  bottom: calc(100% + 8px);
+  position: absolute;
+  top: calc(100% + 8px);
+  bottom: auto;
   width: 100%;
   max-width: 100%;
+  max-height: min(270px, 42vh);
 }
 
 .scheduled-jobs-form-select-search {
