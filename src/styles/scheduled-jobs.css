@@ -507,10 +507,11 @@
 }
 
 .scheduled-run-log-button {
-  min-height: 30px;
-  padding: 0 8px;
+  justify-self: center;
+  min-height: 28px;
+  padding: 0 7px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
 }
 

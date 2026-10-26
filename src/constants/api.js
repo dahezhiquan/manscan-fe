@@ -59,6 +59,10 @@ export function buildScheduledJobRunApi(runId) {
   return `${API_PREFIX}/scheduled-job-runs/${encodeURIComponent(runId)}`
 }
 
+export function buildScheduledJobRunOutputApi(runId) {
+  return `${buildScheduledJobRunApi(runId)}/output`
+}
+
 export function buildVulnerabilityDetailApi(vulnerabilityId) {
   return `${VULNERABILITY_LIST_API}/${encodeURIComponent(vulnerabilityId)}`
 }
