@@ -2751,7 +2751,7 @@ curl -G "http://127.0.0.1:8686/api/v1/domain-assets/screenshots" \
 
 ## 40. 定时任务
 
-定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器读取该文件并逐行查询 ProjectDiscovery VulnX API，更新五张漏洞情报表。未配置 `api_key_id` 时分别使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
+定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器读取该文件并逐行查询 ProjectDiscovery VulnX API，更新五张漏洞情报表；`aliyun_avd_vulnerability.sync` 处理器通过阿里云高危漏洞列表筛选无 CVE 项、读取详情并生成 JSON 产物，数据库字段映射确认前不会写入漏洞情报表。未配置 `api_key_id` 时分别使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
 
 ### 查询定时任务列表
 
@@ -2852,7 +2852,7 @@ curl -L -OJ \
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnx_vulnerability_sync.sql`，默认启用并使用环境变量 API Key；可在定时任务管理中关联 `api_key_id` 以启用按 Key 限流。脚本按 `job_type` 判断，可重复执行。
 - `config_json`：使用 `{}`；任务固定读取服务根目录下 `data/tmp/cve_data/cves.txt`，逐行去重并过滤非法 CVE 编号。
 - API Key：配置 `api_key_id` 时从第三方 API Key 服务读取并解密，按每次请求发送 `X-Api-Key`；未配置 `api_key_id` 时读取环境变量 `PDCP_API_KEY`。建议优先使用 `api_key_id`，以便配置每分钟限额。
-- 限流：配置 `api_key_id` 后，每个 CVE 请求前复用服务启动时创建的共享限流器，按该 Key 的 `rate_limit_per_minute` 放行；同一 Key 的任务和并发执行共享额度，等待支持取消和超时。使用 `PDCP_API_KEY` 环境变量时不启用服务端限流，仍受 ProjectDiscovery API 自身限流约束。
+- 并发与限流：每次最多并行处理 8 个 CVE；配置 `api_key_id` 后，每次 CVE 请求（包括重试）都复用服务启动时创建的共享限流器，按该 Key 的 `rate_limit_per_minute` 放行。同一 Key 的任务和并发执行共享额度，限流等待支持取消和超时。使用 `PDCP_API_KEY` 环境变量时没有服务端配置的限额，也不启用服务端限流，仍受 ProjectDiscovery API 自身限流约束。
 - 更新范围：每个 CVE 查询 `https://api.projectdiscovery.io/v2/vulnerability/{CVE}`，在一个数据库事务中按 CVE 替换以下五张表的完整快照：
   - `manscan_vulnerability_intelligence_records`：`data` 中漏洞画像、时间、CVSS、CWE、EPSS、暴露主机数、HackerOne、POC、产品、厂商、修复、严重性、状态、漏洞类型和影响字段。
   - `manscan_vulnerability_intelligence_components`：`affected_products[]` 的 CPE、类别、部署方式、行业、产品、摘要和厂商。
@@ -2860,6 +2860,19 @@ curl -L -OJ \
   - `manscan_vulnerability_intelligence_pocs`：`pocs[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_shodan_exposures`：`exposure.values[]` 的产品 ID、暴露主机数和 Shodan 查询语句。
 - 失败策略：单个 CVE 查询、解析或写库失败后最多重试 3 次（最多 4 次尝试），然后继续处理剩余 CVE；最终仍失败的 CVE 每行写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，每次运行开始时清空旧文件。任务进度按每个 CVE 最终处理结果推进；只要存在失败项，最终执行状态为 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
+
+### 内置任务：阿里云高危无 CVE 漏洞采集
+
+- `job_type`：`aliyun_avd_vulnerability.sync`
+- 默认计划：`0 30 * * *`，时区 `Asia/Shanghai`；初始化 SQL 默认启用，可在任务管理页面调整。
+- 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_aliyun_avd_no_cve_sync.sql`，按 `job_type` 判断，可重复执行。
+- `config_json`：可选 `{"request_delay_ms":250,"max_pages":0}`；请求间隔范围 0-60000 毫秒（0 使用 250 毫秒默认值），最大列表页数范围 0-10000（0 使用 10000 页上限）。
+- 抓取流程：顺序请求阿里云 `/high-risk/list?page=N`，解析 AVD 编号、标题、类型、披露时间及状态，只对标记无 CVE 或标题无 CVE 编号的记录请求详情页；列表结束时停止。列表与详情均限制为 HTTPS 固定主机 `avd.aliyun.com`，响应体最大 16 MiB，具备请求超时、退避重试、Cookie Jar，并执行页面 WAF 校验脚本以取得校验后的 URL。进度在抓取阶段按“已处理列表页/最大列表页数”逐页推送，抓取完成后切换为详情数据库同步、产物写入和完成阶段提示。
+- 详情产物：包含 AVD/CVE 编号、标题、严重等级、利用情况、补丁情况、披露时间、描述、解决建议、参考 URL 数组、阿里云评分、评分拆分指标、CWE、受影响软件、阿里云安全产品覆盖、列表元数据、来源 URL 和抓取时间。源页面未提供的字段为空或缺省，不从描述推断填充。
+- 输出：原子写入 `data/tmp/aliyun_avd/no_cve_vulnerabilities.json`，执行记录登记产物路径，可通过定时任务产出下载接口获取。存在部分详情失败时保留成功记录和错误摘要，任务状态标记失败。
+- 数据库映射：在一个事务中按 `source=avd` 与 AVD 编号更新或新增 `manscan_vulnerability_intelligence_records`，并按漏洞编号和 URL 幂等写入参考链接到 `manscan_vulnerability_intelligence_articles`。records 写入 `category=non-cve`、标题、描述、解决建议、阿里云评分、披露时间到 `created_at`，severity 转为 `critical`/`high`/`medium`/`low`/`none`，`is_poc` 在利用情况或 EXP 成熟度为“EXP 已公开”或“POC 已公开”时为 1；`vulnerability_impact` 不写，`updated_at` 不由任务写入。articles 的 `source` 固定为 `avd`，`url` 为参考链接，`added_at` 不由任务写入。已有记录更新时保留现有 `updated_at`、`vulnerability_impact`；新增时间列由数据库默认值生成。
+- 不写入 `manscan_vulnerability_intelligence_components`、`manscan_vulnerability_intelligence_pocs` 和 `manscan_vulnerability_intelligence_shodan_exposures`。
+- 数据库升级：已有数据库执行 `docs/SQL/alter_manscan_vulnerability_intelligence_avd_timestamp_defaults.sql`，以便 records.`updated_at` 和 articles.`added_at` 在任务省略这些字段时由数据库默认生成。
 
 以下接口均要求 JWT 登录且当前用户角色为管理员。API Key 使用 AES-256-GCM 加密后只存入 `manscan_third_party_api_keys.encrypted_key`；数据库不保留明文 Key 列，列表、单条查询及增改删响应均不返回密钥明文或密文，只返回 `key_configured`。如确有必要，可使用下方明文查询接口；该接口是唯一返回明文 Key 的接口。新部署请执行 `docs/SQL/create_manscan_third_party_api_keys.sql`；已有表请先备份并执行 `docs/SQL/alter_manscan_third_party_api_keys_encrypt_key.sql`。迁移会将当前版本的 `api_key` 密文列重命名为 `encrypted_key` 并保留密文；如果数据库中存在早期独立的明文 `key` 列，迁移会删除该列及其中数据。配置密钥丢失或更换后既有密文不可恢复。请求体最大 16 KiB。
 
