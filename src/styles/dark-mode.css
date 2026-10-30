@@ -1401,6 +1401,7 @@ html[data-color-mode='dark'] :where(
 html[data-color-mode='dark'] :where(
   .is-critical,
   .severity-critical,
+  .template-severity-critical,
   .scan-template-severity.is-critical,
   .templates-severity-pill.is-critical,
   .vulnerabilities-severity-pill.is-critical,
@@ -1415,6 +1416,7 @@ html[data-color-mode='dark'] :where(
 html[data-color-mode='dark'] :where(
   .is-high,
   .severity-high,
+  .template-severity-high,
   .scan-template-severity.is-high,
   .templates-severity-pill.is-high,
   .vulnerabilities-severity-pill.is-high,
@@ -1429,6 +1431,7 @@ html[data-color-mode='dark'] :where(
 html[data-color-mode='dark'] :where(
   .is-medium,
   .severity-medium,
+  .template-severity-medium,
   .scan-template-severity.is-medium,
   .templates-severity-pill.is-medium,
   .vulnerabilities-severity-pill.is-medium,
@@ -1447,6 +1450,7 @@ html[data-color-mode='dark'] :where(
   .is-low,
   .is-info,
   .severity-low,
+  .template-severity-low,
   .severity-info,
   .scan-template-severity.is-low,
   .scan-template-severity.is-info,
@@ -1462,6 +1466,12 @@ html[data-color-mode='dark'] :where(
   background: rgba(30, 64, 175, 0.46) !important;
   border-color: rgba(147, 197, 253, 0.42) !important;
   color: #dbeafe !important;
+}
+
+html[data-color-mode='dark'] .templates-severity-pill.template-severity-info {
+  background: rgba(17, 94, 89, 0.48) !important;
+  border-color: rgba(94, 234, 212, 0.44) !important;
+  color: #99f6e4 !important;
 }
 
 html[data-color-mode='dark'] :where(
