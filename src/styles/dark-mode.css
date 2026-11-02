@@ -91,7 +91,8 @@ html[data-color-mode='dark'] :where(
   .settings-page,
   .scan-create-page,
   .scan-task-detail-page,
-  .scheduled-jobs-page
+  .scheduled-jobs-page,
+  .vulnerability-intelligence-page
 ) {
   color: var(--dark-text);
   background:
@@ -111,7 +112,8 @@ html[data-color-mode='dark'] :where(
   .settings-page,
   .scan-create-page,
   .scan-task-detail-page,
-  .scheduled-jobs-page
+  .scheduled-jobs-page,
+  .vulnerability-intelligence-page
 )::before {
   opacity: 0.14;
   background:
@@ -133,9 +135,91 @@ html[data-color-mode='dark'] :where(
   .settings-page,
   .scan-create-page,
   .scan-task-detail-page,
-  .scheduled-jobs-page
+  .scheduled-jobs-page,
+  .vulnerability-intelligence-page
 ) * {
   border-color: var(--dark-border);
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-list-card {
+  background: var(--dark-surface) !important;
+  border-color: var(--dark-border) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-search-field input {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-search-field input:hover,
+html[data-color-mode='dark'] .vulnerability-intelligence-search-field input:focus,
+html[data-color-mode='dark'] .vulnerability-intelligence-search-field:focus-within input {
+  background: rgba(8, 17, 32, 0.98) !important;
+  border-color: rgba(56, 189, 248, 0.58) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+  transform: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-trigger,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-menu,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-option,
+html[data-color-mode='dark'] .vulnerability-intelligence-pagination-arrow {
+  border-color: var(--dark-border) !important;
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-option:hover,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-option.selected,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-trigger:hover:not(:disabled),
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-trigger.active,
+html[data-color-mode='dark'] .vulnerability-intelligence-pagination-arrow:hover:not(:disabled) {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-blue-soft) !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-page-crumb-icon {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-table th {
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-table tbody tr:hover {
+  background: var(--dark-blue-soft) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-severity.is-critical {
+  color: #fecdd3 !important;
+  background: rgba(159, 18, 57, 0.42) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-severity.is-high {
+  color: #fed7aa !important;
+  background: rgba(154, 52, 18, 0.42) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-severity.is-medium {
+  color: #fef08a !important;
+  background: rgba(113, 63, 18, 0.42) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-severity.is-low,
+html[data-color-mode='dark'] .vulnerability-intelligence-flag.is-yes {
+  color: #bbf7d0 !important;
+  background: var(--dark-green-soft) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-severity.is-info {
+  color: #bae6fd !important;
+  background: var(--dark-blue-soft) !important;
 }
 
 html[data-color-mode='dark'] :where(
@@ -192,6 +276,15 @@ html[data-color-mode='dark'] :where(
   .scan-create-step-copy small
 ) {
   color: inherit;
+}
+
+html[data-color-mode='dark'] .settings-page-crumb,
+html[data-color-mode='dark'] .settings-page-crumb-icon {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .settings-page-crumb-separator {
+  color: var(--dark-text-muted) !important;
 }
 
 html[data-color-mode='dark'] :where(
@@ -2309,6 +2402,13 @@ html[data-theme='deep'][data-color-mode='dark'] :is(
   box-shadow: none !important;
 }
 
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-intelligence-search-field input:is(:hover, :focus),
+html[data-theme='deep'][data-color-mode='dark'] .vulnerability-intelligence-search-field:focus-within input {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--deep-focus) !important;
+  box-shadow: 0 0 0 3px var(--deep-accent-soft) !important;
+}
+
 html[data-theme='deep'][data-color-mode='dark'] :is(
   .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-option,
   .domain-assets-value-option, .domain-assets-dialog-close, .domain-assets-dialog-button.is-secondary
@@ -2948,4 +3048,96 @@ html[data-color-mode='dark'] .scheduled-jobs-feedback {
 
 html[data-color-mode='dark'] .scheduled-jobs-overlay {
   background: rgba(2, 6, 23, 0.72) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-add-filter,
+html[data-color-mode='dark'] .domain-assets-clear-button,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-trigger,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-menu,
+html[data-color-mode='dark'] .vulnerability-intelligence-page-size-option,
+html[data-color-mode='dark'] .vulnerability-intelligence-pagination-arrow {
+  border-color: var(--dark-border) !important;
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-chip {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-blue-soft) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-chip-remove {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-solid) !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-chip-remove:is(:hover, :focus-visible) {
+  border-color: var(--accent-blue) !important;
+  background: var(--accent-blue) !important;
+  color: #082f49 !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-solid) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-overlay {
+  background: rgba(2, 6, 23, 0.76) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-head,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-actions {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-head h2,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-field > span,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-close,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-button.is-secondary {
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option,
+html[data-color-mode='dark'] .vulnerability-intelligence-value-option,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-field input {
+  border-color: var(--dark-border) !important;
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option:hover,
+html[data-color-mode='dark'] .vulnerability-intelligence-value-option:hover,
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option.selected,
+html[data-color-mode='dark'] .vulnerability-intelligence-value-option.selected,
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-close:hover {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-blue-soft) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option-check {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-solid) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option-check.selected {
+  border-color: var(--accent-blue) !important;
+  background: var(--accent-blue) !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-filter-option-check.selected::after {
+  border-color: #082f49 !important;
+}
+
+html[data-color-mode='dark'] .vulnerability-intelligence-dialog-button:not(.is-secondary) {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--accent-blue) !important;
+  color: #082f49 !important;
 }

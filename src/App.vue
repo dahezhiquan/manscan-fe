@@ -35,6 +35,7 @@ import TemplateDetailPage from './pages/TemplateDetailPage.vue'
 import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
+import VulnerabilityIntelligencePage from './pages/VulnerabilityIntelligencePage.vue'
 import { useAppRouter } from './composables/useAppRouter'
 import {
   applyThemeSettings,
@@ -211,6 +212,10 @@ const currentView = computed(() => {
 
   if (currentPath.value === '/scheduled-jobs') {
     return ScheduledJobsPage
+  }
+
+  if (currentPath.value === '/vulnerability-intelligence') {
+    return VulnerabilityIntelligencePage
   }
 
   if (currentPath.value.startsWith('/assets/domains/')) {

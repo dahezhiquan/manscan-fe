@@ -19,6 +19,44 @@
   color: var(--ink);
 }
 
+.settings-page-crumbs {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+}
+
+.settings-page-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.settings-page-crumb-separator {
+  color: color-mix(in srgb, var(--ink-soft) 65%, transparent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.settings-page-crumb-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--ink);
+}
+
+.settings-page-crumb-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .settings-tab-icon,
 .settings-user-avatar {
   display: inline-flex;

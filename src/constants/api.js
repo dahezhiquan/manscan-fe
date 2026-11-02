@@ -20,6 +20,7 @@ export const TEMPLATE_LIST_API = `${API_PREFIX}/templates`
 export const TEMPLATE_DETAIL_API = `${API_PREFIX}/templates`
 export const TEMPLATE_TAGS_API = `${API_PREFIX}/templates/options/tags`
 export const TEMPLATE_PROTOCOLS_API = `${API_PREFIX}/templates/options/protocols`
+export const VULNERABILITY_INTELLIGENCE_RECORDS_API = `${API_PREFIX}/vulnerability-intelligence-records`
 export const SCAN_TASK_CREATE_API = `${API_PREFIX}/scans`
 export const SCAN_TASK_STATS_API = `${API_PREFIX}/scans/stats`
 export const SCAN_TASK_NAME_OPTIONS_API = `${API_PREFIX}/scans/options/names`

@@ -9,7 +9,8 @@ export const ROUTE_PATHS = {
   HOST_ASSETS: '/assets/hosts',
   ASSET_CONFIG: '/assets/config',
   SETTINGS: '/settings',
-  SCHEDULED_JOBS: '/scheduled-jobs'
+  SCHEDULED_JOBS: '/scheduled-jobs',
+  VULNERABILITY_INTELLIGENCE: '/vulnerability-intelligence'
 }
 
 export const ROUTE_TITLES = {
@@ -23,7 +24,8 @@ export const ROUTE_TITLES = {
   [ROUTE_PATHS.HOST_ASSETS]: 'ManScan - 主机资产清单',
   [ROUTE_PATHS.ASSET_CONFIG]: 'ManScan - 资产配置中心',
   [ROUTE_PATHS.SETTINGS]: 'ManScan - 设置',
-  [ROUTE_PATHS.SCHEDULED_JOBS]: 'ManScan - 定时任务'
+  [ROUTE_PATHS.SCHEDULED_JOBS]: 'ManScan - 定时任务',
+  [ROUTE_PATHS.VULNERABILITY_INTELLIGENCE]: 'ManScan - 漏洞情报'
 }
 
 export function normalizePath(path) {
@@ -65,6 +67,10 @@ export function normalizePath(path) {
 
   if (path === ROUTE_PATHS.SCHEDULED_JOBS) {
     return ROUTE_PATHS.SCHEDULED_JOBS
+  }
+
+  if (path === ROUTE_PATHS.VULNERABILITY_INTELLIGENCE) {
+    return ROUTE_PATHS.VULNERABILITY_INTELLIGENCE
   }
 
   if (path === ROUTE_PATHS.DOMAIN_ASSETS) {
@@ -120,6 +126,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.SCHEDULED_JOBS
   }
 
+  if (path.startsWith('/vulnerability-intelligence')) {
+    return ROUTE_PATHS.VULNERABILITY_INTELLIGENCE
+  }
+
   return ROUTE_PATHS.HOME
 }
 
@@ -166,6 +176,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/scheduled-jobs')) {
     return 'ManScan - 定时任务'
+  }
+
+  if (path.startsWith('/vulnerability-intelligence')) {
+    return 'ManScan - 漏洞情报'
   }
 
   return ROUTE_TITLES[path] || ROUTE_TITLES[ROUTE_PATHS.HOME]

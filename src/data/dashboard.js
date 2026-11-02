@@ -10,7 +10,8 @@ export const primaryNav = [
 
 export const secondaryNav = [
   { label: '报告', icon: 'chart' },
-  { label: '漏洞模板', icon: 'doc', route: '/templates/all' }
+  { label: '漏洞模板', icon: 'doc', route: '/templates/all' },
+  { label: '漏洞情报', icon: 'shield', route: '/vulnerability-intelligence' }
 ]
 
 export const footerNav = [
@@ -36,6 +37,10 @@ export function getNavigationState(path = '/', options = {}) {
 
     if (route === '/templates/all') {
       return path === '/templates/all' || path.startsWith('/templates/')
+    }
+
+    if (route === '/vulnerability-intelligence') {
+      return path === route
     }
 
     if (route === '/assets/config') {

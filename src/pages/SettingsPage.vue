@@ -635,6 +635,15 @@ onBeforeUnmount(() => {
     @logout="emit('logout')"
   >
     <main class="settings-page">
+      <section class="settings-page-crumbs" aria-label="当前位置">
+        <div class="settings-page-crumb">
+          <span class="settings-page-crumb-separator">/</span>
+          <span class="settings-page-crumb-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" v-html="iconPath('gear')" />
+          </span>
+          <span>设置</span>
+        </div>
+      </section>
       <div class="settings-workspace">
         <nav class="settings-tabs" aria-label="设置二级导航">
           <button

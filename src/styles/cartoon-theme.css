@@ -34,6 +34,42 @@
   backdrop-filter: none;
 }
 
+.vulnerability-intelligence-dialog {
+  border: var(--border-strong);
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: var(--shadow-flat-lg);
+}
+
+.vulnerability-intelligence-dialog-head {
+  border-bottom: var(--border-strong);
+  background: var(--paper-3);
+}
+
+.vulnerability-intelligence-dialog-actions {
+  border-top: var(--border-strong);
+  background: var(--surface);
+}
+
+.vulnerability-intelligence-filter-option,
+.vulnerability-intelligence-value-option {
+  border: 2px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.vulnerability-intelligence-filter-option:is(:hover, .selected),
+.vulnerability-intelligence-value-option:is(:hover, .selected) {
+  border-color: var(--line);
+  background: var(--paper-3);
+}
+
+.vulnerability-intelligence-filter-option.selected,
+.vulnerability-intelligence-value-option.selected {
+  box-shadow: inset 4px 0 0 var(--accent-orange);
+}
+
 .discover-card,
 .stats-card > .card-header,
 .category-panel,

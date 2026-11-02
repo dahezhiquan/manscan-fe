@@ -2307,6 +2307,7 @@ curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
 
 - 说明：
   - `request`、`response` 分别表示该域名资产最近一次探测保存的请求与响应原文；没有记录时返回空字符串。
+  - `has_form`、`has_upload`、`has_admin`、`has_uc_login`、`has_baidu_login` 为可空布尔值；数据库值为 `NULL` 时接口返回 `null`，`false` 表示已确认不存在。
   - `vulnerability_count` 表示漏洞表中 `asset_endpoint` 等于当前域名资产 `domain` 的记录数量。
   - `critical_count`、`high_count`、`medium_count`、`low_count` 表示上述关联漏洞中各严重等级的数量，按漏洞表 `severity` 字段统计。
   - `risk_level` 表示当前资产的最高风险等级，按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
@@ -2384,6 +2385,7 @@ curl "http://127.0.0.1:8686/api/v1/domain-assets?page=1&page_size=10&keyword=exa
 
 - 说明：
   - `service_assets` 来自 `manscan_asset_domain_service_assets`，按当前域名精确匹配 `domain` 字段。
+  - `service_assets[].app_version` 为可空字符串；未识别到版本时返回 `null`。
   - `title_histories` 来自 `manscan_asset_domain_title_history`，按当前域名精确匹配 `domain` 字段。
   - `vulnerability_count` 表示漏洞表中 `asset_endpoint` 等于当前域名资产 `domain` 的记录数量，但不统计 `status` 为 `fixed`、`false_positive`、`ignored` 的漏洞。
   - `risk_level` 表示过滤上述状态后的最高风险等级，按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
@@ -2574,6 +2576,7 @@ curl "http://127.0.0.1:8686/api/v1/host-assets?page=1&page_size=10&keyword=10.72
 
 - 说明：
   - `ports` 来自 `manscan_asset_host_port`，按当前主机精确匹配 `ip_address` 字段。
+  - `ports[].is_high_risk_port` 为可空布尔值；数据库值为 `NULL` 时接口返回 `null`，`false` 表示已确认非高危端口。
   - `vulnerability_count` 表示漏洞表中 `asset_host` 等于当前主机 `ip_address` 的记录数量，但不统计 `status` 为 `fixed`、`false_positive`、`ignored` 的漏洞。
   - `risk_level` 表示过滤上述状态后的最高风险等级，按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
   - 端口数组默认按 `is_alive` 倒序、`port_number` 升序和 ID 升序排序。
@@ -2859,7 +2862,17 @@ curl -L -OJ \
   - `manscan_vulnerability_intelligence_articles`：`citations[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_pocs`：`pocs[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_shodan_exposures`：`exposure.values[]` 的产品 ID、暴露主机数和 Shodan 查询语句。
-- 失败策略：单个 CVE 查询、解析或写库失败后最多重试 3 次（最多 4 次尝试），然后继续处理剩余 CVE；最终仍失败的 CVE 每行写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，每次运行开始时清空旧文件。任务进度按每个 CVE 最终处理结果推进；只要存在失败项，最终执行状态为 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
+- 失败策略：单个 CVE 查询、解析或写库失败后最多尝试 3 次（首次请求 + 2 次重试），然后继续处理剩余 CVE；最终仍失败的 CVE 的编号写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，具体错误写入 `data/tmp/cve_data/vulnXerrorDetail.log`，两个文件每次运行开始时清空。任务结束时将这两个文件打包为 `data/tmp/cve_data/vulnXerror.zip`，可通过执行记录的产出下载接口下载。任务进度按每个 CVE 最终处理结果推进；只要存在失败项，最终执行状态为 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
+
+### 内置任务：长亭无 CVE 漏洞情报同步
+
+- `job_type`：`chaitin_vulnerability.sync`
+- 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`。
+- 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_chaitin_vulnerability_sync.sql`，按 `job_type` 判断，可重复执行。
+- 抓取流程：顺序请求 `https://stack.chaitin.com/api/v2/vuln/list/`，使用 `limit=15` 与 `offset=0,15,30...` 全量分页；只同步 `cve_id` 为空的记录，以 `ct_id` 作为漏洞编号。
+- 数据库映射：在事务中按 `source=chaitin` 与 `ct_id` 更新或新增 `manscan_vulnerability_intelligence_records`，并幂等写入 `references` 到 `manscan_vulnerability_intelligence_articles`。
+- records 写入 `category=non-cve`、标题、描述、影响、解决建议、严重性、披露时间和更新时间；`vulnerability_type`、`is_patch_available`、`cvss_metrics`、`cvss_score` 不写入。articles 的 `source` 固定为 `chaitin`，`added_at` 不写入。
+- 不写入 `manscan_vulnerability_intelligence_pocs`、`manscan_vulnerability_intelligence_components` 和 `manscan_vulnerability_intelligence_shodan_exposures`。
 
 ### 内置任务：阿里云高危无 CVE 漏洞采集
 
@@ -2958,4 +2971,41 @@ curl -X PUT "http://127.0.0.1:8686/api/v1/third-party-api-keys/1" \
 ```bash
 curl -X DELETE "http://127.0.0.1:8686/api/v1/third-party-api-keys/1" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+## 漏洞情报分页查询
+
+- 请求方法和路径：`GET /api/v1/vulnerability-intelligence-records`，需要登录。
+- 请求参数：`page` 为可选正整数，默认 `1`；`page_size` 为可选整数，范围 `1-100`，默认 `10`。`source`、`vulnerability_id`、`vul_name`、`severity` 为可选字符串模糊查询；`is_poc`、`is_kev` 为可选布尔值（支持 `true`/`false`、`1`/`0`、`yes`/`no`、`y`/`n`）。`is_kev=true` 匹配数据库 `is_kev` 或 `is_vkev` 任一为 true 的记录；`is_kev=false` 匹配两者均不为 true 的记录。
+- 响应格式：统一响应 envelope 中的 `data` 为分页对象，包含 `page`、`pageSize`、`total`、`totalPages`、`items`。每条记录仅返回 `source`、`vulnerability_id`、`created_at`、`updated_at`、`cvss_score`、`vul_name`、`is_kev`、`is_poc`、`severity`；`is_kev` 在数据库 `is_kev` 或 `is_vkev` 任一为 true 时为 true，否则为 false。其他数据库可空字段保持 `null`。按 `created_at DESC, id DESC` 排序。
+- 错误码：`40001` 分页参数或布尔筛选参数非法，`40101` 未登录或令牌无效，`50001` 数据库查询失败。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  "http://127.0.0.1:8686/api/v1/vulnerability-intelligence-records?page=1&page_size=10&source=vulnx&vulnerability_id=CVE-2026&vul_name=RCE&is_poc=true&severity=critical&is_kev=true"
+```
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 1,
+    "totalPages": 1,
+    "items": [{
+      "source": "vulnx",
+      "vulnerability_id": "CVE-2026-12345",
+      "created_at": "2026-01-01T00:00:00Z",
+      "updated_at": null,
+      "cvss_score": 9.8,
+      "vul_name": "示例漏洞",
+      "is_kev": true,
+      "is_poc": false,
+      "severity": "critical"
+    }]
+  }
+}
 ```
