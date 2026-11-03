@@ -1,15 +1,35 @@
 import {
   HOST_ASSET_DETAIL_API,
+  HOST_ASSET_EXPORT_API,
   HOST_ASSET_LIST_API,
   HOST_ASSET_MANUAL_NOTE_API
 } from '../constants/api'
 import { requestJson } from '../utils/http'
+import { downloadXlsx } from './downloadXlsx'
 
 export async function getHostAssetList(params = {}, signal) {
+  const query = buildHostAssetQueryParams(params).toString()
+  const requestUrl = query ? `${HOST_ASSET_LIST_API}?${query}` : HOST_ASSET_LIST_API
+
+  return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function downloadHostAssetExport(params = {}, signal) {
+  const query = buildHostAssetQueryParams(params, false).toString()
+  const requestUrl = query ? `${HOST_ASSET_EXPORT_API}?${query}` : HOST_ASSET_EXPORT_API
+  await downloadXlsx(requestUrl, 'host-assets', signal)
+}
+
+function buildHostAssetQueryParams(params, includePagination = true) {
   const searchParams = new URLSearchParams()
 
-  appendQueryParam(searchParams, 'page', params.page)
-  appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  if (includePagination) {
+    appendQueryParam(searchParams, 'page', params.page)
+    appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  }
   appendQueryParam(searchParams, 'keyword', params.keyword)
   appendQueryParam(searchParams, 'os_type', params.os_type ?? params.osType)
   appendQueryParam(searchParams, 'region', params.region)
@@ -17,13 +37,7 @@ export async function getHostAssetList(params = {}, signal) {
   appendQueryParam(searchParams, 'has_vulnerability', params.has_vulnerability ?? params.hasVulnerability)
   appendQueryParam(searchParams, 'is_alive', params.is_alive ?? params.isAlive)
 
-  const query = searchParams.toString()
-  const requestUrl = query ? `${HOST_ASSET_LIST_API}?${query}` : HOST_ASSET_LIST_API
-
-  return requestJson(requestUrl, {
-    method: 'GET',
-    signal
-  })
+  return searchParams
 }
 
 export async function getHostAssetDetail(ipAddress, signal) {

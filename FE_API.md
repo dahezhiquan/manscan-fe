@@ -812,6 +812,16 @@
   - 列表资产地址优先展示 `asset_endpoint`；缺失时兼容回退到历史字段 `asset_domain` 和 `asset_host`，`asset_host` 仍用于 Host 筛选和资产信息补充
   - `asset_endpoint`、`asset_host`、`template_id`、`latest_scan_task_name`、`last_found_at` 缺失时会显示 `--`
 
+### 17.1 导出漏洞筛选结果
+
+- 用途：`/vulnerabilities` 漏洞查询页“导出 Excel”按钮下载当前筛选条件匹配的全部漏洞
+- 请求方式：`GET`
+- 路径：`/api/v1/vulnerabilities/export`
+- 请求参数：与第 17 节列表接口使用同一组已生效筛选条件：`keyword`、`asset_host`、`status`、`tags`、`severity`、`latest_scan_task_name`、`protocol`；多选值以重复同名 query 参数传递。前端不发送 `page`、`page_size`，导出范围不受当前页和每页数量限制
+- 返回结构：成功时返回 XLSX 二进制附件，不使用 JSON 封装；文件名为 `vulnerabilities-YYYYMMDD-HHMMSS.xlsx`。`vulnerabilities` 工作表包含列表字段与完整详情字段，排除主键 `id`；超长字段在 `large_fields` 工作表按段保存，空结果仍返回表头
+- 异常分支：生成失败时后端返回 `{ code, message, data }` JSON（`50001`）；前端显示错误提示并允许再次导出。HTTP `401` 或业务码 `40101` 触发登录过期处理；页面关闭时中止未完成的下载请求
+- 联调注意事项：请求携带现有登录令牌；点击前提交仍处于输入防抖期的筛选条件；导出按钮在请求期间禁用并显示“导出中...”。文件可能含请求、响应和 Payload 中的敏感内容，前端只触发浏览器下载，不写入日志或持久化缓存
+
 ### 18. 更新漏洞状态
 
 - 用途：`/vulnerabilities/:id` 漏洞详情页修改“漏洞状态”
@@ -1045,6 +1055,16 @@
   - 后端 handler 已接收 `title`、`risk_level`、`has_vulnerability`、`has_component`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
 
+### 25.1 导出域名资产清单
+
+- 用途：`/assets/domains` 页面下载当前筛选条件匹配的全部域名资产
+- 请求方式：`GET`
+- 路径：`/api/v1/domain-assets/export`
+- 请求参数：沿用第 25 节列表请求中的 `keyword`、`title`、`region`、`risk_level`、`has_vulnerability`、`has_component`；导出请求不发送 `page`、`page_size`，结果不受当前分页限制。接口还支持 `owner`、`asset_address`、`is_alive`，当前页面没有对应筛选控件，因此不会发送
+- 返回结构：成功时返回 XLSX 二进制附件，文件名 `domain-assets-YYYYMMDD-HHMMSS.xlsx`；`domain_assets` 工作表包含域名资产列表及完整详情字段，不含主键 `id`；超长字段分段写入 `large_fields`，空结果仍有表头
+- 异常分支：布尔筛选非法返回 `40001`，文件生成失败返回 `50001`，失败响应为 `{ code, message, data }` JSON；前端显示错误并允许重试。HTTP `401` 或业务码 `40101` 触发登录过期处理
+- 联调注意事项：请求携带登录令牌，搜索框中尚未防抖提交的关键字会在点击时立即应用；下载期间按钮禁用，页面卸载时中止请求；文件可能包含请求和响应原文，前端不写入日志或持久化缓存
+
 ### 26. 获取域名资产详情
 
 - 用途：`/assets/domains/:domain` 域名资产详情页加载指定域名资产的基础信息、服务资产、标题历史和请求/响应证据
@@ -1200,6 +1220,16 @@
   - 主机清单行点击后在新标签页打开 `/assets/hosts/${encodeURIComponent(ip_address)}`，支持键盘 `Enter` 和空格进入详情
   - 后端 handler 已接收 `keyword`、`os_type`、`region`、`risk_level`，前端筛选参数与后端读取字段保持一致
   - `pageSize`、`totalPages` 若后端字段命名变为 `page_size`、`total_pages`，前端也兼容
+
+### 27.1 导出主机资产清单
+
+- 用途：`/assets/hosts` 页面下载当前筛选条件匹配的全部主机资产
+- 请求方式：`GET`
+- 路径：`/api/v1/host-assets/export`
+- 请求参数：沿用第 27 节列表请求中的 `keyword`、`os_type`、`region`、`risk_level`；导出请求不发送 `page`、`page_size`，结果不受当前分页限制。接口还支持 `owner`、`asset_address`、`has_vulnerability`、`has_port`、`is_alive`，当前页面没有对应筛选控件，因此不会发送
+- 返回结构：成功时返回 XLSX 二进制附件，文件名 `host-assets-YYYYMMDD-HHMMSS.xlsx`；`host_assets` 工作表包含主机资产列表及完整详情字段，不含主键 `id`；超长字段分段写入 `large_fields`，空结果仍有表头
+- 异常分支：布尔筛选非法返回 `40001`，文件生成失败返回 `50001`，失败响应为 `{ code, message, data }` JSON；前端显示错误并允许重试。HTTP `401` 或业务码 `40101` 触发登录过期处理
+- 联调注意事项：请求携带登录令牌，搜索框中尚未防抖提交的关键字会在点击时立即应用；下载期间按钮禁用，页面卸载时中止请求；文件可能包含端口详情，前端不写入日志或持久化缓存
 
 ### 28. 获取主机资产详情
 

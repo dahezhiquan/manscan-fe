@@ -973,6 +973,10 @@
   transform: none;
 }
 
+.vulnerabilities-export-button {
+  gap: 6px;
+}
+
 .vulnerabilities-tag-menu-search {
   padding-bottom: 10px;
 }

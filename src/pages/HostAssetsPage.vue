@@ -64,15 +64,30 @@
                   </span>
                 </button>
 
-                <button class="domain-assets-add-filter" type="button" @click="openFilterDialog()">
-                  <span class="domain-assets-add-filter-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
-                      <path d="M12 5v14" />
-                      <path d="M5 12h14" />
+                <div class="domain-assets-filter-actions">
+                  <button class="domain-assets-add-filter" type="button" @click="openFilterDialog()">
+                    <span class="domain-assets-add-filter-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                        <path d="M12 5v14" />
+                        <path d="M5 12h14" />
+                      </svg>
+                    </span>
+                    <span>添加筛选条件</span>
+                  </button>
+                  <button
+                    class="domain-assets-export-button"
+                    type="button"
+                    :disabled="isExporting"
+                    :aria-busy="isExporting ? 'true' : 'false'"
+                    @click="handleExport"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+                      <path d="M4 17v3h16v-3" />
                     </svg>
-                  </span>
-                  <span>添加筛选条件</span>
-                </button>
+                    {{ isExporting ? '导出中...' : '导出' }}
+                  </button>
+                </div>
 
                 <button
                   v-if="hasFilters"
@@ -97,6 +112,14 @@
                 <p>{{ pageError }}</p>
               </div>
               <button type="button" @click="handleRefresh">重试</button>
+            </div>
+
+            <div v-if="exportError" class="domain-assets-alert" role="alert">
+              <div>
+                <strong>主机资产导出失败</strong>
+                <p>{{ exportError }}</p>
+              </div>
+              <button type="button" @click="exportError = ''">关闭</button>
             </div>
 
             <section class="domain-assets-table-card host-assets-table-card">
@@ -351,7 +374,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { getHostAssetList } from '../api/host-assets'
+import { downloadHostAssetExport, getHostAssetList } from '../api/host-assets'
 import AppShell from '../components/layout/AppShell.vue'
 import {
   DOMAIN_ASSET_LIST_PAGE_SIZE_OPTIONS,
@@ -412,8 +435,11 @@ const isPageSizeMenuOpen = ref(false)
 const pageError = ref('')
 const isLoading = ref(true)
 const isRefreshing = ref(false)
+const isExporting = ref(false)
+const exportError = ref('')
 
 let fetchController = null
+let exportController = null
 let keywordTimer = null
 let currentRequestId = 0
 let isSyncingKeyword = false
@@ -646,6 +672,36 @@ function handleRefresh() {
   void loadHostAssets({ forceLoading: !hasData.value })
 }
 
+async function handleExport() {
+  if (isExporting.value) {
+    return
+  }
+
+  window.clearTimeout(keywordTimer)
+  const keyword = keywordInput.value.trim()
+  if (keyword !== appliedKeyword.value) {
+    appliedKeyword.value = keyword
+    currentPage.value = 1
+    void loadHostAssets()
+  }
+
+  const controller = new AbortController()
+  exportController = controller
+  isExporting.value = true
+  exportError.value = ''
+
+  try {
+    await downloadHostAssetExport(buildHostAssetListParams(), controller.signal)
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      exportError.value = error instanceof Error ? error.message : '导出主机资产失败，请稍后重试。'
+    }
+  } finally {
+    isExporting.value = false
+    exportController = null
+  }
+}
+
 function stopRequest() {
   fetchController?.abort()
   fetchController = null
@@ -719,6 +775,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
   window.clearTimeout(keywordTimer)
+  exportController?.abort()
   stopRequest()
 })
 </script>

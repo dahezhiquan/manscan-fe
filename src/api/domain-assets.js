@@ -1,17 +1,37 @@
 import {
   DOMAIN_ASSET_DETAIL_API,
+  DOMAIN_ASSET_EXPORT_API,
   DOMAIN_ASSET_LATEST_SCREENSHOT_API,
   DOMAIN_ASSET_LIST_API,
   DOMAIN_ASSET_MANUAL_NOTE_API,
   DOMAIN_ASSET_SCREENSHOTS_API
 } from '../constants/api'
 import { requestJson } from '../utils/http'
+import { downloadXlsx } from './downloadXlsx'
 
 export async function getDomainAssetList(params = {}, signal) {
+  const query = buildDomainAssetQueryParams(params).toString()
+  const requestUrl = query ? `${DOMAIN_ASSET_LIST_API}?${query}` : DOMAIN_ASSET_LIST_API
+
+  return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function downloadDomainAssetExport(params = {}, signal) {
+  const query = buildDomainAssetQueryParams(params, false).toString()
+  const requestUrl = query ? `${DOMAIN_ASSET_EXPORT_API}?${query}` : DOMAIN_ASSET_EXPORT_API
+  await downloadXlsx(requestUrl, 'domain-assets', signal)
+}
+
+function buildDomainAssetQueryParams(params, includePagination = true) {
   const searchParams = new URLSearchParams()
 
-  appendQueryParam(searchParams, 'page', params.page)
-  appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  if (includePagination) {
+    appendQueryParam(searchParams, 'page', params.page)
+    appendQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  }
   appendQueryParam(searchParams, 'keyword', params.keyword)
   appendQueryParam(searchParams, 'title', params.title)
   appendQueryParam(searchParams, 'region', params.region)
@@ -20,13 +40,7 @@ export async function getDomainAssetList(params = {}, signal) {
   appendQueryParam(searchParams, 'has_component', params.has_component ?? params.hasComponent)
   appendQueryParam(searchParams, 'is_alive', params.is_alive ?? params.isAlive)
 
-  const query = searchParams.toString()
-  const requestUrl = query ? `${DOMAIN_ASSET_LIST_API}?${query}` : DOMAIN_ASSET_LIST_API
-
-  return requestJson(requestUrl, {
-    method: 'GET',
-    signal
-  })
+  return searchParams
 }
 
 export async function getDomainAssetDetail(domain, signal) {

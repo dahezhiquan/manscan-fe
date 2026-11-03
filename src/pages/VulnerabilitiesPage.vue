@@ -380,8 +380,9 @@
           </svg>
         </button>
 
-        <div v-if="tableRows.length" class="vulnerabilities-selection-tools">
+        <div class="vulnerabilities-selection-tools">
           <button
+            v-if="tableRows.length"
             class="vulnerabilities-selection-tool"
             type="button"
             :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isCurrentPageFullySelected"
@@ -390,6 +391,7 @@
             选中当前页
           </button>
           <button
+            v-if="tableRows.length"
             class="vulnerabilities-selection-tool"
             type="button"
             :disabled="isLoading || isRefreshing || isBatchOperationSubmitting || isSelectingAll || total === selectedVulnerabilityCount"
@@ -413,6 +415,19 @@
               <path d="M7.5 5.5h6.9a2.6 2.6 0 0 1 1.84.76l2.5 2.5a2.6 2.6 0 0 1 0 3.68l-2.5 2.5a2.6 2.6 0 0 1-1.84.76H7.5a2.5 2.5 0 0 1-2.5-2.5V8a2.5 2.5 0 0 1 2.5-2.5Z" />
             </svg>
           </button>
+          <button
+            class="vulnerabilities-selection-tool vulnerabilities-export-button"
+            type="button"
+            :disabled="isExporting"
+            :aria-busy="isExporting ? 'true' : 'false'"
+            @click="handleExport"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+              <path d="M4 17v3h16v-3" />
+            </svg>
+            {{ isExporting ? '导出中...' : '导出' }}
+          </button>
         </div>
 
       </section>
@@ -425,6 +440,11 @@
       <div v-if="selectionError" class="vulnerabilities-page-notice is-error" aria-live="polite">
         <span>{{ selectionError }}</span>
         <button type="button" @click="clearSelectionNotice">关闭</button>
+      </div>
+
+      <div v-if="exportError" class="vulnerabilities-page-notice is-error" aria-live="polite">
+        <span>{{ exportError }}</span>
+        <button type="button" @click="exportError = ''">关闭</button>
       </div>
 
       <section class="vulnerabilities-list-card">
@@ -755,6 +775,7 @@ import { getScanTaskNameOptions } from '../api/scans'
 import { getTemplateProtocols, getTemplateTags } from '../api/templates'
 import {
   deleteVulnerabilities,
+  downloadVulnerabilityExport,
   getVulnerabilityList,
   updateVulnerabilityStatuses
 } from '../api/vulnerabilities'
@@ -809,6 +830,8 @@ const tagOptions = ref(VULNERABILITY_TAG_OPTIONS)
 const selectedVulnerabilityIds = ref([])
 const isSelectingAll = ref(false)
 const selectionError = ref('')
+const isExporting = ref(false)
+const exportError = ref('')
 const isBulkActionMenuOpen = ref(false)
 const isBatchStatusDialogOpen = ref(false)
 const batchStatusDialogRef = ref(null)
@@ -832,6 +855,7 @@ let protocolOptionsController = null
 let tagOptionsController = null
 let scanTaskOptionsController = null
 let selectAllController = null
+let exportController = null
 let batchStatusController = null
 let batchDeleteController = null
 let currentRequestId = 0
@@ -1408,6 +1432,32 @@ function handleRefresh() {
   void loadVulnerabilities({ forceLoading: !hasData.value })
 }
 
+async function handleExport() {
+  if (isExporting.value) {
+    return
+  }
+
+  window.clearTimeout(filterTimer)
+  commitFilters()
+  exportController = new AbortController()
+  isExporting.value = true
+  exportError.value = ''
+
+  try {
+    await downloadVulnerabilityExport(
+      buildVulnerabilityListParams(appliedFilters.value, currentPage.value, pageSize.value),
+      exportController.signal
+    )
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      exportError.value = error instanceof Error ? error.message : '导出漏洞失败，请稍后重试。'
+    }
+  } finally {
+    isExporting.value = false
+    exportController = null
+  }
+}
+
 function handlePageSizeChange() {
   currentPage.value = 1
   void loadVulnerabilities()
@@ -1837,6 +1887,7 @@ onBeforeUnmount(() => {
   tagOptionsController?.abort()
   scanTaskOptionsController?.abort()
   selectAllController?.abort()
+  exportController?.abort()
   batchStatusController?.abort()
   batchDeleteController?.abort()
   stopRequest()

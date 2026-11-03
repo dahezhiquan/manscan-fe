@@ -1652,6 +1652,35 @@ curl "http://127.0.0.1:8686/api/v1/vulnerabilities?page=1&page_size=20&keyword=s
   - 翻页、修改每页数量、修改筛选条件时重新请求列表；筛选条件变化后将 `page` 重置为 `1`。
   - 严重级别建议按 `critical`、`high`、`medium`、`low`、`info`、`unknown` 做固定选项；状态建议按 `unreviewed`、`confirmed`、`ticketed`、`fixed`、`false_positive`、`ignored` 做固定选项。
 
+## 18.1 导出漏洞筛选结果
+
+- 请求方法和路径：`GET /api/v1/vulnerabilities/export`
+- 请求参数：与列表接口使用相同的筛选语义，均为可选。多值参数支持逗号分隔和重复传入；`page`、`page_size` 可随列表请求传入，但导出始终包含全部筛选结果，不受分页限制。
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `keyword` | `string` | 否 | 漏洞名称或模板 ID 模糊搜索 |
+| `asset_host` | `string` / `string[]` | 否 | 资产 Host 模糊匹配 |
+| `status` | `string` / `string[]` | 否 | 漏洞状态精确匹配 |
+| `tag` / `tags` | `string` / `string[]` | 否 | 漏洞标签匹配 |
+| `severity` / `level` | `string` / `string[]` | 否 | 严重级别精确匹配 |
+| `template_id` | `string` / `string[]` | 否 | 模板 ID 模糊匹配 |
+| `vulnerability_name` | `string` / `string[]` | 否 | 漏洞名称模糊匹配 |
+| `latest_scan_task_name` | `string` / `string[]` | 否 | 最近扫描任务名称模糊匹配 |
+| `protocol` | `string` / `string[]` | 否 | 协议类型精确匹配 |
+| `page` / `page_size` | `int` | 否 | 接收但不影响导出范围 |
+
+- 响应格式：成功时返回 `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` 附件，文件名为 `vulnerabilities-YYYYMMDD-HHMMSS.xlsx`，不使用 JSON 响应封装。`vulnerabilities` 工作表每条漏洞一行，列为 `name`、`severity`、`template_id`、`asset_path`、`asset_endpoint`、`asset_host`、`status`、`tags`、`latest_scan_task_name`、`protocol`、`last_found_at`、`latest_scan_task_id`、`first_found_at`、`fixed_at`、`asset_port`、`description`、`impact`、`cvss_score`、`vendor`、`product`、`remediation`、`reference_links`、`extracted-results`、`payload`、`detail`、`vuln_fingerprint`。`name` 即漏洞名称，导出不再重复提供 `vulnerability_name`；仅排除漏洞主键 `id`。数组和对象以 JSON 文本保存，时间为 RFC3339 格式，空值留空。顺序与列表相同。
+- 工作表使用固定表头、交替底色和自动换行；主表行高 48 磅，长字段表行高 84 磅，列宽按内容类型设置。
+- 超过单元格长度限制的内容在主表显示 `[see large_fields]`，完整内容分段写入 `large_fields` 工作表；该表的 `row` 指向主表行号，`field` 为字段名，按 `part` 升序拼接 `content` 即为原文。空结果仍返回带表头的文件。
+- 文件包含原始漏洞详情，可能含请求、响应、Payload 中的敏感数据；此接口使用与漏洞列表相同的登录认证。前端应复用当前筛选参数请求该路径，并按二进制文件下载。
+- 错误码说明：`50001` 表示创建文件、查询或生成 XLSX 失败；失败响应仍使用 `{ "code", "message", "data" }` JSON 格式。
+- 使用示例：
+
+```bash
+curl -o vulnerabilities.xlsx "http://127.0.0.1:8686/api/v1/vulnerabilities/export?status=unreviewed&severity=high&tag=cve"
+```
+
 ## 19. 更新漏洞状态
 
 - 请求方法和路径：`PATCH /api/v1/vulnerabilities/:id/status`
@@ -2326,6 +2355,33 @@ curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
 curl "http://127.0.0.1:8686/api/v1/domain-assets?page=1&page_size=10&keyword=example&title=Portal&region=internal&risk_level=high&has_vulnerability=true&has_component=true"
 ```
 
+## 31.1 导出域名资产清单
+
+- 请求方法和路径：`GET /api/v1/domain-assets/export`
+- 请求参数：与域名资产列表使用同一筛选语义。所有参数均可选；`page`、`page_size` 可随列表请求传入，但不限制导出范围。
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `keyword` | `string` | 否 | 域名或站点标题模糊搜索 |
+| `owner` | `string` | 否 | 负责人模糊筛选 |
+| `title` | `string` | 否 | 站点标题模糊筛选 |
+| `region` | `string` | 否 | 区域模糊筛选 |
+| `asset_address` | `string` | 否 | 域名地址模糊筛选 |
+| `risk_level` | `string` / `string[]` | 否 | 最高风险等级筛选，支持逗号分隔或重复参数 |
+| `has_vulnerability` | `bool` | 否 | 是否存在漏洞 |
+| `has_component` | `bool` | 否 | 是否存在存活组件 |
+| `is_alive` | `bool` | 否 | 是否存活 |
+| `page` / `page_size` | `int` | 否 | 接收但不影响导出范围 |
+
+- 响应格式：成功返回 XLSX 附件，`Content-Type` 为 `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`，文件名为 `domain-assets-YYYYMMDD-HHMMSS.xlsx`。`domain_assets` 工作表每条匹配资产一行，按列表顺序排列，列为 `domain`、`owner`、`title`、`first_alive_at`、`last_alive_at`、`region`、`risk_level`、`has_form`、`has_upload`、`has_admin`、`has_uc_login`、`has_baidu_login`、`screenshot_path`、`manual_note`、`http_status_code`、`request`、`response`、`is_alive`、`vulnerability_count`、`critical_count`、`high_count`、`medium_count`、`low_count`、`component_count`、`service_assets`、`title_histories`。`domain` 即列表中的 `asset_address`，不重复导出；不包含主键 `id`。
+- `service_assets` 和 `title_histories` 包含详情接口对应的完整数组，保存为 JSON 文本。统计列和 `risk_level` 使用列表接口口径；可空字段留空，时间为 RFC3339 文本。工作表沿用漏洞导出的列宽、行高、冻结首行、交替底色和长字段分段规则；超长内容存入 `large_fields` 工作表。无匹配结果时仍返回带表头的文件。
+- 错误码说明：`40001` 表示布尔筛选值非法；`50001` 表示创建文件、查询或生成 XLSX 失败，错误响应使用 `{ "code", "message", "data" }` JSON 格式。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o domain-assets.xlsx "http://127.0.0.1:8686/api/v1/domain-assets/export?owner=team&risk_level=high&has_component=true"
+```
+
 ## 32. 获取域名资产详情
 
 - 请求方法和路径：`GET /api/v1/domain-assets/detail`
@@ -2525,6 +2581,33 @@ curl -X PATCH "http://127.0.0.1:8686/api/v1/domain-assets/manual-note" \
 
 ```bash
 curl "http://127.0.0.1:8686/api/v1/host-assets?page=1&page_size=10&keyword=10.72&os_type=linux&region=生产&risk_level=critical&has_vulnerability=true&has_port=true"
+```
+
+## 34.1 导出主机资产清单
+
+- 请求方法和路径：`GET /api/v1/host-assets/export`
+- 请求参数：与主机资产列表使用同一筛选语义。所有参数均可选；`page`、`page_size` 可随列表请求传入，但不限制导出范围。
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `keyword` | `string` | 否 | IP 地址模糊搜索 |
+| `owner` | `string` | 否 | 负责人模糊筛选 |
+| `os_type` | `string` | 否 | 操作系统类型模糊筛选 |
+| `region` | `string` | 否 | 区域模糊筛选 |
+| `asset_address` | `string` | 否 | IP 地址模糊筛选 |
+| `risk_level` | `string` / `string[]` | 否 | 最高风险等级筛选，支持逗号分隔或重复参数 |
+| `has_vulnerability` | `bool` | 否 | 是否存在漏洞 |
+| `has_port` | `bool` | 否 | 是否存在存活端口 |
+| `is_alive` | `bool` | 否 | 是否存活 |
+| `page` / `page_size` | `int` | 否 | 接收但不影响导出范围 |
+
+- 响应格式：成功返回 XLSX 附件，`Content-Type` 为 `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`，文件名为 `host-assets-YYYYMMDD-HHMMSS.xlsx`。`host_assets` 工作表每条匹配资产一行，按列表顺序排列，列为 `ip_address`、`region`、`owner`、`os_type`、`os_version`、`scan_created_at`、`last_alive_at`、`manual_note`、`is_alive`、`related_domains`、`risk_level`、`vulnerability_count`、`critical_count`、`high_count`、`medium_count`、`low_count`、`port_count`、`ports`。`ip_address` 即列表中的 `asset_address`，不重复导出；不包含主键 `id`。
+- `ports` 包含详情接口对应的完整端口数组，包括非存活端口，保存为 JSON 文本；`port_count` 只统计存活端口。统计列和 `risk_level` 使用列表接口口径；可空字段留空，时间为 RFC3339 文本。工作表沿用漏洞导出的列宽、行高、冻结首行、交替底色和长字段分段规则；超长内容存入 `large_fields` 工作表。无匹配结果时仍返回带表头的文件。
+- 错误码说明：`40001` 表示布尔筛选值非法；`50001` 表示创建文件、查询或生成 XLSX 失败，错误响应使用 `{ "code", "message", "data" }` JSON 格式。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o host-assets.xlsx "http://127.0.0.1:8686/api/v1/host-assets/export?os_type=linux&has_port=true&risk_level=critical"
 ```
 
 ## 35. 获取主机资产详情

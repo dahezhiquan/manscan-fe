@@ -1,16 +1,63 @@
 import {
   VULNERABILITY_BATCH_STATUS_API,
+  VULNERABILITY_EXPORT_API,
   VULNERABILITY_LIST_API,
   buildVulnerabilityDetailApi,
   buildVulnerabilityStatusApi
 } from '../constants/api'
-import { requestJson } from '../utils/http'
+import { HttpRequestError, createAuthorizedRequestOptions, requestJson } from '../utils/http'
+import { notifyAuthSessionExpired } from '../utils/authSession'
 
 export async function getVulnerabilityList(params = {}, signal) {
+  const searchParams = buildVulnerabilityQueryParams(params)
+  const query = searchParams.toString()
+  const requestUrl = query ? `${VULNERABILITY_LIST_API}?${query}` : VULNERABILITY_LIST_API
+
+  return requestJson(requestUrl, {
+    method: 'GET',
+    signal
+  })
+}
+
+export async function downloadVulnerabilityExport(params = {}, signal) {
+  const query = buildVulnerabilityQueryParams(params, false).toString()
+  const requestUrl = query ? `${VULNERABILITY_EXPORT_API}?${query}` : VULNERABILITY_EXPORT_API
+  const response = await fetch(requestUrl, createAuthorizedRequestOptions({ method: 'GET', signal }))
+  const contentType = response.headers.get('content-type') || ''
+
+  if (!response.ok || !contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+    const payload = contentType.includes('json') ? await response.json().catch(() => null) : null
+    if (response.status === 401 || Number(payload?.code) === 40101) {
+      notifyAuthSessionExpired()
+    }
+
+    throw new HttpRequestError(
+      payload?.message || (response.ok ? '导出响应格式异常，请稍后重试。' : `导出漏洞失败：${response.status}`),
+      { status: response.status, code: payload?.code, payload }
+    )
+  }
+
+  const blob = await response.blob()
+  const filename = response.headers.get('content-disposition')?.match(/vulnerabilities-\d{8}-\d{6}\.xlsx/)?.[0]
+    || 'vulnerabilities.xlsx'
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+}
+
+function buildVulnerabilityQueryParams(params, includePagination = true) {
   const searchParams = new URLSearchParams()
 
-  appendSingleQueryParam(searchParams, 'page', params.page)
-  appendSingleQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  if (includePagination) {
+    appendSingleQueryParam(searchParams, 'page', params.page)
+    appendSingleQueryParam(searchParams, 'page_size', params.page_size ?? params.pageSize)
+  }
   appendSingleQueryParam(searchParams, 'keyword', params.keyword)
   appendMultiQueryParam(searchParams, 'asset_host', params.asset_host ?? params.assetHost)
   appendMultiQueryParam(searchParams, 'status', params.status)
@@ -29,13 +76,7 @@ export async function getVulnerabilityList(params = {}, signal) {
   )
   appendMultiQueryParam(searchParams, 'protocol', params.protocol)
 
-  const query = searchParams.toString()
-  const requestUrl = query ? `${VULNERABILITY_LIST_API}?${query}` : VULNERABILITY_LIST_API
-
-  return requestJson(requestUrl, {
-    method: 'GET',
-    signal
-  })
+  return searchParams
 }
 
 export async function getVulnerabilityDetail(vulnerabilityId, signal) {
