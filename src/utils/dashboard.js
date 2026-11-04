@@ -1,4 +1,4 @@
-import { DASHBOARD_ASSET_RISKS, DASHBOARD_RANKING_LIMIT, DASHBOARD_SEVERITIES, DASHBOARD_STATUSES } from '../constants/dashboard'
+import { DASHBOARD_ASSET_RISKS, DASHBOARD_INTELLIGENCE_LIST_LIMIT, DASHBOARD_RANKING_LIMIT, DASHBOARD_SEVERITIES, DASHBOARD_STATUSES } from '../constants/dashboard'
 
 function requireCount(value) {
   const count = typeof value === 'number' || (typeof value === 'string' && value.trim()) ? Number(value) : NaN
@@ -14,6 +14,35 @@ function normalizeCounts(payload, keys) {
 
 export function formatDashboardCount(value) {
   return Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString('zh-CN') : '--'
+}
+
+export function normalizeVulnerabilityIntelligenceStats(payload) {
+  const last7Days = requireCount(payload?.last_7_days)
+  const last30Days = requireCount(payload?.last_30_days)
+  if (last7Days > last30Days) {
+    throw new Error('漏洞情报统计数量不一致，请重试')
+  }
+  return { last7Days, last30Days }
+}
+
+export function normalizeRecentVulnerabilityIntelligence(payload) {
+  if (!Array.isArray(payload?.items)) {
+    throw new Error('漏洞情报列表数据格式异常，请重试')
+  }
+  return payload.items.slice(0, DASHBOARD_INTELLIGENCE_LIST_LIMIT).map((record) => {
+    if (!record || typeof record !== 'object') {
+      throw new Error('漏洞情报记录格式异常，请重试')
+    }
+    const severity = String(record?.severity ?? '').trim().toLowerCase()
+    const vulnerabilityId = typeof record.vulnerability_id === 'string' ? record.vulnerability_id.trim() : ''
+    const name = typeof record.vul_name === 'string' ? record.vul_name.trim() : ''
+    return {
+      severity: severity === 'critical' ? '严重' : severity === 'high' ? '高危' : '未知',
+      severityTone: severity === 'critical' || severity === 'high' ? severity : 'unknown',
+      vulnerabilityId: vulnerabilityId || '--',
+      name: name || '未命名漏洞'
+    }
+  })
 }
 
 export function sumDashboardCounts(values) {

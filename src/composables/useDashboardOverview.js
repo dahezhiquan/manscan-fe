@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, reactive } from 'vue'
 import { getDashboardOverview, getDashboardAssetRisks, getDashboardHostRankings, getDashboardServiceFingerprints } from '../api/dashboard'
+import { getRecentVulnerabilityIntelligence, getVulnerabilityIntelligenceStats } from '../api/vulnerabilityIntelligence'
 import { DASHBOARD_REFRESH_TIMEOUT } from '../constants/dashboard'
 
 /** 每个区块独立加载、取消和重试，较慢或失败的接口不阻塞其他区块。 */
@@ -8,7 +9,9 @@ export function useDashboardOverview() {
     overview: getDashboardOverview,
     assetRisks: getDashboardAssetRisks,
     hostRankings: getDashboardHostRankings,
-    fingerprints: getDashboardServiceFingerprints
+    fingerprints: getDashboardServiceFingerprints,
+    intelligenceStats: getVulnerabilityIntelligenceStats,
+    intelligenceRecent: getRecentVulnerabilityIntelligence
   }
   const sections = reactive(Object.fromEntries(Object.keys(loaders).map((key) => [key, {
     data: null, status: 'idle', error: '', errorCode: null, updatedAt: null

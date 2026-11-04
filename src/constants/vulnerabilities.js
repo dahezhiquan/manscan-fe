@@ -13,8 +13,7 @@ export const VULNERABILITY_SEVERITY_OPTIONS = [
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
-  { value: 'info', label: 'Info' },
-  { value: 'unknown', label: 'Unknown' }
+  { value: 'info', label: 'Info' }
 ]
 
 export const VULNERABILITY_STATUS_OPTIONS = [

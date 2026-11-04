@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
+import { createSSRApp } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 import { createServer } from 'vite'
 
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
 const utils = await server.ssrLoadModule('/src/utils/dashboard.js')
 const api = await server.ssrLoadModule('/src/api/dashboard.js')
+const intelligenceApi = await server.ssrLoadModule('/src/api/vulnerabilityIntelligence.js')
 const { readEnumRouteFilter } = await server.ssrLoadModule('/src/utils/routeFilters.js')
 const { VULNERABILITY_STATUS_OPTIONS, VULNERABILITY_SEVERITY_OPTIONS } = await server.ssrLoadModule('/src/constants/vulnerabilities.js')
 const { DOMAIN_ASSET_RISK_OPTIONS } = await server.ssrLoadModule('/src/constants/domainAssets.js')
@@ -53,6 +56,93 @@ test('missing or invalid counts cannot masquerade as an empty database', () => {
   })
   zero.high_risk_open_ports = 0
   assert.equal(utils.normalizeDashboardOverview(zero).pending.other, 0)
+})
+
+test('intelligence stats distinguish valid zero counts from missing or inconsistent data', () => {
+  assert.deepEqual(utils.normalizeVulnerabilityIntelligenceStats({ last_7_days: 0, last_30_days: 0 }), { last7Days: 0, last30Days: 0 })
+  assert.deepEqual(utils.normalizeVulnerabilityIntelligenceStats({ last_7_days: 3, last_30_days: 7 }), { last7Days: 3, last30Days: 7 })
+  for (const payload of [null, {}, { last_7_days: null, last_30_days: 7 }, { last_7_days: -1, last_30_days: 7 }, { last_7_days: 8, last_30_days: 7 }]) {
+    assert.throws(() => utils.normalizeVulnerabilityIntelligenceStats(payload))
+  }
+})
+
+test('intelligence stats request uses authentication and forwards abort and errors', async () => {
+  const originalFetch = globalThis.fetch
+  const originalWindow = globalThis.window
+  const signal = new AbortController().signal
+  try {
+    globalThis.window = { localStorage: { getItem: key => key === 'manscan-auth-access-token' ? 'unit-test-token' : null } }
+    let request
+    globalThis.fetch = async (url, options) => {
+      request = { url, options }
+      return { ok: true, json: async () => ({ code: 0, data: { last_7_days: 3, last_30_days: 7 } }) }
+    }
+    assert.deepEqual(await intelligenceApi.getVulnerabilityIntelligenceStats(signal), { last7Days: 3, last30Days: 7 })
+    assert.equal(request.url, '/api/v1/vulnerability-intelligence-records/stats')
+    assert.equal(request.options.method, 'GET')
+    assert.equal(request.options.signal, signal)
+    assert.equal(request.options.headers.get('Authorization'), 'Bearer unit-test-token')
+    globalThis.fetch = async () => ({ ok: false, status: 500, json: async () => ({ code: 50001, message: '查询失败', data: null }) })
+    await assert.rejects(intelligenceApi.getVulnerabilityIntelligenceStats(signal), { status: 500, code: 50001 })
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalWindow === undefined) delete globalThis.window
+    else globalThis.window = originalWindow
+  }
+})
+
+test('recent intelligence requests ten high or critical records and preserves backend order', async () => {
+  const originalFetch = globalThis.fetch
+  const originalWindow = globalThis.window
+  const signal = new AbortController().signal
+  const items = [
+    { vulnerability_id: 'CVE-2026-2', vul_name: '近期漏洞', severity: 'HIGH', created_at: '2026-11-04T00:00:00Z' },
+    { vulnerability_id: 'CVE-2026-1', vul_name: '较早漏洞', severity: 'critical', created_at: '2026-11-03T00:00:00Z' }
+  ]
+  try {
+    globalThis.window = {
+      location: { origin: 'http://localhost' },
+      localStorage: { getItem: key => key === 'manscan-auth-access-token' ? 'unit-test-token' : null }
+    }
+    let request
+    globalThis.fetch = async (url, options) => {
+      request = { url, options }
+      return { ok: true, json: async () => ({ code: 0, data: { items } }) }
+    }
+    const records = await intelligenceApi.getRecentVulnerabilityIntelligence(signal)
+    const url = new URL(request.url)
+    assert.equal(url.pathname, '/api/v1/vulnerability-intelligence-records')
+    assert.equal(url.searchParams.get('page'), '1')
+    assert.equal(url.searchParams.get('page_size'), '10')
+    assert.equal(url.searchParams.get('severity'), 'critical,high')
+    assert.equal(request.options.signal, signal)
+    assert.equal(request.options.headers.get('Authorization'), 'Bearer unit-test-token')
+    assert.deepEqual(records.map(({ vulnerabilityId, severity, name }) => ({ vulnerabilityId, severity, name })), [
+      { vulnerabilityId: 'CVE-2026-2', severity: '高危', name: '近期漏洞' },
+      { vulnerabilityId: 'CVE-2026-1', severity: '严重', name: '较早漏洞' }
+    ])
+    assert.deepEqual(utils.normalizeRecentVulnerabilityIntelligence({ items: [] }), [])
+    assert.throws(() => utils.normalizeRecentVulnerabilityIntelligence({ items: null }))
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalWindow === undefined) delete globalThis.window
+    else globalThis.window = originalWindow
+  }
+})
+
+test('dashboard intelligence card links to a list with both severity filters selected', async () => {
+  const Card = (await server.ssrLoadModule('/src/components/dashboard/VulnIntelCard.vue')).default
+  const Panel = (await server.ssrLoadModule('/src/components/templates/VulnerabilityIntelligencePanel.vue')).default
+  const cardHtml = await renderToString(createSSRApp(Card, {
+    statsSection: { data: { last7Days: 3, last30Days: 7 }, status: 'success' },
+    recentSection: { data: [{ vulnerabilityId: 'CVE-2026-1', severity: '严重', severityTone: 'critical', name: '漏洞名称' }], status: 'success' }
+  }))
+  const panelHtml = await renderToString(createSSRApp(Panel, { routeSearch: '?severity=critical,high' }))
+  assert.doesNotMatch(cardHtml, /搜索漏洞情报/)
+  assert.match(cardHtml, /href="\/vulnerability-intelligence\?severity=critical,high"[^>]*target="_blank"/)
+  assert.match(cardHtml, /CVE-2026-1/)
+  assert.match(cardHtml, /漏洞名称/)
+  assert.match(panelHtml, /风险等级 严重、高危/)
 })
 
 test('inconsistent severity and status aggregates reject the complete overview', () => {

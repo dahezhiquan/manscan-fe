@@ -14,3 +14,5 @@ export const DASHBOARD_ASSET_RISKS = [
 export const DASHBOARD_STATUSES = VULNERABILITY_STATUS_OPTIONS.filter((item) => item.value)
 export const DASHBOARD_REFRESH_TIMEOUT = 15000
 export const DASHBOARD_RANKING_LIMIT = 10
+export const DASHBOARD_INTELLIGENCE_SEVERITIES = ['critical', 'high']
+export const DASHBOARD_INTELLIGENCE_LIST_LIMIT = 10

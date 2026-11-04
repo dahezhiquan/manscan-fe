@@ -6,7 +6,7 @@
   <component
     v-else
     :is="currentView"
-    v-bind="[ROUTE_PATHS.VULNERABILITIES, ROUTE_PATHS.HOST_ASSETS, ROUTE_PATHS.DOMAIN_ASSETS].includes(currentPath) ? { routeSearch: currentSearch } : {}"
+    v-bind="[ROUTE_PATHS.VULNERABILITIES, ROUTE_PATHS.HOST_ASSETS, ROUTE_PATHS.DOMAIN_ASSETS, ROUTE_PATHS.VULNERABILITY_INTELLIGENCE].includes(currentPath) ? { routeSearch: currentSearch } : {}"
     :navigate-to="navigateTo"
     :current-path="currentPath"
     :is-sidebar-collapsed="isSidebarCollapsed"

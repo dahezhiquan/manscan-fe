@@ -21,6 +21,7 @@ export const TEMPLATE_DETAIL_API = `${API_PREFIX}/templates`
 export const TEMPLATE_TAGS_API = `${API_PREFIX}/templates/options/tags`
 export const TEMPLATE_PROTOCOLS_API = `${API_PREFIX}/templates/options/protocols`
 export const VULNERABILITY_INTELLIGENCE_RECORDS_API = `${API_PREFIX}/vulnerability-intelligence-records`
+export const VULNERABILITY_INTELLIGENCE_STATS_API = `${VULNERABILITY_INTELLIGENCE_RECORDS_API}/stats`
 export function buildVulnerabilityIntelligenceDetailApi(vulnerabilityId) {
   return `${VULNERABILITY_INTELLIGENCE_RECORDS_API}/${encodeURIComponent(vulnerabilityId)}`
 }

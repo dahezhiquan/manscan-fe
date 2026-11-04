@@ -46,7 +46,7 @@
         </div>
         <div class="right-column">
           <RiskFocusCard :overview="sections.overview" :asset-risks="sections.assetRisks" :navigate-to="props.navigateTo" @retry="refreshSection" />
-          <VulnIntelCard :latest-detections="latestDetections" :vulnerability-detections="vulnerabilityDetections" />
+          <VulnIntelCard :stats-section="sections.intelligenceStats" :recent-section="sections.intelligenceRecent" @retry-stats="refreshSection('intelligenceStats')" @retry-recent="refreshSection('intelligenceRecent')" />
         </div>
       </section>
     </main>
@@ -64,7 +64,7 @@ import RiskFocusCard from '../components/dashboard/RiskFocusCard.vue'
 import VulnerabilityStatusCard from '../components/dashboard/VulnerabilityStatusCard.vue'
 import DashboardRankingsCard from '../components/dashboard/DashboardRankingsCard.vue'
 import VulnIntelCard from '../components/dashboard/VulnIntelCard.vue'
-import { footerNav, latestDetections, vulnerabilityDetections } from '../data/dashboard'
+import { footerNav } from '../data/dashboard'
 import { DASHBOARD_STATUSES } from '../constants/dashboard'
 import { useSidebarNavigation } from '../composables/useSidebarNavigation'
 import { useDashboardOverview } from '../composables/useDashboardOverview'
