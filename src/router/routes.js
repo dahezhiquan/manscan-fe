@@ -73,6 +73,10 @@ export function normalizePath(path) {
     return ROUTE_PATHS.VULNERABILITY_INTELLIGENCE
   }
 
+  if (/^\/vulnerability-intelligence\/[^/]+$/.test(path)) {
+    return path
+  }
+
   if (path === ROUTE_PATHS.DOMAIN_ASSETS) {
     return ROUTE_PATHS.DOMAIN_ASSETS
   }
@@ -176,6 +180,10 @@ export function resolveDocumentTitle(path) {
 
   if (path.startsWith('/scheduled-jobs')) {
     return 'ManScan - 定时任务'
+  }
+
+  if (path.startsWith('/vulnerability-intelligence/')) {
+    return 'ManScan - 漏洞情报详情'
   }
 
   if (path.startsWith('/vulnerability-intelligence')) {

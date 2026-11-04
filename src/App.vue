@@ -36,6 +36,7 @@ import TemplatesDashboardPage from './pages/TemplatesDashboardPage.vue'
 import VulnerabilityDetailPage from './pages/VulnerabilityDetailPage.vue'
 import VulnerabilitiesDashboardPage from './pages/VulnerabilitiesDashboardPage.vue'
 import VulnerabilityIntelligencePage from './pages/VulnerabilityIntelligencePage.vue'
+import VulnerabilityIntelligenceDetailPage from './pages/VulnerabilityIntelligenceDetailPage.vue'
 import { useAppRouter } from './composables/useAppRouter'
 import {
   applyThemeSettings,
@@ -216,6 +217,10 @@ const currentView = computed(() => {
 
   if (currentPath.value === '/vulnerability-intelligence') {
     return VulnerabilityIntelligencePage
+  }
+
+  if (currentPath.value.startsWith('/vulnerability-intelligence/')) {
+    return VulnerabilityIntelligenceDetailPage
   }
 
   if (currentPath.value.startsWith('/assets/domains/')) {

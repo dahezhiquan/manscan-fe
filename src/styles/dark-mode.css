@@ -2410,7 +2410,7 @@ html[data-theme='deep'][data-color-mode='dark'] .vulnerability-intelligence-sear
 }
 
 html[data-theme='deep'][data-color-mode='dark'] :is(
-  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-option,
+  .domain-assets-add-filter, .domain-assets-export-button, .domain-assets-clear-button, .domain-assets-filter-option,
   .domain-assets-value-option, .domain-assets-dialog-close, .domain-assets-dialog-button.is-secondary
 ) {
   border-color: var(--line-soft) !important;
@@ -2419,9 +2419,9 @@ html[data-theme='deep'][data-color-mode='dark'] :is(
 }
 
 html[data-theme='deep'][data-color-mode='dark'] :is(
-  .domain-assets-add-filter, .domain-assets-clear-button, .domain-assets-filter-option,
+  .domain-assets-add-filter, .domain-assets-export-button, .domain-assets-clear-button, .domain-assets-filter-option,
   .domain-assets-value-option, .domain-assets-dialog-close, .domain-assets-dialog-button:where(.is-secondary)
-):hover:where(:not(:disabled)) {
+):is(:hover, :focus-visible):where(:not(:disabled)) {
   border-color: var(--deep-accent) !important;
   background: var(--dark-surface-2) !important;
 }
@@ -3051,6 +3051,7 @@ html[data-color-mode='dark'] .scheduled-jobs-overlay {
 }
 
 html[data-color-mode='dark'] .vulnerability-intelligence-add-filter,
+html[data-color-mode='dark'] .domain-assets-export-button,
 html[data-color-mode='dark'] .domain-assets-clear-button,
 html[data-color-mode='dark'] .vulnerability-intelligence-page-size-trigger,
 html[data-color-mode='dark'] .vulnerability-intelligence-page-size-menu,
@@ -3060,6 +3061,12 @@ html[data-color-mode='dark'] .vulnerability-intelligence-pagination-arrow {
   background: var(--dark-surface-2) !important;
   color: var(--dark-text) !important;
   box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-export-button:where(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-3) !important;
+  color: var(--dark-text-strong) !important;
 }
 
 html[data-color-mode='dark'] .vulnerability-intelligence-filter-chip {
@@ -3140,4 +3147,77 @@ html[data-color-mode='dark'] .vulnerability-intelligence-dialog-button:not(.is-s
   border-color: var(--dark-border-strong) !important;
   background: var(--accent-blue) !important;
   color: #082f49 !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-entry {
+  border-color: var(--dark-border) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-entry-head strong {
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-field {
+  border-color: var(--dark-border) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-count,
+html[data-color-mode='dark'] .intelligence-detail-field dt,
+html[data-color-mode='dark'] .intelligence-detail-pagination > span {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-field dd {
+  color: var(--dark-text) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-field a {
+  color: #7dd3fc !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-neutral,
+html[data-color-mode='dark'] .intelligence-detail-badge.is-no,
+html[data-color-mode='dark'] .intelligence-detail-badge.is-unknown {
+  color: #cbd5e1 !important;
+  background: #334155 !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-source,
+html[data-color-mode='dark'] .intelligence-detail-badge.is-info {
+  color: #7dd3fc !important;
+  background: var(--dark-blue-soft) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-critical {
+  color: #fda4af !important;
+  background: rgba(190, 18, 60, 0.24) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-high {
+  color: #fdba74 !important;
+  background: rgba(194, 65, 12, 0.24) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-medium,
+html[data-color-mode='dark'] .intelligence-detail-badge.is-array {
+  color: #fcd34d !important;
+  background: rgba(161, 98, 7, 0.24) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-badge.is-low,
+html[data-color-mode='dark'] .intelligence-detail-badge.is-yes {
+  color: #86efac !important;
+  background: var(--dark-green-soft) !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-pagination button {
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  background: var(--dark-surface-2) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .intelligence-detail-pagination button:hover:not(:disabled) {
+  border-color: var(--accent-blue) !important;
+  background: var(--dark-blue-soft) !important;
 }

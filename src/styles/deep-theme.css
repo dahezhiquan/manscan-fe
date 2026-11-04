@@ -2030,6 +2030,38 @@ html[data-theme='deep'] .vulnerability-delete-dialog .template-detail-primary-bu
   background: #9f1239;
 }
 
+html[data-theme='deep'] .intelligence-detail-entry {
+  border-color: var(--line-soft);
+}
+
+html[data-theme='deep'] .intelligence-detail-entry-head strong {
+  color: var(--ink-strong);
+}
+
+html[data-theme='deep'] .intelligence-detail-badge.is-source {
+  color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+}
+
+html[data-theme='deep'] .intelligence-detail-badge.is-neutral,
+html[data-theme='deep'] .intelligence-detail-badge.is-no,
+html[data-theme='deep'] .intelligence-detail-badge.is-unknown {
+  color: var(--ink);
+  background: var(--paper-3);
+}
+
+html[data-theme='deep'] .intelligence-detail-pagination button {
+  border-color: var(--line-soft);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .intelligence-detail-pagination button:hover:not(:disabled) {
+  border-color: var(--deep-accent);
+  background: var(--deep-accent-soft);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-theme='deep'] *,
   html[data-theme='deep'] *::before,
