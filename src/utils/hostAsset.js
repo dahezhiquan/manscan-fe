@@ -97,6 +97,14 @@ export function normalizeHostAssetDetail(payload) {
     0
   )
   const ports = normalizeHostAssetPorts(firstDefined(rawDetail?.ports, rawDetail?.port_details, rawDetail?.portDetails))
+  const portNumbers = new Set()
+  const alivePortNumbers = new Set()
+  for (const port of ports) {
+    if (port.portNumber > 0) {
+      portNumbers.add(port.portNumber)
+      if (port.isAlive === true) alivePortNumbers.add(port.portNumber)
+    }
+  }
 
   return {
     ipAddress,
@@ -116,8 +124,8 @@ export function normalizeHostAssetDetail(payload) {
     vulnerabilityCount,
     vulnerabilityCountDisplay: formatCount(vulnerabilityCount),
     ports,
-    portCountDisplay: formatCount(ports.length),
-    alivePortCountDisplay: formatCount(ports.filter((port) => port.isAlive === true).length)
+    portCountDisplay: formatCount(portNumbers.size),
+    alivePortCountDisplay: formatCount(alivePortNumbers.size)
   }
 }
 

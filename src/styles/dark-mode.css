@@ -3221,3 +3221,104 @@ html[data-color-mode='dark'] .intelligence-detail-pagination button:hover:not(:d
   border-color: var(--accent-blue) !important;
   background: var(--dark-blue-soft) !important;
 }
+
+html[data-color-mode='dark'] .domain-assets-state-panel {
+  border-color: var(--dark-border) !important;
+  background: var(--dark-surface) !important;
+  box-shadow: var(--dark-shadow) !important;
+}
+
+html[data-color-mode='dark'] .domain-assets-state-panel.is-error {
+  border-color: rgba(248, 113, 113, 0.44) !important;
+  background: var(--dark-red-soft) !important;
+}
+
+html[data-theme='cartoon'][data-color-mode='dark'] .dark-button {
+  color: #1f1a17 !important;
+}
+
+html[data-color-mode='dark'] .asset-config-panel-kicker {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-blue-soft) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scan-task-detail-kicker {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-blue-soft) !important;
+  color: var(--dark-text-strong) !important;
+}
+
+html[data-color-mode='dark'] .asset-config-panel-head-chip {
+  border-color: rgba(134, 239, 172, 0.46) !important;
+  background: var(--dark-green-soft) !important;
+  color: #dcfce7 !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .scans-chip-tooltip a {
+  border-color: var(--dark-border-strong) !important;
+  background: var(--dark-surface-2) !important;
+}
+
+html[data-color-mode='dark'] .scans-chip-tooltip a:hover {
+  background: var(--dark-blue-soft) !important;
+}
+
+html[data-color-mode='dark'] .scan-create-checklist-link-icon {
+  background: var(--dark-surface-2) !important;
+  color: var(--dark-text-strong) !important;
+  box-shadow: none !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring-value span {
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring.cvss-tone-low {
+  --cvss-color: #93c5fd !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring.cvss-tone-medium {
+  --cvss-color: #fde047 !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring.cvss-tone-high {
+  --cvss-color: #fdba74 !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring.cvss-tone-critical {
+  --cvss-color: #fda4af !important;
+}
+
+html[data-color-mode='dark'] .template-score-ring:not(.cvss-tone-none) .template-score-ring-value strong {
+  color: var(--cvss-color) !important;
+}
+
+html[data-color-mode='dark'] .scheduled-run-status:is(.is-running, .is-queued) {
+  border-color: rgba(125, 211, 252, 0.44) !important;
+  background: var(--dark-blue-soft) !important;
+  color: #bae6fd !important;
+}
+
+html[data-color-mode='dark'] .scheduled-run-status.is-failed {
+  border-color: rgba(248, 113, 113, 0.44) !important;
+  background: var(--dark-red-soft) !important;
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .scheduled-run-status.is-skipped {
+  border-color: rgba(252, 211, 77, 0.44) !important;
+  background: var(--dark-amber-soft) !important;
+  color: #fde68a !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-inline-error,
+html[data-color-mode='dark'] .scheduled-jobs-error-copy {
+  color: #fecaca !important;
+}
+
+html[data-color-mode='dark'] .scheduled-jobs-state button {
+  color: #7dd3fc !important;
+}

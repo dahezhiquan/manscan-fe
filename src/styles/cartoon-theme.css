@@ -638,6 +638,10 @@
   color: var(--line);
 }
 
+.scan-create-step.is-active .scan-create-step-copy small {
+  color: var(--line);
+}
+
 .template-id-copy,
 .ghost-icon,
 .section-leading-icon,

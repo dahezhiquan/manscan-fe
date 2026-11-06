@@ -467,6 +467,15 @@ html[data-theme='deep'] :is(.scheduled-job-row:hover, .scheduled-job-row.active,
   transform: none;
 }
 
+html[data-theme='deep'] :is(.asset-config-panel-kicker, .scan-task-detail-kicker) {
+  border: 1px solid #c8deef;
+  border-radius: var(--radius-md);
+  background: var(--deep-accent-soft);
+  color: var(--deep-accent);
+  box-shadow: none;
+  font-weight: 600;
+}
+
 html[data-theme='deep'] .scheduled-runs-head {
   background: var(--surface-2);
 }

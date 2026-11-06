@@ -3,7 +3,7 @@
     <div class="dashboard-card-head"><div><h3>优先关注</h3><p class="dashboard-card-description">端口暴露与高风险资产</p></div></div>
     <DashboardDataNotice :states="[overview]" @retry="emit('retry', 'overview')" />
     <div class="dashboard-focus-value tone-high">{{ formatDashboardCount(overview.data?.highRiskOpenPorts) }}<span>个</span></div>
-    <p class="dashboard-card-description">高危开放端口 · 按存活端口记录计数</p>
+    <p class="dashboard-card-description">高危开放端口 · 同一主机同号端口只计一次</p>
     <div class="dashboard-focus-list">
       <button type="button" @click="navigateTo(highRiskVulnerabilitiesRoute)"><span>严重 / 高危未审核漏洞</span><strong>{{ formatDashboardCount(highRiskUnreviewed) }} ↗</strong></button>
     </div>

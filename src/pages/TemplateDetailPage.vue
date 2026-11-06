@@ -761,7 +761,7 @@ onBeforeUnmount(() => {
 
         <div class="template-detail-side-column">
           <article class="template-detail-card score-card">
-            <div class="template-score-ring" :style="detail.cvssRingStyle">
+            <div class="template-score-ring" :class="`cvss-tone-${detail.cvssTone}`" :style="detail.cvssRingStyle">
               <div class="template-score-ring-track"></div>
               <div class="template-score-ring-value">
                 <strong :class="{ 'is-empty': detail.isCvssUnavailable }">{{ detail.cvssScoreDisplay }}</strong>
