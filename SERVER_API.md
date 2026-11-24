@@ -1493,6 +1493,7 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
   - `direction=before` 用于向前翻旧日志，返回 `seq < offset` 的最近一页可见事件；当 `offset=0` 时返回当前尾部最近一页；`next_offset` 表示本页最早可见事件的 `seq`，下一次请求可直接作为 `offset` 继续翻更早日志。
   - 运行中任务也支持 `direction=before`，可用于浏览器刷新后从尾部向前回补历史日志。
   - `result` 类型事件可能包含 `tags`、`result_key`、`template_id`、`severity` 字段：`tags` 用于记录该命中结果的模板标签；`result_key` 为后端生成的不透明结构化去重键，前端只应作为稳定标识使用，不应解析其内部格式；`template_id` 和 `severity` 分别表示命中模板 ID 与严重级别。
+  - 目标命中 `exclude_targets` 禁扫规则时，会在任何前置探测前产生 `level=info`、`type=target_excluded` 的事件，`message` 包含被跳过的目标和首次命中的规则。被排除目标不参与扫描前 HTTP/Wappalyzer 探测、截图采集或主扫描；全部目标被排除时跳过执行并将实际插件数量设为 `0`。
   - 当任务开启 `matcher_status` 时，模板匹配失败会以 `level=info`、`type=match_failure` 输出为调试日志；这类事件不计入 `progress.matched`，不写入漏洞结果。
 
 - 错误码说明：
@@ -2335,12 +2336,15 @@ curl -X DELETE "http://127.0.0.1:8686/api/v1/asset-config-centers/1" \
 ```
 
 - 说明：
+  - 域名资产在扫描前 HTTP 探测完成后同步存活状态：成功取得响应的地址设为 `is_alive=true`，本次已检查但未取得响应的已有地址设为 `is_alive=false`；任务成功结束时不再重复同步域名存活状态。
+  - `first_alive_at` 记录首次探测存活的同步时间，已有值不覆盖；`last_alive_at` 记录最近一次探测存活的扫描前同步时间。探测不存活时保留两个时间字段的原值。
   - `request`、`response` 分别表示该域名资产最近一次探测保存的请求与响应原文；没有记录时返回空字符串。
   - `has_form`、`has_upload`、`has_admin`、`has_uc_login`、`has_baidu_login` 为可空布尔值；数据库值为 `NULL` 时接口返回 `null`，`false` 表示已确认不存在。
   - `vulnerability_count` 表示漏洞表中 `asset_endpoint` 等于当前域名资产 `domain` 的记录数量。
   - `critical_count`、`high_count`、`medium_count`、`low_count` 表示上述关联漏洞中各严重等级的数量，按漏洞表 `severity` 字段统计。
   - `risk_level` 表示当前资产的最高风险等级，按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
   - `component_count` 表示域名组件表中 `domain` 等于当前域名资产 `domain` 且 `is_alive = true` 的组件数量。
+  - 组件在扫描前被动指纹识别或后续指纹结果写入时更新 `last_found_at`；`first_found_at` 仅在首次发现时设置。单个目标完成主动指纹识别或自动模板映射的指纹识别后，立即将该地址本次未识别到的旧组件设为 `is_alive=false`，不改动其发现时间；未启用这两类识别时不执行旧组件失活检查。任务成功结束时不再重复同步组件或改写 `last_found_at`。
   - `title`、`region` 为模糊筛选；`risk_level=high` 仅返回最高风险等级为高危的资产，存在严重漏洞的资产会归入 `critical`。
   - 列表默认按最近存活时间和 ID 倒序排序。
   - 当前后端表结构没有 `organization`、`scan_task`、`business_system` 字段，因此这些前端筛选项不会作为服务端查询条件。
@@ -2440,7 +2444,9 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o domain-assets.xlsx "http://
 ```
 
 - 说明：
+  - `is_alive`、`first_alive_at`、`last_alive_at` 与域名资产清单采用相同的扫描前探测同步口径；任务结束时不再重写 `last_alive_at`。
   - `service_assets` 来自 `manscan_asset_domain_service_assets`，按当前域名精确匹配 `domain` 字段。
+  - `service_assets[].first_found_at` 仅记录首次发现时间；`last_found_at` 在扫描前被动识别或后续指纹结果写入时更新。新识别到的组件立即设为 `is_alive=true`；启用主动指纹识别或自动模板映射时，每个目标的指纹识别完成后，立即将该地址本次未识别到的旧组件设为 `is_alive=false`，但保留两个发现时间。未启用这两类识别时不执行旧组件失活检查；任务成功结束时不再重复同步或改写 `last_found_at`。
   - `service_assets[].app_version` 为可空字符串；未识别到版本时返回 `null`。
   - SSH 指纹的 `service_assets[].app_version` 包含软件名称和版本，例如 `OpenSSH 7.4`、`WeOnlyDo 2.4.3`。
   - `title_histories` 来自 `manscan_asset_domain_title_history`，按当前域名精确匹配 `domain` 字段。
@@ -2660,6 +2666,8 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o host-assets.xlsx "http://12
 
 - 说明：
   - `ports` 来自 `manscan_asset_host_port`，按当前主机精确匹配 `ip_address` 字段；同一 IP、协议、端口可按不同 `service_name` 返回多条记录。
+  - `ports[].port_created_at` 保留该 IP、端口和服务名首次写入的时间；当后续指纹确定此前空缺的 TCP/UDP 协议时，会将空协议记录合并到已确认协议记录，并保留较早的首次发现时间和已知版本。同一服务同时存在 TCP 与 UDP 时不推断空协议记录的归属。`ports[].last_alive_at` 在该组合实际被 HTTP 探测或指纹结果再次确认时更新。任务成功结束不再对端口表执行二次同步；关闭结果队列时尚未落库的实际指纹结果仍会按结果观察时间写入，不使用任务结束时间重写存活时间。
+  - 扫描前 HTTP 探测完成后，已检查但未取得响应的 IP 端口，其已有 HTTP 服务记录立即设为 `is_alive=false`。启用前置指纹识别或自动模板映射时，单个目标的指纹识别完成后，立即把该 IP 端口本次未识别到的旧服务设为 `is_alive=false`；已取得 HTTP 响应的端口保留 HTTP 服务存活。失活操作不改写两个时间字段，未启用这两类识别时不执行旧服务指纹失活检查。
   - SSH 指纹的 `ports[].app_version` 包含软件名称和版本，例如 `OpenSSH 7.4`、`WeOnlyDo 2.4.3`。
   - `ports[].is_high_risk_port` 为可空布尔值；数据库值为 `NULL` 时接口返回 `null`，`false` 表示已确认非高危端口。
   - `vulnerability_count` 表示漏洞表中 `asset_host` 等于当前主机 `ip_address` 的记录数量，但不统计 `status` 为 `fixed`、`false_positive`、`ignored` 的漏洞。
@@ -2839,7 +2847,7 @@ curl -G "http://127.0.0.1:8686/api/v1/domain-assets/screenshots" \
 
 ## 40. 定时任务
 
-定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器读取该文件并逐行查询 ProjectDiscovery VulnX API，更新五张漏洞情报表；`aliyun_avd_vulnerability.sync` 处理器通过阿里云高危漏洞列表筛选无 CVE 项、读取详情并生成 JSON 产物，数据库字段映射确认前不会写入漏洞情报表。未配置 `api_key_id` 时分别使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
+定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器获取最新完整 CVE 列表并只查询数据库缺失编号的 ProjectDiscovery VulnX 详情，新增五张漏洞情报表；`chaitin_vulnerability.sync` 与 `aliyun_avd_vulnerability.sync` 分别同步各自无 CVE 漏洞；`vulnerability_intelligence.incremental` 依次执行三个渠道并汇总进度。未配置 `api_key_id` 时按处理器使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
 
 ### 查询定时任务列表
 
@@ -2933,12 +2941,12 @@ curl -L -OJ \
 - 共享范围：限流状态保存在当前服务进程内，重启后清空；多个服务进程或实例之间不共享额度。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_cve_file_names.sql`，可重复执行，不会重复插入同一 `job_type`。
 
-### 内置任务：全量 VulnX 漏洞更新
+### 内置任务：VulnX 新增漏洞更新
 
 - `job_type`：`vulnx_vulnerability.sync`
-- 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`，每天凌晨 00:30 执行；应安排在 CVE 文件名同步（00:00）之后。
+- 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`，每天凌晨 00:30 执行；该任务会自行刷新 CVE 列表。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnx_vulnerability_sync.sql`，默认启用并使用环境变量 API Key；可在定时任务管理中关联 `api_key_id` 以启用按 Key 限流。脚本按 `job_type` 判断，可重复执行。
-- `config_json`：使用 `{}`；任务固定读取服务根目录下 `data/tmp/cve_data/cves.txt`，逐行去重并过滤非法 CVE 编号。
+- `config_json`：使用 `{}`；每次执行都从 GitHub `CVEProject/cvelistV5` 获取完整 CVE 列表（使用 `GITHUB_TOKEN` 环境变量），并原子更新服务根目录下 `data/tmp/cve_data/cves.txt`。列表完成后分批检查数据库中 `source=vulnx` 的现有编号，只对数据库缺失的 CVE 调用详情 API。已有 CVE 不重复请求或覆盖。
 - API Key：配置 `api_key_id` 时从第三方 API Key 服务读取并解密，按每次请求发送 `X-Api-Key`；未配置 `api_key_id` 时读取环境变量 `PDCP_API_KEY`。建议优先使用 `api_key_id`，以便配置每分钟限额。
 - 并发与限流：每次最多并行处理 8 个 CVE；配置 `api_key_id` 后，每次 CVE 请求（包括重试）都复用服务启动时创建的共享限流器，按该 Key 的 `rate_limit_per_minute` 放行。同一 Key 的任务和并发执行共享额度，限流等待支持取消和超时。使用 `PDCP_API_KEY` 环境变量时没有服务端配置的限额，也不启用服务端限流，仍受 ProjectDiscovery API 自身限流约束。
 - 更新范围：每个 CVE 查询 `https://api.projectdiscovery.io/v2/vulnerability/{CVE}`，在一个数据库事务中按 CVE 替换以下五张表的完整快照：
@@ -2971,6 +2979,15 @@ curl -L -OJ \
 - 数据库映射：在一个事务中按 `source=avd` 与 AVD 编号更新或新增 `manscan_vulnerability_intelligence_records`，并按漏洞编号和 URL 幂等写入参考链接到 `manscan_vulnerability_intelligence_articles`。records 写入 `category=non-cve`、标题、描述、解决建议、阿里云评分、披露时间到 `created_at`，severity 转为 `critical`/`high`/`medium`/`low`/`none`，`is_poc` 在利用情况或 EXP 成熟度为“EXP 已公开”或“POC 已公开”时为 1；`vulnerability_impact` 不写，`updated_at` 不由任务写入。articles 的 `source` 固定为 `avd`，`url` 为参考链接，`added_at` 不由任务写入。已有记录更新时保留现有 `updated_at`、`vulnerability_impact`；新增时间列由数据库默认值生成。
 - 不写入 `manscan_vulnerability_intelligence_components`、`manscan_vulnerability_intelligence_pocs` 和 `manscan_vulnerability_intelligence_shodan_exposures`。
 - 数据库升级：已有数据库执行 `docs/SQL/alter_manscan_vulnerability_intelligence_avd_timestamp_defaults.sql`，以便 records.`updated_at` 和 articles.`added_at` 在任务省略这些字段时由数据库默认生成。
+
+### 内置任务：漏洞情报增量更新（三渠道）
+
+- `job_type`：`vulnerability_intelligence.incremental`
+- 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnerability_incremental.sql`，默认每天 02:00 执行，按 `job_type` 判断后可重复执行。默认超时 21600 秒；任务顺序执行三个渠道。
+- 执行顺序：长亭无 CVE 全量列表、阿里云无 CVE 全量列表与详情、VulnX 最新完整 CVE 列表及缺失项详情。各来源任务分别报告阶段、当前值、总量和说明，综合任务进度按渠道阶段推进；每个数据源完成后继续下一个，发生错误则停止并标明失败渠道。
+- 长亭与阿里云：按各自来源和漏洞编号匹配现有记录；新编号插入，字段有变化时更新映射字段，参考链接按来源同步差异。其他来源和关联表不受影响。
+- VulnX：先获取最新完整 CVE 列表，再按 1000 个编号一批检查 `source=vulnx`。只对不存在的编号请求详情并新增完整情报快照，已有 CVE 不进行重复 API 请求。
+- API Key：综合任务的 `api_key_id` 用于 VulnX ProjectDiscovery 请求和共享限流；CVE 列表使用 `GITHUB_TOKEN` 环境变量。未设置 GitHub Token 时仍可访问 GitHub 公共 API，但受匿名限流约束。
 
 以下接口均要求 JWT 登录且当前用户角色为管理员。API Key 使用 AES-256-GCM 加密后只存入 `manscan_third_party_api_keys.encrypted_key`；数据库不保留明文 Key 列，列表、单条查询及增改删响应均不返回密钥明文或密文，只返回 `key_configured`。如确有必要，可使用下方明文查询接口；该接口是唯一返回明文 Key 的接口。新部署请执行 `docs/SQL/create_manscan_third_party_api_keys.sql`；已有表请先备份并执行 `docs/SQL/alter_manscan_third_party_api_keys_encrypt_key.sql`。迁移会将当前版本的 `api_key` 密文列重命名为 `encrypted_key` 并保留密文；如果数据库中存在早期独立的明文 `key` 列，迁移会删除该列及其中数据。配置密钥丢失或更换后既有密文不可恢复。请求体最大 16 KiB。
 

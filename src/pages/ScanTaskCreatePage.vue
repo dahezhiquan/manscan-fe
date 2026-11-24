@@ -83,7 +83,7 @@ const stepDefinitions = [
 ]
 
 const DEFAULT_CUSTOM_HEADERS = [
-  'User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 c2fbccf08ddd46b93fa4e87cff76a009 Xray/Scan'
+  'User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 9f2c7a1e4b8d6035c0a6f9e2d7148b3c Xray/Scan'
 ]
 
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])

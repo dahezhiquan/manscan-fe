@@ -192,7 +192,7 @@ const progressCards = computed(() => [
     tone: 'green'
   },
   {
-    label: '实际漏洞插件数量',
+    label: '实际插件数量',
     value: formatCount(firstDefined(task.value?.plugin_count, progress.value?.templates)),
     tone: 'paper'
   }

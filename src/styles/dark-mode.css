@@ -3171,6 +3171,12 @@ html[data-color-mode='dark'] .intelligence-detail-field dd {
   color: var(--dark-text) !important;
 }
 
+html[data-color-mode='dark'] .intelligence-detail-fields.is-analysis dt {
+  border-left-color: var(--accent-blue);
+  color: var(--dark-text-strong) !important;
+  background: var(--dark-surface-2);
+}
+
 html[data-color-mode='dark'] .intelligence-detail-field a {
   color: #7dd3fc !important;
 }

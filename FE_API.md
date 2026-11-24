@@ -508,7 +508,7 @@
 - 联调注意事项：
   - `task.id` 缺失时，前端会尝试从 `task_api` 中解析详情 ID
   - `task_api` 建议返回 `/api/v1/scans/:id`
-  - 创建页的“自定义请求头”会默认预填一行 `User-Agent`，值为 `User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 c2fbccf08ddd46b93fa4e87cff76a009 Xray/Scan`，用户可按需删除或覆盖
+  - 创建页的“自定义请求头”会默认预填一行 `User-Agent`，值为 `User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36 9f2c7a1e4b8d6035c0a6f9e2d7148b3c Xray/Scan`，用户可按需删除或覆盖
 
 ### 10. 重新扫描任务
 
@@ -1268,6 +1268,7 @@
   - `risk_level` 展示前会统一归一化；中文风险值也兼容为对应等级；缺失时展示为未知
   - `vulnerability_count` 缺失时按 `0` 兜底，并在“资产概览”中展示
   - `ports` 缺失时按空数组兜底；端口资产展示协议、端口号、服务、应用、存活状态、高危端口标记和时间，保留同号端口的多条指纹记录。资产概览的“端口数量”按所有有效端口数字去重，“存活端口”按至少一条记录存活的有效端口数字去重，不区分协议和服务名
+  - 端口资产按接口返回顺序在前端分页，每页固定展示 10 条记录；分页总条数按 `ports` 记录数计算，翻页不额外请求接口，切换主机或刷新详情后回到第一页。没有端口记录时展示空态并隐藏分页控件
   - `related_domains` 支持逗号、分号或换行分隔字符串；为空时展示暂无关联域名
   - 可空字符串和可空时间缺失时前端以 `--` 或 `暂无备注` 兜底
 
@@ -1372,7 +1373,7 @@
 - 接口封装：`src/api/scheduledJobs.js`；请求统一使用 `src/utils/http.js` 自动携带登录令牌。
 - 列表：`GET /api/v1/scheduled-jobs?page=&page_size=`，读取分页 `items`、`total`、`page_size`、`total_pages`；当前页面不提供搜索条件。
 - 详情：`GET /api/v1/scheduled-jobs/:id`，展示名称、类型、Cron、时区、开关、并发策略、产出内容描述、最近执行状态与配置 JSON。响应中的 `output_description` 为任务产出内容说明，未设置时为空字符串；前端以纯文本展示并保留换行。
-- 管理员写操作：`PUT /api/v1/scheduled-jobs/:id`、`DELETE /api/v1/scheduled-jobs/:id`、`POST /api/v1/scheduled-jobs/:id/trigger`、`POST /api/v1/scheduled-jobs/:id/stop`。当前前端不提供新建任务入口；编辑表单不提供任务类型修改，PUT 沿用详情中的 `job_type`，并校验名称、Cron 表达式和 `config_json`，后端仍是最终权限与参数校验方。编辑弹窗打开时会请求 `GET /api/v1/third-party-api-keys?page=1&page_size=100`，按分页总页数继续加载全部 API Key 配置，仅使用 `id`、`platform_url` 和 `description`；API Key ID 选择器只对 `platform_url` 做本地筛选，不读取或展示密钥明文。
+- 管理员写操作：`PUT /api/v1/scheduled-jobs/:id`、`DELETE /api/v1/scheduled-jobs/:id`、`POST /api/v1/scheduled-jobs/:id/trigger`、`POST /api/v1/scheduled-jobs/:id/stop`。当前前端不提供新建任务入口；编辑表单不提供任务类型修改，PUT 沿用详情中的 `job_type`，可编辑 `output_description`（任务产出内容说明，最多 512 字符），并校验名称、Cron 表达式和 `config_json`，后端仍是最终权限与参数校验方。编辑弹窗打开时会请求 `GET /api/v1/third-party-api-keys?page=1&page_size=100`，按分页总页数继续加载全部 API Key 配置，仅使用 `id`、`platform_url` 和 `description`；API Key ID 选择器只对 `platform_url` 做本地筛选，不读取或展示密钥明文。
 - 取消运行：仅当实时执行状态为 `queued` 或 `running` 时向管理员展示“取消运行”按钮；点击后确认并调用 stop 接口。请求只取消当前实例，不修改 `enabled`、Cron 调度或后续自动执行；取消前已完成的操作不会回滚。接口返回 `data.cancel_requested_runs`，无活动实例时前端提示 `0`，最终状态通过执行记录轮询刷新为 `cancelled`。
 - 执行记录：`GET /api/v1/scheduled-jobs/:id/runs?page=&page_size=`；单次详情：`GET /api/v1/scheduled-job-runs/:run_id`。记录使用 `error_message` 展示失败原因；状态为 `failed` 的记录提供“查看失败日志”按钮，以弹窗纯文本展示该字段，未返回时显示兜底提示。最近一次运行状态为 `success` 时，任务详情顶部展示“下载产出”按钮，调用 `GET /api/v1/scheduled-job-runs/:run_id/output` 下载产出文件；下载失败时展示接口返回的错误信息。
 - 动态进度：列表中存在 `queued` 或 `running` 记录时，前端每 3 秒请求单次执行详情；状态变为终态后停止轮询并刷新记录。`progress_total=0` 时显示“进度暂不可计算”。

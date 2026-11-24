@@ -1,267 +1,3 @@
-<script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getHostAssetDetail, updateHostAssetManualNote } from '../api/host-assets'
-import manscanIcon from '../assets/manscan-icon.png'
-import { normalizeHostAssetDetail } from '../utils/hostAsset'
-
-const props = defineProps({
-  navigateTo: {
-    type: Function,
-    required: true
-  },
-  currentPath: {
-    type: String,
-    default: '/assets/hosts'
-  }
-})
-
-const detailLoading = ref(true)
-const detailError = ref('')
-const detailData = ref(null)
-const copiedState = ref('')
-const copyEffectTick = ref(0)
-const isManualNoteDialogOpen = ref(false)
-const manualNoteDraft = ref('')
-const manualNoteError = ref('')
-const manualNoteSaving = ref(false)
-
-let detailAbortController = null
-let manualNoteAbortController = null
-let copyFeedbackTimer = null
-let currentRequestId = 0
-
-const MANUAL_NOTE_MAX_LENGTH = 5000
-
-const ipAddress = computed(() => {
-  const match = props.currentPath.match(/^\/assets\/hosts\/([^/]+)$/)
-  return decodeURIComponent(match?.[1] ?? '')
-})
-
-const detail = computed(() => (detailData.value ? normalizeHostAssetDetail(detailData.value) : null))
-const pageTitle = computed(() => {
-  const target = detail.value?.ipAddress && detail.value.ipAddress !== '--' ? detail.value.ipAddress : ipAddress.value
-  return target ? `主机资产详情 - ${target}` : 'ManScan - 主机资产详情'
-})
-const manualNoteLength = computed(() => manualNoteDraft.value.length)
-const canSaveManualNote = computed(() =>
-  !manualNoteSaving.value && manualNoteLength.value <= MANUAL_NOTE_MAX_LENGTH
-)
-
-const overviewItems = computed(() => {
-  if (!detail.value) {
-    return []
-  }
-
-  return [
-    { label: 'IP 地址', value: detail.value.ipAddress, monospace: true },
-    { label: '操作系统', value: detail.value.osDisplay },
-    { label: '资产归属', value: detail.value.owner },
-    { label: '区域', value: detail.value.region },
-    { label: '风险等级', value: detail.value.riskMeta.label, riskTone: detail.value.riskMeta.tone },
-    { label: '漏洞数量', value: detail.value.vulnerabilityCountDisplay },
-    { label: '端口数量', value: detail.value.portCountDisplay },
-    { label: '存活端口', value: detail.value.alivePortCountDisplay },
-    {
-      label: '存活状态',
-      value: detail.value.isAliveMeta.label,
-      statusTone: detail.value.isAliveMeta.tone
-    }
-  ]
-})
-
-const timelineItems = computed(() => {
-  if (!detail.value) {
-    return []
-  }
-
-  return [
-    { label: '扫描创建时间', value: detail.value.scanCreatedAtDisplay },
-    { label: '最近存活时间', value: detail.value.lastAliveAtDisplay }
-  ]
-})
-
-function getAlivePillClass(tone) {
-  return `domain-asset-detail-alive-pill is-${tone}`
-}
-
-function getPortRiskClass(tone) {
-  return `host-asset-detail-port-risk is-${tone}`
-}
-
-function goBackToList() {
-  props.navigateTo('/assets/hosts')
-}
-
-function refreshDetail() {
-  void fetchHostAssetDetail()
-}
-
-function openManualNoteDialog() {
-  manualNoteDraft.value = getManualNoteValue()
-  manualNoteError.value = ''
-  isManualNoteDialogOpen.value = true
-}
-
-function closeManualNoteDialog() {
-  if (manualNoteSaving.value) {
-    return
-  }
-
-  isManualNoteDialogOpen.value = false
-  manualNoteError.value = ''
-}
-
-async function copyShareLink() {
-  try {
-    copyEffectTick.value += 1
-    await copyTextToClipboard(window.location.href)
-    triggerCopiedFeedback('share')
-  } catch (error) {
-    detailError.value = error instanceof Error ? error.message : '复制失败，请手动选择内容复制。'
-  }
-}
-
-function triggerCopiedFeedback(type) {
-  copiedState.value = type
-  window.clearTimeout(copyFeedbackTimer)
-  copyFeedbackTimer = window.setTimeout(() => {
-    copiedState.value = ''
-  }, 1400)
-}
-
-async function copyTextToClipboard(text) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-
-  const textArea = document.createElement('textarea')
-  textArea.value = text
-  textArea.setAttribute('readonly', 'true')
-  textArea.style.position = 'fixed'
-  textArea.style.opacity = '0'
-  textArea.style.pointerEvents = 'none'
-  document.body.appendChild(textArea)
-  textArea.select()
-
-  const succeeded = document.execCommand('copy')
-  document.body.removeChild(textArea)
-
-  if (!succeeded) {
-    throw new Error('浏览器不支持剪切板复制')
-  }
-}
-
-async function fetchHostAssetDetail() {
-  detailAbortController?.abort()
-  detailAbortController = new AbortController()
-  const requestId = ++currentRequestId
-  detailLoading.value = true
-  detailError.value = ''
-
-  if (!ipAddress.value) {
-    detailData.value = null
-    detailError.value = '缺少主机资产 IP 参数，请从主机资产清单进入详情。'
-    detailLoading.value = false
-    return
-  }
-
-  try {
-    const data = await getHostAssetDetail(ipAddress.value, detailAbortController.signal)
-    if (requestId === currentRequestId) {
-      detailData.value = data
-    }
-  } catch (error) {
-    if (error?.name !== 'AbortError' && requestId === currentRequestId) {
-      detailError.value = error instanceof Error ? error.message : '主机资产详情加载失败，请稍后重试。'
-      detailData.value = null
-    }
-  } finally {
-    if (requestId === currentRequestId) {
-      detailLoading.value = false
-      detailAbortController = null
-    }
-  }
-}
-
-async function saveManualNote() {
-  const targetIpAddress = detail.value?.ipAddress && detail.value.ipAddress !== '--' ? detail.value.ipAddress : ipAddress.value
-
-  if (!canSaveManualNote.value || !targetIpAddress) {
-    return
-  }
-
-  manualNoteAbortController?.abort()
-  manualNoteAbortController = new AbortController()
-  manualNoteSaving.value = true
-  manualNoteError.value = ''
-
-  try {
-    const data = await updateHostAssetManualNote(
-      targetIpAddress,
-      manualNoteDraft.value,
-      manualNoteAbortController.signal
-    )
-    const nextManualNote = String(data?.manual_note ?? data?.manualNote ?? manualNoteDraft.value ?? '').trim()
-    applyManualNote(nextManualNote)
-    isManualNoteDialogOpen.value = false
-  } catch (error) {
-    if (error?.name !== 'AbortError') {
-      manualNoteError.value = error instanceof Error ? error.message : '人工备注保存失败，请稍后重试。'
-    }
-  } finally {
-    manualNoteSaving.value = false
-    manualNoteAbortController = null
-  }
-}
-
-function getManualNoteValue() {
-  const rawDetail = detailData.value?.host_asset && typeof detailData.value.host_asset === 'object'
-    ? detailData.value.host_asset
-    : detailData.value
-
-  return String(rawDetail?.manual_note ?? rawDetail?.manualNote ?? '').trim()
-}
-
-function applyManualNote(manualNote) {
-  if (!detailData.value) {
-    return
-  }
-
-  const target = detailData.value.host_asset && typeof detailData.value.host_asset === 'object'
-    ? detailData.value.host_asset
-    : detailData.value
-
-  target.manual_note = manualNote
-  target.manualNote = manualNote
-}
-
-onMounted(() => {
-  void fetchHostAssetDetail()
-})
-
-watch(
-  () => ipAddress.value,
-  () => {
-    void fetchHostAssetDetail()
-  }
-)
-
-watch(
-  pageTitle,
-  (title) => {
-    document.title = title
-  },
-  { immediate: true }
-)
-
-onBeforeUnmount(() => {
-  detailAbortController?.abort()
-  manualNoteAbortController?.abort()
-  window.clearTimeout(copyFeedbackTimer)
-})
-</script>
-
 <template>
   <main class="template-detail-page host-asset-detail-page">
     <section class="template-detail-content">
@@ -402,7 +138,7 @@ onBeforeUnmount(() => {
 
             <div v-if="detail.ports.length" class="host-asset-detail-port-list">
               <section
-                v-for="port in detail.ports"
+                v-for="port in paginatedPorts"
                 :key="port.key"
                 class="template-detail-query-box host-asset-detail-port-item"
               >
@@ -431,6 +167,36 @@ onBeforeUnmount(() => {
               </section>
             </div>
             <div v-else class="template-detail-empty-text domain-asset-detail-empty-copy">暂无端口资产</div>
+            <footer v-if="portTotal" class="domain-assets-pagination">
+              <div class="domain-assets-pagination-meta" aria-live="polite">
+                <span>共 {{ portTotal }} 条，每页 {{ PORT_PAGE_SIZE }} 条</span>
+                <span>第 {{ portPage }} / {{ portTotalPages }} 页</span>
+              </div>
+              <div class="domain-assets-pagination-actions">
+                <button
+                  class="domain-assets-pagination-arrow"
+                  type="button"
+                  :disabled="portPage <= 1"
+                  aria-label="端口资产上一页"
+                  @click="portPage -= 1"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m15 6-6 6 6 6" />
+                  </svg>
+                </button>
+                <button
+                  class="domain-assets-pagination-arrow"
+                  type="button"
+                  :disabled="portPage >= portTotalPages"
+                  aria-label="端口资产下一页"
+                  @click="portPage += 1"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                </button>
+              </div>
+            </footer>
           </article>
         </div>
 
@@ -531,3 +297,276 @@ onBeforeUnmount(() => {
     </section>
   </main>
 </template>
+
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getHostAssetDetail, updateHostAssetManualNote } from '../api/host-assets'
+import manscanIcon from '../assets/manscan-icon.png'
+import { normalizeHostAssetDetail } from '../utils/hostAsset'
+
+const props = defineProps({
+  navigateTo: {
+    type: Function,
+    required: true
+  },
+  currentPath: {
+    type: String,
+    default: '/assets/hosts'
+  }
+})
+
+const detailLoading = ref(true)
+const detailError = ref('')
+const detailData = ref(null)
+const copiedState = ref('')
+const copyEffectTick = ref(0)
+const isManualNoteDialogOpen = ref(false)
+const manualNoteDraft = ref('')
+const manualNoteError = ref('')
+const manualNoteSaving = ref(false)
+const portPage = ref(1)
+
+let detailAbortController = null
+let manualNoteAbortController = null
+let copyFeedbackTimer = null
+let currentRequestId = 0
+
+const MANUAL_NOTE_MAX_LENGTH = 5000
+const PORT_PAGE_SIZE = 10
+
+const ipAddress = computed(() => {
+  const match = props.currentPath.match(/^\/assets\/hosts\/([^/]+)$/)
+  return decodeURIComponent(match?.[1] ?? '')
+})
+
+const detail = computed(() => (detailData.value ? normalizeHostAssetDetail(detailData.value) : null))
+const portTotal = computed(() => detail.value?.ports.length ?? 0)
+const portTotalPages = computed(() => Math.max(1, Math.ceil(portTotal.value / PORT_PAGE_SIZE)))
+const paginatedPorts = computed(() => {
+  const start = (portPage.value - 1) * PORT_PAGE_SIZE
+  return detail.value?.ports.slice(start, start + PORT_PAGE_SIZE) ?? []
+})
+const pageTitle = computed(() => {
+  const target = detail.value?.ipAddress && detail.value.ipAddress !== '--' ? detail.value.ipAddress : ipAddress.value
+  return target ? `主机资产详情 - ${target}` : 'ManScan - 主机资产详情'
+})
+const manualNoteLength = computed(() => manualNoteDraft.value.length)
+const canSaveManualNote = computed(() =>
+  !manualNoteSaving.value && manualNoteLength.value <= MANUAL_NOTE_MAX_LENGTH
+)
+
+const overviewItems = computed(() => {
+  if (!detail.value) {
+    return []
+  }
+
+  return [
+    { label: 'IP 地址', value: detail.value.ipAddress, monospace: true },
+    { label: '操作系统', value: detail.value.osDisplay },
+    { label: '资产归属', value: detail.value.owner },
+    { label: '区域', value: detail.value.region },
+    { label: '风险等级', value: detail.value.riskMeta.label, riskTone: detail.value.riskMeta.tone },
+    { label: '漏洞数量', value: detail.value.vulnerabilityCountDisplay },
+    { label: '端口数量', value: detail.value.portCountDisplay },
+    { label: '存活端口', value: detail.value.alivePortCountDisplay },
+    {
+      label: '存活状态',
+      value: detail.value.isAliveMeta.label,
+      statusTone: detail.value.isAliveMeta.tone
+    }
+  ]
+})
+
+const timelineItems = computed(() => {
+  if (!detail.value) {
+    return []
+  }
+
+  return [
+    { label: '扫描创建时间', value: detail.value.scanCreatedAtDisplay },
+    { label: '最近存活时间', value: detail.value.lastAliveAtDisplay }
+  ]
+})
+
+function getAlivePillClass(tone) {
+  return `domain-asset-detail-alive-pill is-${tone}`
+}
+
+function getPortRiskClass(tone) {
+  return `host-asset-detail-port-risk is-${tone}`
+}
+
+function goBackToList() {
+  props.navigateTo('/assets/hosts')
+}
+
+function refreshDetail() {
+  void fetchHostAssetDetail()
+}
+
+function openManualNoteDialog() {
+  manualNoteDraft.value = getManualNoteValue()
+  manualNoteError.value = ''
+  isManualNoteDialogOpen.value = true
+}
+
+function closeManualNoteDialog() {
+  if (manualNoteSaving.value) {
+    return
+  }
+
+  isManualNoteDialogOpen.value = false
+  manualNoteError.value = ''
+}
+
+async function copyShareLink() {
+  try {
+    copyEffectTick.value += 1
+    await copyTextToClipboard(window.location.href)
+    triggerCopiedFeedback('share')
+  } catch (error) {
+    detailError.value = error instanceof Error ? error.message : '复制失败，请手动选择内容复制。'
+  }
+}
+
+function triggerCopiedFeedback(type) {
+  copiedState.value = type
+  window.clearTimeout(copyFeedbackTimer)
+  copyFeedbackTimer = window.setTimeout(() => {
+    copiedState.value = ''
+  }, 1400)
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  textArea.setAttribute('readonly', 'true')
+  textArea.style.position = 'fixed'
+  textArea.style.opacity = '0'
+  textArea.style.pointerEvents = 'none'
+  document.body.appendChild(textArea)
+  textArea.select()
+
+  const succeeded = document.execCommand('copy')
+  document.body.removeChild(textArea)
+
+  if (!succeeded) {
+    throw new Error('浏览器不支持剪切板复制')
+  }
+}
+
+async function fetchHostAssetDetail() {
+  detailAbortController?.abort()
+  detailAbortController = new AbortController()
+  const requestId = ++currentRequestId
+  detailLoading.value = true
+  detailError.value = ''
+  portPage.value = 1
+
+  if (!ipAddress.value) {
+    detailData.value = null
+    detailError.value = '缺少主机资产 IP 参数，请从主机资产清单进入详情。'
+    detailLoading.value = false
+    return
+  }
+
+  try {
+    const data = await getHostAssetDetail(ipAddress.value, detailAbortController.signal)
+    if (requestId === currentRequestId) {
+      detailData.value = data
+    }
+  } catch (error) {
+    if (error?.name !== 'AbortError' && requestId === currentRequestId) {
+      detailError.value = error instanceof Error ? error.message : '主机资产详情加载失败，请稍后重试。'
+      detailData.value = null
+    }
+  } finally {
+    if (requestId === currentRequestId) {
+      detailLoading.value = false
+      detailAbortController = null
+    }
+  }
+}
+
+async function saveManualNote() {
+  const targetIpAddress = detail.value?.ipAddress && detail.value.ipAddress !== '--' ? detail.value.ipAddress : ipAddress.value
+
+  if (!canSaveManualNote.value || !targetIpAddress) {
+    return
+  }
+
+  manualNoteAbortController?.abort()
+  manualNoteAbortController = new AbortController()
+  manualNoteSaving.value = true
+  manualNoteError.value = ''
+
+  try {
+    const data = await updateHostAssetManualNote(
+      targetIpAddress,
+      manualNoteDraft.value,
+      manualNoteAbortController.signal
+    )
+    const nextManualNote = String(data?.manual_note ?? data?.manualNote ?? manualNoteDraft.value ?? '').trim()
+    applyManualNote(nextManualNote)
+    isManualNoteDialogOpen.value = false
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      manualNoteError.value = error instanceof Error ? error.message : '人工备注保存失败，请稍后重试。'
+    }
+  } finally {
+    manualNoteSaving.value = false
+    manualNoteAbortController = null
+  }
+}
+
+function getManualNoteValue() {
+  const rawDetail = detailData.value?.host_asset && typeof detailData.value.host_asset === 'object'
+    ? detailData.value.host_asset
+    : detailData.value
+
+  return String(rawDetail?.manual_note ?? rawDetail?.manualNote ?? '').trim()
+}
+
+function applyManualNote(manualNote) {
+  if (!detailData.value) {
+    return
+  }
+
+  const target = detailData.value.host_asset && typeof detailData.value.host_asset === 'object'
+    ? detailData.value.host_asset
+    : detailData.value
+
+  target.manual_note = manualNote
+  target.manualNote = manualNote
+}
+
+onMounted(() => {
+  void fetchHostAssetDetail()
+})
+
+watch(
+  () => ipAddress.value,
+  () => {
+    void fetchHostAssetDetail()
+  }
+)
+
+watch(
+  pageTitle,
+  (title) => {
+    document.title = title
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  detailAbortController?.abort()
+  manualNoteAbortController?.abort()
+  window.clearTimeout(copyFeedbackTimer)
+})
+</script>
