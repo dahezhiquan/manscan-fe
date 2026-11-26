@@ -507,6 +507,13 @@
   text-align: center;
 }
 
+.scheduled-run-row-actions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .scheduled-run-log-button {
   justify-self: center;
   min-height: 28px;

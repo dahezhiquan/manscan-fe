@@ -41,8 +41,15 @@ export async function updateNotification(id, payload, signal) {
       description: payload.description ?? '',
       enabled: payload.enabled,
       event: payload.event,
-      style: payload.style
+      style: payload.style,
+      ...(typeof payload.webhook === 'string' && payload.webhook.trim()
+        ? { webhook: payload.webhook.trim() }
+        : {})
     }),
     signal
   })
+}
+
+export async function getNotificationStyles(signal) {
+  return requestJson(`${NOTIFICATIONS_API}/styles`, { method: 'GET', signal })
 }
