@@ -712,6 +712,35 @@
   padding: 12px;
 }
 
+.settings-switch-control {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.settings-notification-empty {
+  display: grid;
+  gap: 6px;
+  padding: 28px 20px;
+  border: 2px dashed var(--line-soft);
+  border-radius: 18px;
+  background: rgba(255, 250, 241, 0.56);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.settings-notification-empty strong {
+  color: var(--line);
+  font-size: 15px;
+}
+
+.settings-notification-empty p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .settings-switch-input {
   position: absolute;
   width: 1px;

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { getThemeSettings, updateThemeSettings } from '../api/settings'
+import { getNotificationList, getThemeSettings, updateNotification, updateThemeSettings } from '../api/settings'
 import { createUser, deleteUser, getUserList, updateUser } from '../api/users'
 import ThirdPartyApiKeyManagement from '../components/settings/ThirdPartyApiKeyManagement.vue'
 import AppShell from '../components/layout/AppShell.vue'
@@ -8,6 +8,7 @@ import { applyThemeSettings, cacheThemeSettings, getAppliedThemeSettings } from 
 import { THEME_OPTIONS } from '../constants/themes'
 import { iconPath } from '../utils/icons'
 import { normalizeThemeSettings } from '../utils/themeSettings'
+import { normalizeNotification, normalizeNotificationListResponse } from '../utils/notificationManagement'
 import {
   USER_ROLE_OPTIONS,
   USER_STATUS_OPTIONS,
@@ -47,20 +48,11 @@ const SETTINGS_TABS = [
   { id: 'notifications', label: '通知策略', icon: 'shield' }
 ]
 
-const NOTIFICATION_POLICIES = [
-  { id: 'scanFinished', label: '扫描完成通知', description: '任务完成或失败时通知任务创建人。' },
-  { id: 'criticalVulnerability', label: '严重漏洞提醒', description: '发现严重漏洞后立即提醒负责人。' },
-  { id: 'dailyDigest', label: '每日安全摘要', description: '每天汇总新增资产、漏洞和任务执行情况。' }
-]
-
 const activeTab = ref('users')
 const initialThemeSettings = getAppliedThemeSettings()
 const settingsState = reactive({
   selectedTheme: initialThemeSettings.theme,
-  darkModeEnabled: initialThemeSettings.darkModeEnabled,
-  scanFinished: true,
-  criticalVulnerability: true,
-  dailyDigest: false
+  darkModeEnabled: initialThemeSettings.darkModeEnabled
 })
 const savedSnapshot = ref(JSON.stringify(settingsState))
 const saveState = ref('idle')
@@ -68,6 +60,13 @@ const themeSettingsState = reactive({
   loading: false,
   loaded: false,
   error: ''
+})
+const notificationsState = reactive({
+  items: [],
+  loading: false,
+  loaded: false,
+  error: '',
+  updatingIds: new Set()
 })
 const usersState = reactive({
   items: [],
@@ -109,8 +108,11 @@ let editUserAbortController = null
 let deleteUserAbortController = null
 let themeSettingsAbortController = null
 let saveThemeSettingsAbortController = null
+let notificationsAbortController = null
+const notificationUpdateAbortControllers = new Map()
 let usersRequestId = 0
 let themeSettingsRequestId = 0
+let notificationsRequestId = 0
 let createUserFeedbackTimer = null
 
 const USERNAME_MAX_LENGTH = 64
@@ -120,13 +122,14 @@ const userFeedbackMessage = ref('')
 
 const isAdminUser = computed(() => props.currentUserRole === 'admin')
 const visibleSettingsTabs = computed(() =>
-  SETTINGS_TABS.filter((item) => !['users', 'apiKeys'].includes(item.id) || isAdminUser.value)
+  SETTINGS_TABS.filter((item) => !['users', 'apiKeys', 'notifications'].includes(item.id) || isAdminUser.value)
 )
 const activeTabMeta = computed(
   () => visibleSettingsTabs.value.find((item) => item.id === activeTab.value) ?? visibleSettingsTabs.value[0]
 )
 const isThemeTabActive = computed(() => activeTab.value === 'theme')
 const isApiKeysTabActive = computed(() => activeTab.value === 'apiKeys')
+const isNotificationTabActive = computed(() => activeTab.value === 'notifications')
 const isDirty = computed(() => JSON.stringify(settingsState) !== savedSnapshot.value)
 const canSaveSettings = computed(() =>
   isDirty.value && saveState.value !== 'saving' && !(isThemeTabActive.value && themeSettingsState.loading)
@@ -373,6 +376,89 @@ async function saveThemeSettings() {
   }
 }
 
+function refreshNotifications() {
+  void fetchNotifications({ force: true })
+}
+
+async function fetchNotifications(options = {}) {
+  if (notificationsState.loading) {
+    return
+  }
+
+  if (notificationsState.loaded && !options.force) {
+    return
+  }
+
+  notificationsAbortController?.abort()
+  notificationsAbortController = new AbortController()
+  const requestId = ++notificationsRequestId
+  notificationsState.loading = true
+  notificationsState.error = ''
+
+  try {
+    const data = await getNotificationList(notificationsAbortController.signal)
+    const items = normalizeNotificationListResponse(data)
+
+    if (requestId === notificationsRequestId) {
+      notificationsState.items = items
+      notificationsState.loaded = true
+    }
+  } catch (error) {
+    if (error?.name !== 'AbortError' && requestId === notificationsRequestId) {
+      notificationsState.error = error instanceof Error ? error.message : '通知策略加载失败，请稍后重试。'
+    }
+  } finally {
+    if (requestId === notificationsRequestId) {
+      notificationsState.loading = false
+      notificationsAbortController = null
+    }
+  }
+}
+
+async function toggleNotification(notification, enabled) {
+  if (notificationsState.updatingIds.has(notification.id)) {
+    return
+  }
+
+  const previousEnabled = notification.enabled
+  notification.enabled = enabled
+  notificationsState.updatingIds.add(notification.id)
+  notificationsState.error = ''
+
+  const controller = new AbortController()
+  notificationUpdateAbortControllers.set(notification.id, controller)
+
+  try {
+    const data = await updateNotification(
+      notification.id,
+      {
+        name: notification.name,
+        description: notification.description,
+        enabled,
+        event: notification.event,
+        style: notification.style
+      },
+      controller.signal
+    )
+    const updated = normalizeNotification(data)
+    const index = notificationsState.items.findIndex((item) => item.id === notification.id)
+
+    if (index !== -1) {
+      notificationsState.items[index] = updated.id === null
+        ? { ...notification, enabled }
+        : updated
+    }
+  } catch (error) {
+    notification.enabled = previousEnabled
+    if (error?.name !== 'AbortError') {
+      notificationsState.error = error instanceof Error ? error.message : '通知策略更新失败，请稍后重试。'
+    }
+  } finally {
+    notificationsState.updatingIds.delete(notification.id)
+    notificationUpdateAbortControllers.delete(notification.id)
+  }
+}
+
 async function fetchUsers(page = usersState.page) {
   usersAbortController?.abort()
   usersAbortController = new AbortController()
@@ -602,6 +688,10 @@ watch(
     if (tabId === 'theme') {
       void fetchThemeSettings()
     }
+
+    if (isAdmin && tabId === 'notifications') {
+      void fetchNotifications()
+    }
   },
   { immediate: true }
 )
@@ -620,6 +710,8 @@ onBeforeUnmount(() => {
   deleteUserAbortController?.abort()
   themeSettingsAbortController?.abort()
   saveThemeSettingsAbortController?.abort()
+  notificationsAbortController?.abort()
+  notificationUpdateAbortControllers.forEach((controller) => controller.abort())
   window.clearTimeout(createUserFeedbackTimer)
 })
 </script>
@@ -828,20 +920,39 @@ onBeforeUnmount(() => {
             </div>
 
             <div v-else class="settings-notification-grid">
-              <div class="settings-toggle-list">
-                <label v-for="policy in NOTIFICATION_POLICIES" :key="policy.id" class="settings-toggle-row">
+              <div v-if="notificationsState.loading" class="settings-alert" role="status">
+                正在加载通知策略
+              </div>
+              <div v-if="notificationsState.error" class="settings-alert is-error" role="alert">
+                <span>{{ notificationsState.error }}</span>
+                <button type="button" @click="refreshNotifications">重试</button>
+              </div>
+              <div v-if="!notificationsState.loading && !notificationsState.items.length && !notificationsState.error" class="settings-notification-empty">
+                <strong>暂无通知策略</strong>
+                <p>后端 manscan_notifications 表中暂无可展示的通知配置。</p>
+              </div>
+              <div v-else-if="notificationsState.items.length" class="settings-toggle-list">
+                <div v-for="policy in notificationsState.items" :key="policy.id" class="settings-toggle-row">
                   <span>
-                    <strong>{{ policy.label }}</strong>
-                    <small>{{ policy.description }}</small>
+                    <strong>{{ policy.name }}</strong>
+                    <small>{{ policy.description || '暂无简介' }}</small>
                   </span>
-                  <input v-model="settingsState[policy.id]" type="checkbox" class="settings-switch-input" />
-                  <span class="settings-switch" aria-hidden="true"></span>
-                </label>
+                  <label class="settings-switch-control" :aria-label="`${policy.enabled ? '关闭' : '开启'} ${policy.name}`">
+                    <input
+                      :checked="policy.enabled"
+                      type="checkbox"
+                      class="settings-switch-input"
+                      :disabled="notificationsState.updatingIds.has(policy.id)"
+                      @change="toggleNotification(policy, $event.target.checked)"
+                    />
+                    <span class="settings-switch" aria-hidden="true"></span>
+                  </label>
+                </div>
               </div>
             </div>
           </section>
 
-          <div v-if="activeTab !== 'users' && !isApiKeysTabActive" class="settings-save-bar" :class="{ 'is-dirty': isDirty }">
+          <div v-if="activeTab !== 'users' && !isApiKeysTabActive && !isNotificationTabActive" class="settings-save-bar" :class="{ 'is-dirty': isDirty }">
             <div>
               <strong>{{ isDirty ? '有未保存的设置' : '设置已同步' }}</strong>
               <p>{{ saveBarDescription }}</p>

@@ -1252,6 +1252,8 @@ curl "http://127.0.0.1:8686/api/v1/scans/1/config"
   - 当任务已经是 `cancelled` 状态时，接口会直接返回当前状态。
   - 当任务已经是 `paused` 状态时，接口会直接将其收口为 `cancelled`，不会再恢复执行。
   - 当数据库中任务仍是 `pending` 或 `running`，但运行态已经丢失时，接口会直接将任务收口为 `cancelled`。
+  - Unix 系统取消时会终止扫描进程组，包括 `go run` 启动器及其扫描子进程，避免启动器退出后实际扫描仍继续执行。
+  - 运行态丢失后，详情、日志、列表和订阅返回的进度终态以数据库状态为准；旧 `progress.json` 中的 `running` 不会覆盖已落库的 `cancelled` 等终态，请求计数仍予以保留。
 
 - 错误码说明：
   - `40001`：任务 ID 非法，或任务已结束且不支持再次取消
@@ -2448,6 +2450,8 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o domain-assets.xlsx "http://
   - `service_assets` 来自 `manscan_asset_domain_service_assets`，按当前域名精确匹配 `domain` 字段。
   - `service_assets[].first_found_at` 仅记录首次发现时间；`last_found_at` 在扫描前被动识别或后续指纹结果写入时更新。新识别到的组件立即设为 `is_alive=true`；启用主动指纹识别或自动模板映射时，每个目标的指纹识别完成后，立即将该地址本次未识别到的旧组件设为 `is_alive=false`，但保留两个发现时间。未启用这两类识别时不执行旧组件失活检查；任务成功结束时不再重复同步或改写 `last_found_at`。
   - `service_assets[].app_version` 为可空字符串；未识别到版本时返回 `null`。
+  - 指纹版本优先采用 `组件名:版本` 的显式归属；多个组件时，可使用模板 `info.metadata.product` 将合法的纯版本、通用 `version:版本`（含带引号的 JSON 字段片段）或可规范化的版本横幅归给同名组件。product 去除首尾空白并忽略大小写后必须与已有组件精确匹配，不推断别名、不新增组件，也不把版本复制给其他标签；同一结果含多个不同的待归属版本时，不通过 product 推断。单组件保持原有版本解析规则，显式组件版本优先于推断版本。
+  - product 优先读取扫描结果 `info.metadata.product`；该字段缺失或为空字符串时，使用模板详情中解析自 `metadata.product` 的 Product。非字符串、多值或无法匹配的 product 不用于多组件版本归属。更新服务后需再次扫描才能补充版本，历史空版本不会自动回填。
   - SSH 指纹的 `service_assets[].app_version` 包含软件名称和版本，例如 `OpenSSH 7.4`、`WeOnlyDo 2.4.3`。
   - `title_histories` 来自 `manscan_asset_domain_title_history`，按当前域名精确匹配 `domain` 字段。
   - `vulnerability_count` 表示漏洞表中 `asset_endpoint` 等于当前域名资产 `domain` 的记录数量，但不统计 `status` 为 `fixed`、`false_positive`、`ignored` 的漏洞。
@@ -2666,9 +2670,13 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" -o host-assets.xlsx "http://12
 
 - 说明：
   - `ports` 来自 `manscan_asset_host_port`，按当前主机精确匹配 `ip_address` 字段；同一 IP、协议、端口可按不同 `service_name` 返回多条记录。
+  - `ports[].port_protocol` 表示传输层协议（`tcp` / `udp`），不是模板执行类型。`jdwp`、`mssql`、`openssh`、`rsync` 指纹即使来自未声明传输协议的 `javascript` 模板，也会按已识别的服务补充为 `tcp`，同样适用于非标准端口；明确提供的传输协议优先，MSSQL Browser 的 `udp` 标签仍保留为 `udp`。结果及其元数据中的 `tls` / `ssl` 按传输层归一为 `tcp`。更新服务后需再次扫描确认，已有空协议记录不会仅因代码更新自动改写。
+  - `sip-options-detect` 的 SIP 服务及产品指纹（包括 `gowvp`、`audiocodes-mediant`）优先采用结果元数据中的实际 `transport`，缺失时读取该模板 JSON 响应中的 `service: sip` 和 `transport`。不按 SIP 产品名称或默认端口猜测传输协议；同时带有 `tcp` / `udp` 标签且无实际传输证据时保留空值。同一服务在同一 IP 端口分别命中 TCP 和 UDP 时，两种观察结果在批量入库、缓存和目标完成后的存活同步中分别保留。
   - `ports[].port_created_at` 保留该 IP、端口和服务名首次写入的时间；当后续指纹确定此前空缺的 TCP/UDP 协议时，会将空协议记录合并到已确认协议记录，并保留较早的首次发现时间和已知版本。同一服务同时存在 TCP 与 UDP 时不推断空协议记录的归属。`ports[].last_alive_at` 在该组合实际被 HTTP 探测或指纹结果再次确认时更新。任务成功结束不再对端口表执行二次同步；关闭结果队列时尚未落库的实际指纹结果仍会按结果观察时间写入，不使用任务结束时间重写存活时间。
   - 扫描前 HTTP 探测完成后，已检查但未取得响应的 IP 端口，其已有 HTTP 服务记录立即设为 `is_alive=false`。启用前置指纹识别或自动模板映射时，单个目标的指纹识别完成后，立即把该 IP 端口本次未识别到的旧服务设为 `is_alive=false`；已取得 HTTP 响应的端口保留 HTTP 服务存活。失活操作不改写两个时间字段，未启用这两类识别时不执行旧服务指纹失活检查。
   - SSH 指纹的 `ports[].app_version` 包含软件名称和版本，例如 `OpenSSH 7.4`、`WeOnlyDo 2.4.3`。
+  - 指纹版本优先采用 `组件名:版本` 的显式归属，不会被后续的纯版本覆盖。只有一个组件时，合法的纯版本或 `version:版本` 按原有规则写入该组件；多个组件时，优先读取扫描结果 `info.metadata.product`，该字段缺失或为空字符串时使用模板详情中解析自 `metadata.product` 的 Product。product 必须为单一字符串，去除首尾空白并忽略大小写后与已有组件精确匹配，才能将合法的纯版本、通用版本字段或可规范化的版本横幅定向写入该组件；不推断别名、不新增组件、不复制版本给其他标签。同一结果包含多个不同的待归属版本时不通过 product 推断。提取器名称 `version` 不代表产品归属。
+  - 例如命中 `apache`、`zookeeper` 两个组件，`metadata.product: zookeeper` 且提取结果为 `3.6.0` 时，仅 `zookeeper` 的 `app_version` 为 `3.6.0`。新建记录没有可归属版本时数据库保存 `NULL`、接口返回空字符串；再次扫描未取得版本时不覆盖原有已知版本。更新服务后需再次扫描才能补充版本，历史空版本不会自动回填。
   - `ports[].is_high_risk_port` 为可空布尔值；数据库值为 `NULL` 时接口返回 `null`，`false` 表示已确认非高危端口。
   - `vulnerability_count` 表示漏洞表中 `asset_host` 等于当前主机 `ip_address` 的记录数量，但不统计 `status` 为 `fixed`、`false_positive`、`ignored` 的漏洞。
   - `risk_level` 表示过滤上述状态后的最高风险等级，按 `critical > high > medium > low` 取值；存在漏洞但没有可识别等级时返回 `unknown`，没有漏洞时返回 `info`。
@@ -2847,7 +2855,7 @@ curl -G "http://127.0.0.1:8686/api/v1/domain-assets/screenshots" \
 
 ## 40. 定时任务
 
-定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器获取最新完整 CVE 列表并只查询数据库缺失编号的 ProjectDiscovery VulnX 详情，新增五张漏洞情报表；`chaitin_vulnerability.sync` 与 `aliyun_avd_vulnerability.sync` 分别同步各自无 CVE 漏洞；`vulnerability_intelligence.incremental` 依次执行三个渠道并汇总进度。未配置 `api_key_id` 时按处理器使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
+定时任务接口用于管理通用后台任务（例如同步数据或执行脚本）。当前已内置 `cve_file_names.sync` 处理器，用于从 GitHub `CVEProject/cvelistV5` 获取 CVE 文件名并原子替换 `data/tmp/cve_data/cves.txt`；`vulnx_vulnerability.sync` 处理器获取最新完整 CVE 列表并只查询数据库缺失编号的 ProjectDiscovery VulnX 详情，新增五张漏洞情报表；`chaitin_vulnerability.sync` 同步长亭全部漏洞（不限制 CVE），`aliyun_avd_vulnerability.sync` 同步阿里云高危列表全部漏洞（不限制 CVE）；`vulnerability_intelligence.incremental` 依次执行三个渠道并汇总进度。未配置 `api_key_id` 时按处理器使用 `GITHUB_TOKEN` 或 `PDCP_API_KEY`。创建未知类型仍可保存配置，但触发后会以“定时任务类型未注册”失败；后续注册同名 `JobHandler` 后即可执行。所有接口都需要登录，新增、编辑、删除和立即触发仅管理员可操作。
 
 ### 查询定时任务列表
 
@@ -2913,7 +2921,7 @@ curl -X POST -H 'Authorization: Bearer <access_token>' -H 'Content-Type: applica
 
 - 请求方法和路径：`GET /api/v1/scheduled-job-runs/:run_id/output`
 - 请求参数：路径参数 `run_id` 为正整数；执行记录必须已经写入产出路径且对应文件仍存在。
-- 响应格式：成功时直接返回产出文件内容，并通过 `Content-Disposition` 以原文件名下载；当前 GitHub CVE 同步任务的文件名为 `cves.txt`。
+- 响应格式：成功时直接返回产出文件内容，并通过 `Content-Disposition` 以原文件名下载；GitHub CVE 同步任务的文件名为 `cves.txt`，综合漏洞情报任务为 `incremental_outputs_<run_id>.zip`。
 - 错误码：`40001` 执行记录 ID 不合法；`40101` 未登录；`40401` 执行记录或产出文件不存在；`50001` 下载失败。
 - 使用示例：
 
@@ -2935,8 +2943,13 @@ curl -L -OJ \
 - 默认计划：`0 0 * * *`，时区 `Asia/Shanghai`，每天零点执行。
 - `config_json`：可选 `{"ref":"main"}`，用于指定 GitHub 分支、标签或提交 SHA；为空时使用 `main`。
 - 输出：成功获取完整列表后，使用临时文件原子替换 `data/tmp/cve_data/cves.txt`，失败时保留上一次成功文件。
+- 获取方式：先读取仓库根目录定位 `cves` 的 SHA，再以 `recursive=1` 请求完整子树。仅当 GitHub 成功响应明确标记 `truncated=true` 时，丢弃该部分结果，读取当前目录的直接列表，将未处理子目录加入队列，再逐个尝试获取完整子树。成功且未截断的子树不会再请求其内部子目录；目录按 SHA 去重，CVE 编号去重排序。直接目录列表仍被截断时任务失败，保留旧文件。
+- 请求恢复：GitHub Tree 单次请求超时为 200 秒（包含响应体读取）。网络超时、临时网络错误或响应体提前结束时，同一请求最多尝试 3 次，重试前分别等待 1 秒、2 秒；每次尝试均参与 API Key 共享限流。重试耗尽后停止任务，不因网络失败拆分子目录。鉴权、HTTP 限流、其他 HTTP 错误、非截断类 JSON 格式错误和本地限流配置错误均停止任务。任务取消或总超时立即中止请求及退避等待。独立 VulnX 与综合增量任务获取 GitHub CVE 列表时复用此策略。
+- 详细进度：复用执行记录的 `progress_phase`、`progress_message` 和 `progress_updated_at`。GitHub 阶段为 `github_waiting`（等待 API Key 额度）、`github_requesting`（请求及读取响应）、`github_retrying`（重试退避）、`github_listing`（已定位 CVE 目录）、`github_fallback`（GitHub 截断，改为直接目录列表）、`github_traversing`（当前目录单元已处理）和 `github_finished`（全部 CVE 列表获取完成，准备写文件）。说明明确区分“仅完成直接列表读取，子目录尚待处理”与“当前子树完整读取，无需再请求子目录”。包含当前位置、已处理目录单元数、排队目录数（不含当前目录）、已去重 CVE 数及实际请求次数；目录单元包含仓库根目录，重试及截断回退不会重复计数。
+- 接收量及刷新：长请求和额度等待每 5 秒更新状态，请求说明包含尝试次数、耗时、本次已接收 KiB 及本次任务累计接收 KiB。接收量按解压后的响应体统计，累计量包括截断结果、失败请求已读部分和重试，不代表有效 CVE 数据量；本次接收量在每次请求开始时归零。重试说明包含原因和下次等待秒数。
+- 进度口径：GitHub 获取期间 `progress_current` 为已处理目录单元数，`progress_total=0`，未知总量时不预估百分比；只从成功且未截断的响应收集 CVE。写文件阶段为 `writing`，当前值和总量切换为已写入/全部 CVE 数，并在说明中展示。最终任务完成阶段仍为 `finished`。独立 VulnX 任务沿用上述 GitHub 阶段；综合增量任务在阶段及说明前添加 `VulnX` 来源标识，当前值和总量保持原有三渠道加权口径，GitHub 获取时整体百分比不递增，读取状态持续刷新。进度上报失败会停止本次处理，不当作 GitHub 网络错误重试。
 - 产出：成功执行后，在本次执行记录的 `output_path` 字段写入固定路径 `data/tmp/cve_data/cves.txt`，前端可使用“产出下载”按钮调用执行记录产出下载接口。
-- 限流：当任务配置 `api_key_id` 且该 API Key 的 `rate_limit_per_minute=N` 大于 `0` 时，请求按至少 `60/N` 秒的间隔放行，不允许突发透支。同一服务进程内，相同 API Key ID 的所有任务及并发执行实例（包括自动和手动触发）共享额度，不同 API Key ID 相互独立；根目录、递归 Tree、截断回退和后续子树请求均参与限流。未配置 API Key 或限流值为 `0` 时不启用服务端限流，但仍受 GitHub 自身限流策略约束。
+- 限流：当任务配置 `api_key_id` 且该 API Key 的 `rate_limit_per_minute=N` 大于 `0` 时，请求按至少 `60/N` 秒的间隔放行，不允许突发透支。同一服务进程内，相同 API Key ID 的所有任务及并发执行实例（包括自动和手动触发）共享额度，不同 API Key ID 相互独立；根目录、子树、截断回退及其重试均参与限流。未配置 API Key 或限流值为 `0` 时不启用服务端限流，但仍受 GitHub 自身限流策略约束。
 - 配置变更与取消：每次请求以及等待唤醒后重新读取当前 API Key 限流值；已有等待在下一次检查时采用新值。等待计入任务的 `timeout_seconds`，支持取消和超时，等待期间取消不预占后续额度，获取列表失败时保留上一次成功文件。
 - 共享范围：限流状态保存在当前服务进程内，重启后清空；多个服务进程或实例之间不共享额度。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_cve_file_names.sql`，可重复执行，不会重复插入同一 `job_type`。
@@ -2946,8 +2959,8 @@ curl -L -OJ \
 - `job_type`：`vulnx_vulnerability.sync`
 - 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`，每天凌晨 00:30 执行；该任务会自行刷新 CVE 列表。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnx_vulnerability_sync.sql`，默认启用并使用环境变量 API Key；可在定时任务管理中关联 `api_key_id` 以启用按 Key 限流。脚本按 `job_type` 判断，可重复执行。
-- `config_json`：使用 `{}`；每次执行都从 GitHub `CVEProject/cvelistV5` 获取完整 CVE 列表（使用 `GITHUB_TOKEN` 环境变量），并原子更新服务根目录下 `data/tmp/cve_data/cves.txt`。列表完成后分批检查数据库中 `source=vulnx` 的现有编号，只对数据库缺失的 CVE 调用详情 API。已有 CVE 不重复请求或覆盖。
-- API Key：配置 `api_key_id` 时从第三方 API Key 服务读取并解密，按每次请求发送 `X-Api-Key`；未配置 `api_key_id` 时读取环境变量 `PDCP_API_KEY`。建议优先使用 `api_key_id`，以便配置每分钟限额。
+- `config_json`：使用 `{}`；每次执行都从 GitHub `CVEProject/cvelistV5` 获取完整 CVE 列表，并原子更新服务根目录下 `data/tmp/cve_data/cves.txt`。列表完成后分批检查数据库中 `source=vulnx` 的现有编号，只对数据库缺失的 CVE 调用详情 API。已有 CVE 不重复请求或覆盖。执行时需要存在 `cve_file_names.sync` 任务，以读取其 GitHub Key 配置。
+- API Key：VulnX 详情 API 使用本任务配置的 `api_key_id`，从第三方 API Key 服务读取并解密，按每次请求发送 `X-Api-Key`；未配置时读取环境变量 `PDCP_API_KEY`。GitHub 全量 CVE 列表请求使用“全量 CVE 列表获取”（`cve_file_names.sync`）任务配置的 `api_key_id`，并应用对应 Key 的共享限流；未配置时读取环境变量 `GITHUB_TOKEN`。
 - 并发与限流：每次最多并行处理 8 个 CVE；配置 `api_key_id` 后，每次 CVE 请求（包括重试）都复用服务启动时创建的共享限流器，按该 Key 的 `rate_limit_per_minute` 放行。同一 Key 的任务和并发执行共享额度，限流等待支持取消和超时。使用 `PDCP_API_KEY` 环境变量时没有服务端配置的限额，也不启用服务端限流，仍受 ProjectDiscovery API 自身限流约束。
 - 更新范围：每个 CVE 查询 `https://api.projectdiscovery.io/v2/vulnerability/{CVE}`，在一个数据库事务中按 CVE 替换以下五张表的完整快照：
   - `manscan_vulnerability_intelligence_records`：`data` 中漏洞画像、时间、CVSS、CWE、EPSS、暴露主机数、HackerOne、POC、产品、厂商、修复、严重性、状态、漏洞类型和影响字段。
@@ -2955,39 +2968,63 @@ curl -L -OJ \
   - `manscan_vulnerability_intelligence_articles`：`citations[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_pocs`：`pocs[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_shodan_exposures`：`exposure.values[]` 的产品 ID、暴露主机数和 Shodan 查询语句。
-- 失败策略：单个 CVE 查询、解析或写库失败后最多尝试 3 次（首次请求 + 2 次重试），然后继续处理剩余 CVE；最终仍失败的 CVE 的编号写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，具体错误写入 `data/tmp/cve_data/vulnXerrorDetail.log`，两个文件每次运行开始时清空。任务结束时将这两个文件打包为 `data/tmp/cve_data/vulnXerror.zip`，可通过执行记录的产出下载接口下载。任务进度按每个 CVE 最终处理结果推进；只要存在失败项，最终执行状态为 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
+- 失败策略：单个 CVE 查询、解析或写库失败后最多尝试 3 次（首次请求 + 2 次重试），然后继续处理剩余 CVE；最终仍失败的 CVE 的编号写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，具体错误写入 `data/tmp/cve_data/vulnXerrorDetail.log`，两个文件每次运行开始时清空。首轮全部处理后，再对失败清单中的 CVE 各补偿重试最多 3 次；成功写入数据库的编号会从失败清单和详情日志移除，仍失败的编号及原错误详情保持不变。最终清单打包为 `data/tmp/cve_data/vulnXerror.zip`，可通过执行记录的产出下载接口下载。任务进度按处理与补偿重试阶段推进；独立任务在补偿重试后仍有失败项时标记 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
 
-### 内置任务：长亭无 CVE 漏洞情报同步
+### 内置任务：长亭漏洞情报全量同步
 
 - `job_type`：`chaitin_vulnerability.sync`
 - 默认计划建议：`0 30 * * *`，时区 `Asia/Shanghai`。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_chaitin_vulnerability_sync.sql`，按 `job_type` 判断，可重复执行。
-- 抓取流程：顺序请求 `https://stack.chaitin.com/api/v2/vuln/list/`，使用 `limit=15` 与 `offset=0,15,30...` 全量分页；只同步 `cve_id` 为空的记录，以 `ct_id` 作为漏洞编号。
+- 抓取流程：顺序请求 `https://stack.chaitin.com/api/v2/vuln/list/`，使用 `limit=15` 与 `offset=0,15,30...` 全量分页；同步全部记录，不按 `cve_id` 筛选；无论是否有关联 CVE，均以 `ct_id` 作为漏洞编号。独立全量任务不会因任意页编号全部已存在而提前停止。
 - 数据库映射：在事务中按 `source=chaitin` 与 `ct_id` 更新或新增 `manscan_vulnerability_intelligence_records`，并幂等写入 `references` 到 `manscan_vulnerability_intelligence_articles`。
-- records 写入 `category=non-cve`、标题、描述、影响、解决建议、严重性、披露时间和更新时间；`vulnerability_type`、`is_patch_available`、`cvss_metrics`、`cvss_score` 不写入。articles 的 `source` 固定为 `chaitin`，`added_at` 不写入。
+- records 根据 `cve_id` 分类：包含 CVE 编号时写入 `category=cve`（与 VulnX 一致），缺失、空白或“暂无”等无 CVE 编号的值写入 `category=non-cve`；仍以 CT 编号作为漏洞编号，写入标题、描述、影响、解决建议、严重性、披露时间和更新时间；`vulnerability_type`、`is_patch_available`、`cvss_metrics`、`cvss_score` 不写入。articles 的 `source` 固定为 `chaitin`，`added_at` 不写入。
 - 不写入 `manscan_vulnerability_intelligence_pocs`、`manscan_vulnerability_intelligence_components` 和 `manscan_vulnerability_intelligence_shodan_exposures`。
+- 分类规则同样适用于综合任务中实际同步到的记录。历史分类需重新执行独立全量同步更新，部署不会自动回填整库。
 
-### 内置任务：阿里云高危无 CVE 漏洞采集
+### 内置任务：阿里云高危漏洞情报全量同步
 
 - `job_type`：`aliyun_avd_vulnerability.sync`
 - 默认计划：`0 30 * * *`，时区 `Asia/Shanghai`；初始化 SQL 默认启用，可在任务管理页面调整。
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_aliyun_avd_no_cve_sync.sql`，按 `job_type` 判断，可重复执行。
 - `config_json`：可选 `{"request_delay_ms":250,"max_pages":0}`；请求间隔范围 0-60000 毫秒（0 使用 250 毫秒默认值），最大列表页数范围 0-10000（0 使用 10000 页上限）。
-- 抓取流程：顺序请求阿里云 `/high-risk/list?page=N`，解析 AVD 编号、标题、类型、披露时间及状态，只对标记无 CVE 或标题无 CVE 编号的记录请求详情页；列表结束时停止。列表与详情均限制为 HTTPS 固定主机 `avd.aliyun.com`，响应体最大 16 MiB，具备请求超时、退避重试、Cookie Jar，并执行页面 WAF 校验脚本以取得校验后的 URL。进度在抓取阶段按“已处理列表页/最大列表页数”逐页推送，抓取完成后切换为详情数据库同步、产物写入和完成阶段提示。
+- 抓取流程：顺序请求阿里云 `/high-risk/list?page=N`，解析 AVD 编号、标题、类型、披露时间及状态，对所有有效 AVD 编号请求详情页，不按列表状态、标题或详情中的 CVE 筛选；详情中的 CVE 作为采集信息保留，漏洞编号始终使用 AVD 编号。同次采集按 AVD 编号去重，列表结束时停止。列表与详情均限制为 HTTPS 固定主机 `avd.aliyun.com`，响应体最大 16 MiB，具备请求超时、退避重试、Cookie Jar，并执行页面 WAF 校验脚本以取得校验后的 URL。进度在抓取阶段按“已处理列表页/最大列表页数”逐页推送，抓取完成后切换为详情数据库同步、产物写入和完成阶段提示。
 - 详情产物：包含 AVD/CVE 编号、标题、严重等级、利用情况、补丁情况、披露时间、描述、解决建议、参考 URL 数组、阿里云评分、评分拆分指标、CWE、受影响软件、阿里云安全产品覆盖、列表元数据、来源 URL 和抓取时间。源页面未提供的字段为空或缺省，不从描述推断填充。
-- 输出：原子写入 `data/tmp/aliyun_avd/no_cve_vulnerabilities.json`，执行记录登记产物路径，可通过定时任务产出下载接口获取。存在部分详情失败时保留成功记录和错误摘要，任务状态标记失败。
-- 数据库映射：在一个事务中按 `source=avd` 与 AVD 编号更新或新增 `manscan_vulnerability_intelligence_records`，并按漏洞编号和 URL 幂等写入参考链接到 `manscan_vulnerability_intelligence_articles`。records 写入 `category=non-cve`、标题、描述、解决建议、阿里云评分、披露时间到 `created_at`，severity 转为 `critical`/`high`/`medium`/`low`/`none`，`is_poc` 在利用情况或 EXP 成熟度为“EXP 已公开”或“POC 已公开”时为 1；`vulnerability_impact` 不写，`updated_at` 不由任务写入。articles 的 `source` 固定为 `avd`，`url` 为参考链接，`added_at` 不由任务写入。已有记录更新时保留现有 `updated_at`、`vulnerability_impact`；新增时间列由数据库默认值生成。
+- 输出：为兼容既有下载及综合任务打包，继续原子写入 `data/tmp/aliyun_avd/no_cve_vulnerabilities.json`，实际包含有 CVE 和无 CVE 的记录；JSON 历史字段 `no_cve_candidate_count` 现统计全部去重后的 AVD 候选数量。执行记录登记产物路径，可通过定时任务产出下载接口获取。存在部分详情失败时保留成功记录和错误摘要，任务状态标记失败。
+- 数据库映射：在一个事务中按 `source=avd` 与 AVD 编号更新或新增 `manscan_vulnerability_intelligence_records`，并按漏洞编号和 URL 幂等写入参考链接到 `manscan_vulnerability_intelligence_articles`。records 根据详情中的 CVE 分类：包含 CVE 编号时写入 `category=cve`（与 VulnX 一致），无 CVE 编号时写入 `category=non-cve`；仍以 AVD 编号作为漏洞编号，写入标题、描述、解决建议、阿里云评分、披露时间到 `created_at`，severity 转为 `critical`/`high`/`medium`/`low`/`none`，`is_poc` 在利用情况或 EXP 成熟度为“EXP 已公开”或“POC 已公开”时为 1；`vulnerability_impact` 不写，`updated_at` 不由任务写入。articles 的 `source` 固定为 `avd`，`url` 为参考链接，`added_at` 不由任务写入。已有记录更新时保留现有 `updated_at`、`vulnerability_impact`；新增时间列由数据库默认值生成。
 - 不写入 `manscan_vulnerability_intelligence_components`、`manscan_vulnerability_intelligence_pocs` 和 `manscan_vulnerability_intelligence_shodan_exposures`。
+- 分类规则同样适用于综合任务中实际同步到的记录。历史分类需重新执行独立全量同步更新；综合任务可能提前停止并跳过已有详情，不能保证纠正全部历史记录。
 - 数据库升级：已有数据库执行 `docs/SQL/alter_manscan_vulnerability_intelligence_avd_timestamp_defaults.sql`，以便 records.`updated_at` 和 articles.`added_at` 在任务省略这些字段时由数据库默认生成。
 
 ### 内置任务：漏洞情报增量更新（三渠道）
 
 - `job_type`：`vulnerability_intelligence.incremental`
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnerability_incremental.sql`，默认每天 02:00 执行，按 `job_type` 判断后可重复执行。默认超时 21600 秒；任务顺序执行三个渠道。
-- 执行顺序：长亭无 CVE 全量列表、阿里云无 CVE 全量列表与详情、VulnX 最新完整 CVE 列表及缺失项详情。各来源任务分别报告阶段、当前值、总量和说明，综合任务进度按渠道阶段推进；每个数据源完成后继续下一个，发生错误则停止并标明失败渠道。
+- 渠道失败隔离：长亭、阿里云、VulnX 顺序执行，某个渠道失败后记录 `<来源>.failed` 进度并继续下一个渠道；最后统一汇总渠道、产物和预警补偿推送的错误，存在整体错误时执行记录为 `failed`，进度阶段为 `finished_with_errors`，说明列出各渠道结果并保留已成功推送数量。进度 100% 表示渠道已尝试结束，不代表全部成功。已成功入库及推送的数据不回滚。任务取消、总超时、共享预警配置初始化失败或进度持久化不可用仍会提前结束。
+- 执行顺序：长亭全部漏洞列表、阿里云高危列表全部漏洞及详情、VulnX 最新完整 CVE 列表及缺失项详情。综合任务中，长亭和阿里云逐页检查当前页编号是否全部已存在，而非仅检查第一页。长亭在每页入库前按 `source=chaitin + ct_id` 判断；若全部已存在，更新完当前页后停止请求后续列表页，此判断不受 `cve_id` 影响。阿里云在每页详情请求前按 `source=avd + AVD 编号` 判断，不限制 CVE；全部已存在时跳过当前页全部详情请求并停止后续列表页。当前页仍有新编号则继续分页；空列表按数据源结束条件停止，编号缺失不作为“整页已存在”的依据。例：第 1 页有新编号、第 2 页全部已存在，则第 2 页停止，不再读取第 3 页。进度说明显示实际停止页码。该提前停止逻辑仅用于综合任务，不影响独立的长亭、阿里云全量同步任务。各来源任务分别报告阶段、当前值、总量和说明，综合任务进度按渠道阶段推进；每个数据源无论成功或失败都继续下一个，并保留失败渠道及原因。
 - 长亭与阿里云：按各自来源和漏洞编号匹配现有记录；新编号插入，字段有变化时更新映射字段，参考链接按来源同步差异。其他来源和关联表不受影响。
 - VulnX：先获取最新完整 CVE 列表，再按 1000 个编号一批检查 `source=vulnx`。只对不存在的编号请求详情并新增完整情报快照，已有 CVE 不进行重复 API 请求。
-- API Key：综合任务的 `api_key_id` 用于 VulnX ProjectDiscovery 请求和共享限流；CVE 列表使用 `GITHUB_TOKEN` 环境变量。未设置 GitHub Token 时仍可访问 GitHub 公共 API，但受匿名限流约束。
+- API Key：综合任务和独立 VulnX 任务均从数据库读取 `cve_file_names.sync`（“全量 CVE 列表获取”）的 `api_key_id` 用于 GitHub 列表请求，从 `vulnx_vulnerability.sync`（“全量 VulnX 漏洞更新（长耗时）”）读取 `api_key_id` 用于 VulnX 详情请求。两种请求分别使用对应 Key 的共享限流；综合任务自身的 `api_key_id` 不参与这两种请求。综合任务进入 VulnX 阶段时才读取这两项配置；缺失或读取失败记为 VulnX 渠道失败，不影响长亭和阿里云执行。独立 VulnX 任务仍直接失败。列表任务未绑定 Key 时 GitHub 请求回退到 `GITHUB_TOKEN`，VulnX 任务未绑定 Key 时详情请求回退到 `PDCP_API_KEY`。
+- 下载产出：本次阿里云和 VulnX 渠道均完成后（允许 VulnX 单个 CVE 部分失败），将阿里云 `no_cve_vulnerabilities.json` 与 VulnX 的 `vulnXerror.zip` 放入按执行记录 ID 命名的 `data/tmp/vulnerability_intelligence/incremental_outputs_<run_id>.zip`，并登记为本次执行的 `output_path`。在执行记录的“下载产出”按钮或 `GET /api/v1/scheduled-job-runs/:run_id/output` 下载。VulnX 压缩包包含 `vulnXerror.txt` 和 `vulnXerrorDetail.log`，无失败时两个文件为空。长亭和 VulnX 正常同步结果写入数据库。阿里云或 VulnX 渠道整体失败时不生成本次汇总 ZIP，避免打包固定路径上残留的历史文件；仅长亭失败而另外两个渠道完成时仍生成产出，可通过原下载接口获取。旧执行记录不会补生成汇总 ZIP。
+- 部分失败状态：综合任务中单个 CVE 经重试后仍查询、解析或写库失败时，将编号和错误写入 VulnX 失败清单并继续处理其他 CVE；只要三个渠道整体流程及汇总产物生成成功，综合任务仍标记成功，进度消息会显示失败数量，可下载汇总 ZIP 查看详情。来源列表获取、数据库查询和渠道处理器缺失等错误只结束当前渠道，后续渠道继续执行。三渠道结束后仍尝试预警补偿推送，产物生成失败也不跳过补偿；最终存在整体错误时任务标记失败并汇总所有错误。任务取消或总超时立即停止后续渠道。独立 `vulnx_vulnerability.sync` 任务保持“存在单个失败 CVE 即标记失败”的行为。
+
+综合增量任务还会自动推送新增漏洞预警（独立全量同步任务不触发推送）：
+
+- 推送进度：综合增量任务的 `progress_message` 在采集、GitHub 列表获取、补偿推送和完成阶段均追加 `本次已成功推送到处理接口 N 条`，并在接收端每次确认成功后立即刷新，保留当前阶段、原有进度数值及百分比口径。仅 HTTP `200` 或 `202` 且响应 `resultCode` 与状态码一致时计数；表示接口已确认接收，不表示下游处理已完成。计数按本次运行的 `source + vulnerability_id` 去重，包含本次补偿成功的历史待推送记录，失败、超时、无效响应不计数；本地待推送文件清理失败不撤销已确认数量，同次重试确认不重复累计。每次运行从 0 开始，不是系统历史总量；已保存的进度文本可在执行记录中查看，旧执行记录不补算。复用现有进度响应字段，无新增请求参数；说明超长时截断前部业务说明以保留计数。进度写入失败会使任务报错，但不会因此保留已成功接收且本地清理成功的待推送记录。
+- 触发条件：以 `source + vulnerability_id` 判断是否新增。长亭（`chaitin`）和阿里云（`avd`）新增记录均推送；VulnX（`vulnx`）新增记录仅在 `severity` 为 `high` 或 `critical`，且 `is_kev`、`is_poc`、`is_vkev` 任一为 `true` 时推送。已有记录的字段更新不触发推送；与详情接口一致，`rejected` 记录不推送。长亭新增记录不受 `cve_id` 限制，均以 `ct_id` 推送；阿里云高危列表新增记录同样不限制 CVE，均以 AVD 编号推送。
+- 配置：从 API key 管理表中查找描述为 `推送漏洞预警` 的唯一记录（忽略首尾空格及英文字母大小写）。使用该记录的解密 Key 发送 `Authorization: Bearer <key>`，并使用其共享请求限流；综合任务的 `api_key_id` 不用于推送。配置缺失、重复、密钥不可用或平台 URL 无效时，在采集前将任务标记失败。
+- 接收地址：使用该记录的“平台 URL”作为基地址，追加 `/v1/alerts`；已包含该路径时不重复追加。允许内网 HTTP(S) 平台，不跟随重定向。示例：`http://intel.internal:8080` 对应 `http://intel.internal:8080/v1/alerts`。
+- 请求：`POST /v1/alerts`，`Content-Type: application/json`。唯一顶层字段为 `data`，其内容直接复用 `GET /api/v1/vulnerability-intelligence-records/:vulnerability_id` 的详情数据，包含 `records`、`articles`、`components`、`pocs`、`shodan_exposures` 五个数组；无关联数据时数组为 `[]`，记录可空字段保持 `null`。不发送 ManScan 的 `code`、`message` 响应外壳；`vuln_status` 随详情发送，由接收端按协议丢弃。单个漏洞一条请求，不截断详情；超过接收端默认 256 KiB 上限时保留待处理并报告失败。
+- 响应与失败处理：HTTP `202`（入队）或 `200`（重复提交），且响应 `resultCode` 与 HTTP 状态码一致时视为成功。HTTP `400`、`401`、`413`、`500`、`503`，以及其他状态、响应格式错误、连接失败或 15 秒请求超时均视为失败。新增记录成功入库后立即尝试推送；推送失败不回滚情报入库。待推送来源及编号保存在 `data/vulnerability_alerts/pending/`，不保存 Key 或详情正文，任务结束前补偿重试（包括之前执行留下的记录）；仍有失败则任务失败，并在执行记录错误信息中显示待重试数量。取消或服务重启后保留待推送记录，下次增量任务重新读取详情和最新 Key 配置再推送。该目录需随服务数据持久化，勿作为临时文件清理。接收端已接收但本地尚未确认成功时可能重复投递，由接收端按协议去重。
+
+请求格式示意（`data` 实际为完整漏洞详情）：
+
+```http
+POST /v1/alerts
+Authorization: Bearer <推送漏洞预警 API key>
+Content-Type: application/json
+
+{"data":{"records":[{"source":"chaitin","vulnerability_id":"CT-DEMO"}],"articles":[],"components":[],"pocs":[],"shodan_exposures":[]}}
+```
 
 以下接口均要求 JWT 登录且当前用户角色为管理员。API Key 使用 AES-256-GCM 加密后只存入 `manscan_third_party_api_keys.encrypted_key`；数据库不保留明文 Key 列，列表、单条查询及增改删响应均不返回密钥明文或密文，只返回 `key_configured`。如确有必要，可使用下方明文查询接口；该接口是唯一返回明文 Key 的接口。新部署请执行 `docs/SQL/create_manscan_third_party_api_keys.sql`；已有表请先备份并执行 `docs/SQL/alter_manscan_third_party_api_keys_encrypt_key.sql`。迁移会将当前版本的 `api_key` 密文列重命名为 `encrypted_key` 并保留密文；如果数据库中存在早期独立的明文 `key` 列，迁移会删除该列及其中数据。配置密钥丢失或更换后既有密文不可恢复。请求体最大 16 KiB。
 
@@ -3079,7 +3116,7 @@ curl -X DELETE "http://127.0.0.1:8686/api/v1/third-party-api-keys/1" \
 
 - 请求方法和路径：`GET /api/v1/vulnerability-intelligence-records`，需要登录。
 - 请求参数：`page` 为可选正整数，默认 `1`；`page_size` 为可选整数，范围 `1-100`，默认 `10`。`source`、`vulnerability_id`、`vul_name` 为可选字符串模糊查询；`severity` 为可选字符串或字符串数组，支持逗号分隔（如 `severity=critical,high`）及重复参数（如 `severity=critical&severity=high`），多个等级按“或”匹配，每个值仍执行模糊查询，并与其他筛选条件按“且”组合。`is_poc`、`is_kev` 为可选布尔值（支持 `true`/`false`、`1`/`0`、`yes`/`no`、`y`/`n`）。`is_kev=true` 匹配数据库 `is_kev` 或 `is_vkev` 任一为 true 的记录；`is_kev=false` 匹配两者均不为 true 的记录。
-- 响应格式：统一响应 envelope 中的 `data` 为分页对象，包含 `page`、`pageSize`、`total`、`totalPages`、`items`。每条记录仅返回 `source`、`vulnerability_id`、`created_at`、`updated_at`、`cvss_score`、`vul_name`、`is_kev`、`is_poc`、`severity`；`is_kev` 在数据库 `is_kev` 或 `is_vkev` 任一为 true 时为 true，否则为 false。其他数据库可空字段保持 `null`。按 `created_at DESC, id DESC` 排序。
+- 响应格式：统一响应 envelope 中的 `data` 为分页对象，包含 `page`、`pageSize`、`total`、`totalPages`、`items`。状态 `rejected`（大小写不敏感）的漏洞记录不会出现在列表中，也不计入分页总数；空状态记录仍保留。每条记录仅返回 `source`、`vulnerability_id`、`created_at`、`updated_at`、`cvss_score`、`vul_name`、`is_kev`、`is_poc`、`severity`；`is_kev` 在数据库 `is_kev` 或 `is_vkev` 任一为 true 时为 true，否则为 false。其他数据库可空字段保持 `null`。按 `created_at DESC, id DESC` 排序。
 - 错误码：`40001` 分页参数或布尔筛选参数非法，`40101` 未登录或令牌无效，`50001` 数据库查询失败。
 - 使用示例：
 
@@ -3116,7 +3153,7 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
 
 - 请求方法和路径：`GET /api/v1/vulnerability-intelligence-records/stats`，需要登录。
 - 请求参数：无。
-- 响应格式：统一响应 envelope 中的 `data.last_7_days` 和 `data.last_30_days` 均为整数，分别表示对应时间窗口内 `critical` 与 `high` 等级合并后的记录数量；无匹配记录时返回 `0`。按 `manscan_vulnerability_intelligence_records` 的记录行数统计，不按漏洞编号去重；`created_at` 从请求时刻向前滚动 7×24 小时或 30×24 小时，起止时刻均包含，未来时间和空时间不计入。严重等级大小写不敏感；近 7 天计数包含在近 30 天计数中。
+- 响应格式：统一响应 envelope 中的 `data.last_7_days` 和 `data.last_30_days` 均为整数，分别表示对应时间窗口内 `critical` 与 `high` 等级合并后的记录数量；无匹配记录时返回 `0`。状态 `rejected`（大小写不敏感）的记录不计入，空状态记录仍计入。按 `manscan_vulnerability_intelligence_records` 的记录行数统计，不按漏洞编号去重；`created_at` 从请求时刻向前滚动 7×24 小时或 30×24 小时，起止时刻均包含，未来时间和空时间不计入。严重等级大小写不敏感；近 7 天计数包含在近 30 天计数中。
 - 错误码：`40101` 未登录或令牌无效，`50001` 数据库查询失败。
 - 使用示例：
 
@@ -3140,7 +3177,8 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
 
 - 请求方法和路径：`GET /api/v1/vulnerability-intelligence-records/:vulnerability_id`，需要登录。
 - 请求参数：路径参数 `vulnerability_id`，必填字符串，按完整编号精确查询，去除首尾空白后长度为 1-128 字节，不允许 NUL、回车、换行或制表符。编号应按 URL 路径规则编码。
-- 响应格式：统一响应 envelope 中的 `data` 包含 `records`、`articles`、`components`、`pocs`、`shodan_exposures` 五个数组，对应五张 `manscan_vulnerability_intelligence_*` 表的全部字段，字段名为数据库小写下划线命名。`records` 返回同一编号来自不同来源的全部记录；其余数组按相同编号查询，无关联行时返回 `[]`。各数组按 `id ASC` 排序，可空字段返回 `null`。
+- 响应格式：统一响应 envelope 中的 `data` 包含 `records`、`articles`、`components`、`pocs`、`shodan_exposures` 五个数组，对应五张 `manscan_vulnerability_intelligence_*` 表的全部字段，字段名为数据库小写下划线命名。`records` 返回同一编号来自不同来源、状态不为 `rejected`（大小写不敏感）的记录，空状态记录仍保留；若该编号只有 `rejected` 记录，则返回 `40401`。其余数组按相同编号查询，无关联行时返回 `[]`。各数组按 `id ASC` 排序，可空字段返回 `null`。
+- 字段与空值约定：每条记录始终返回该表的全部字段，数据库 `NULL` 显式输出为 JSON `null`，不省略字段，也不替换为 `""`、`0`、`false` 或 `[]`。JSON 数组列（`cwe`、`vulnerability_impact`、`cpe`、`search_queries`）为 `NULL` 时返回 `null`，存储空数组时返回 `[]`；无关联行时，表对应的顶层数组返回 `[]`。详情中的 `is_kev`、`is_vkev` 分别返回原始字段，不采用列表接口的合并值。
 - 错误码：`40001` 编号非法，`40101` 未登录或令牌无效，`40401` 主记录不存在，`50001` 数据库查询失败。
 - 使用示例：
 
@@ -3154,13 +3192,445 @@ curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   "code": 0,
   "message": "success",
   "data": {
-    "records": [{"id": 1, "source": "vulnx", "vulnerability_id": "CVE-2026-12345", "description": "示例描述"}],
-    "articles": [{"id": 2, "vulnerability_id": "CVE-2026-12345", "url": "https://example.test/advisory"}],
-    "components": [{"id": 3, "vulnerability_id": "CVE-2026-12345", "product": "example", "cpe": []}],
-    "pocs": [],
-    "shodan_exposures": []
+    "records": [{
+      "id": 1,
+      "source": "vulnx",
+      "vulnerability_id": "CVE-2026-12345",
+      "age_in_days": null,
+      "category": null,
+      "created_at": null,
+      "updated_at": null,
+      "cvss_metrics": null,
+      "cvss_score": null,
+      "cwe": null,
+      "description": "示例描述",
+      "epss_percentile": null,
+      "epss_score": null,
+      "max_hosts": null,
+      "min_hosts": null,
+      "filename": null,
+      "h1_rank": null,
+      "h1_reports": null,
+      "impact": null,
+      "vul_name": null,
+      "is_auth": null,
+      "is_kev": null,
+      "is_oss": null,
+      "is_patch_available": null,
+      "is_template": null,
+      "is_poc": null,
+      "is_remote": null,
+      "is_vkev": null,
+      "ntps": null,
+      "poc_count": null,
+      "poc_first_seen": null,
+      "product": null,
+      "vendor": null,
+      "remediation": null,
+      "severity": null,
+      "vuln_status": null,
+      "vulnerability_type": null,
+      "vulnerability_impact": null
+    }],
+    "articles": [{
+      "id": 2,
+      "vulnerability_id": "CVE-2026-12345",
+      "added_at": null,
+      "source": null,
+      "url": "https://example.test/advisory"
+    }],
+    "components": [{
+      "id": 3,
+      "vulnerability_id": "CVE-2026-12345",
+      "cpe": [],
+      "category": null,
+      "deployment_model": null,
+      "industry": null,
+      "product": "example",
+      "summary": null,
+      "vendor": null
+    }],
+    "pocs": [{
+      "id": 4,
+      "vulnerability_id": "CVE-2026-12345",
+      "url": "https://example.test/poc",
+      "source": null,
+      "added_at": null
+    }],
+    "shodan_exposures": [{
+      "id": 5,
+      "vulnerability_id": "CVE-2026-12345",
+      "product_name": null,
+      "max_hosts": null,
+      "min_hosts": null,
+      "search_queries": null
+    }]
   }
 }
 ```
 
-示例仅展示部分字段；实际响应会返回每条记录的全部字段。
+上例完整展示五张表的全部字段及 `null` 的实际响应形式。
+
+## 攻击路径识别与过滤
+
+部署前执行 docs/SQL/create_manscan_attack_path_tasks.sql。默认使用 hybrid 模式，由本地规则先分类、疑难路径再批量调用模型，无需安装 Claude CLI；可配置 ai.attack_path_mode: cli 回退到原单会话模式，此时需要支持 HTTP MCP、--bare 与 --strict-mcp-config 的 Claude CLI。服务端读取私有 config.yaml 中 ai.model、ai.uuap_id 及可选 ai.claude_binary。每次模型请求从 manscan_third_party_api_keys 中查找描述为 `原力平台` 的唯一记录，使用该记录的 `platform_url` 和 API Key；API Key 通过现有 auth.api_key_encryption_key 解密。无需在 config.yaml 中配置记录 ID、URL 或 API Key；密钥不会写入文件或 API 响应。
+
+已有包含 `input_text`、`output_text` 的任务表时，停止任务服务并备份数据库后，一次性执行 `docs/SQL/alter_manscan_attack_path_tasks_file_storage.sql`，再部署当前服务；新建表只执行建表脚本。升级脚本保留已落盘结果的文件名并删除两个正文列，不迁移旧版正文；仅有数据库正文的任务需要重新上传 TXT。
+
+配置示例：
+
+    ai:
+      model: global.anthropic.claude-sonnet-5
+      uuap_id: <服务账户的UUAP-ID>
+      attack_path_mode: hybrid
+      attack_path_concurrency: 5
+      attack_path_batch_size: 500
+      claude_binary: /usr/local/bin/claude # 仅 cli 模式需要
+
+`attack_path_mode` 默认 `hybrid`，可选 `hybrid` / `batch` / `cli`；并发数默认 5、范围 1–32；每批条数默认 500、范围 1–1000。未填写或数值为 0 时使用默认值，越界配置会阻止服务启动。这些配置修改后需要重启服务，不支持按上传请求覆盖。原力平台的 URL 和 API Key 必须在第三方 API Key 管理中配置，描述填写 `原力平台`；同名配置必须唯一，URL 使用 `https://ai-force.duxiaoman-int.com/` 或其 `/agent-api/openai` 地址。
+
+### 提示词配置
+
+将仓库根目录的 `prompt.yaml` 与实际使用的 `config.yaml` 放在同一目录。若通过 `MANSCAN_CONFIG_FILE` 指定配置文件，提示词文件也从该配置文件所在目录读取，不受 Claude 临时工作目录影响。文件内 `prompts` 是标识到提示词正文的映射，当前攻击路径处理使用以下五个标识：
+
+| 标识 | 用途 |
+| --- | --- |
+| `attack_path_filter.system` | 恶意路径识别标准、输入可信边界和任务执行规则，作为模型分类标准，CLI 模式同时用作系统提示词 |
+| `attack_path_filter.task` | 当前任务的处理要求，作为 CLI 任务提示词 |
+| `attack_path_filter.tools.read_paths` | 读取路径工具的说明 |
+| `attack_path_filter.tools.write_filtered_paths` | 提交恶意路径编号并写入正常路径工具的说明 |
+| `attack_path_filter.tools.finish` | 完成确认工具的说明 |
+
+编辑对应标识下的正文即可调整提示词，支持中文及 YAML 多行文本；请保留标识名称。正文支持 `{{total}}`（去重后路径总数）、`{{read_default}}`（默认读取条数）、`{{read_max}}`（最大读取条数）、`{{read_max_bytes}}`（单次路径文本字节上限）四个占位符，由后端按实际参数替换，不执行模板表达式或命令。修改提示词不会改变文件工具的硬性限制、参数结构或权限。
+
+启用 AI 功能时，服务启动会校验提示词文件；每次任务开始执行时重新读取五段提示词，整个任务使用同一份快照。部署此版本后，修改 `prompt.yaml` 无需重新编译或重启，新开始执行的任务使用最新内容，已经运行的任务不受影响。建议先编辑临时文件，再整体替换 `prompt.yaml`，避免读取到保存过程中的不完整文件。
+
+缺失文件、缺少标识、空正文、重复标识、无效 YAML 或未知占位符会报错，不回退到代码内默认提示词。单段正文最多 32 KiB，文件最多 1 MiB。启动校验失败会阻止 AI 处理器初始化；运行期间文件被改坏时，下一次任务在调用模型前失败，详情写入服务端日志，前端通过原任务接口获得 `failed` 状态和现有失败提示。
+
+### hybrid 模式：Coraza + 固定版本 CRS、结构化复核与模型（默认）
+
+1. 引擎固定为 Coraza v3.8.1，规则固定为 coraza-coreruleset/v4 v4.25.0（上游 CRS 4.25.0）。版本与校验和由根目录 go.mod / go.sum 锁定，规则从依赖的嵌入文件系统编译进程序；运行时不下载、不自动更新。旧手写攻击正则、敏感路由名单、三层手工解码和 /api/ 前缀放行逻辑已删除。
+2. 每条输入建立独立的离线 Coraza 事务，执行请求 phase 1 / 2，URI 和查询参数由 Coraza 解析、转换和匹配。只做内存判断，不请求输入 URL，不解析 DNS，不执行载荷。无真实请求方法、请求头、Body 和响应时，适配层使用固定 GET / HTTP/1.1 以及固定 Host、User-Agent、Accept；这些字段不是对目标站点的观测。未加载方法限制、扫描器 UA、multipart、响应检测规则，不能作为完整 HTTP WAF 或业务越权检测器。
+3. 加载 CRS 的 901 初始化、905 通用排除、920 协议规范、921 协议攻击、930–934 LFI/RFI/RCE/PHP/通用攻击、941–944 XSS/SQLi/会话固定/Java 和 949 评分规则组（该编号范围内不存在的组不加载）。运行 DetectionOnly，blocking paranoia level 为 1、detection paranoia level 为 2，不提前阻断，以便获得完整评分；审计和调试输出关闭，避免把原始路径及参数写入日志。
+4. 本地排除要求 CRS 的 PL1 累计分至少 10，且至少命中两个不同的 930–944 攻击检测规则。规则的流程控制命中不作为攻击证据。低分、单规则、仅高敏感等级命中先进入下述结构化复核；无法确认时才送模型。该阈值是离线清洗策略，不是 CRS 默认阻断阈值，也不保证所有高分结果均无误报。
+5. 本地保留要求输入可以可靠解析，且 CRS 完整执行成功、检测分为 0、无攻击检测规则命中。不再要求参数名属于预定义清单、参数值符合数字/布尔/日期/枚举类型；自由文本、未知参数、字符串游标、文件路径值、重复参数和可解析的编码路径，在 CRS 检查干净时直接判为正常 API，不进入模型。/api/ 前缀不参与放行，所有可可靠解析的路径都必须先执行 CRS。无法解析的 URL、非法查询编码、不支持的 URL 表示等仍视为异常可疑输入（内部原因 invalid_input），保留复核，不能把未完成检查当成零分。规则执行、事务处理或评分读取异常仍使任务失败。
+6. CRS 编译实例在处理器中复用，每条路径使用独立事务；本地扫描最多使用 5 个且不超过 GOMAXPROCS 的 worker，每批有界并行并按原位置收集结果。模型与本地结果通过位置掩码合并，保留原文本和顺序；疑难路径集中落盘后批量送模型，临时目录 0700、临时文件 0600，处理结束或取消时清理。
+7. processed / kept 仍表示已按顺序写出或排除的输入前缀；本地扫描期间和前方疑难批次等待模型时，进度可能暂不增长。接口方法、上传参数、响应字段与下载格式均未改变。规则加载、事务处理或评分读取失败会使任务失败，不将错误当零分放行。
+8. 模型并发默认 5，所有使用该分类器的任务共享配置的请求并发闸门，而不是每个任务各占 5 个上游请求。已在配置中显式设置 1 的部署需要手动改为 5 并重启；未配置时使用新默认值。上游并发额度和 API Key 本地每分钟限额是独立限制，不能互相替代。遇到 110602 或 HTTP 429 仍共享降为单并发并退避重试，进程重启后恢复配置上限。
+9. prompt.yaml 只影响疑难路径的模型判定。CRS 版本、加载范围、评分阈值和复核分流策略固定在后端，需要改代码并重新构建才能变更。规则和模型均可能误报或漏报，准确率须用独立人工标注数据验证。
+
+
+#### 当前分流策略：没有可疑证据就本地保留
+
+按用户明确要求，hybrid 取消“未知参数类型必须复核”的限制：
+
+| 本地检查结果 | 当前去向 |
+| --- | --- |
+| CRS 完整执行成功、零检测分且无攻击规则命中 | 本地保留，不消耗模型 token |
+| CRS 有可疑命中，但分数/规则数量不足，结构确认也未成立 | 优先复用模型缓存，未命中才进入模型复核 |
+| CRS 高分多规则命中，或同参数结构确认成立 | 本地排除 |
+| URL/查询编码不合法或无法可靠解析 | 作为异常可疑输入使用模型判定，优先查缓存，不默认当成正常 API |
+| 引擎、事务或评分读取失败 | 任务失败，不默认保留 |
+
+例如 `/api/search?q=手机`、`/api/items?category=books`、`/api/orders?cursor=abc123`、`/api/files?path=reports/a.csv` 和 `/api/items?id=1&id=2` 在当前定向测试中均本地保留；不因自由文本、未知类型或重复参数单独请求模型。
+
+此策略明确接受规则漏检的取舍：“正常”表示当前本地规则没有发现可疑证据，不是业务安全证明。现有回归样本 `/api?host=127.0.0.1%3Bid`（参数解码后为 `127.0.0.1;id`）在当前固定 CRS 中零分无命中，新策略会保留，旧策略曾因未知参数类型送模；该变化已写入回归测试。结构解析仍只确认同一参数已有 CRS 命中的内容，不独立兜底所有零命中载荷。
+
+本次使用原始 1000 条样本仅运行本地诊断：本地保留 682 条、本地排除 170 条（CRS 强证据 160、Shell 结构确认 10）、模型复核 148 条，全部为尚未确认的 CRS 可疑命中。相比旧策略 420 / 170 / 410，新增本地保留 262 条，送模比例从 41.0% 降为 14.8%，送模条数减少约 63.9%。这些是分流统计，不是准确率、token 费用或处理耗时测量；本轮未调用真实模型。
+
+本次修改不改变上传、查询、取消、下载的请求和响应字段，也不改动 batch / cli 模式。需要重新构建并重启后端后生效；已完成任务不会自动重新处理。下方旧样本和真实模型耗时均保留为历史记录，不作为此策略的新性能或准确率结论。
+
+#### 第二层：同一参数的结构化证据确认
+
+对原本需要复核的 CRS 命中，增加以下纯本地解析。它们是语法/结构解析库，不是三个独立 WAF，也不是按命中数量投票。
+
+| 层 | 固定依赖 | 确认范围 |
+| --- | --- | --- |
+| Shell | 新增 mvdan.cc/sh/v3 v3.14.0 的 syntax 包 | 在 host/hostname/ip/target/cmd/command/exec 参数中，确认命令替换，或字面 IP 后出现完整 Shell 命令链；须同时有同一参数的 CRS 932 命中 |
+| HTML / JavaScript | 复用 golang.org/x/net v0.58.0 的 html 包、github.com/projectdiscovery/goja v0.0.0-20260618133720-acb73e419534 的 parser/ast 包 | 解析完整单根 HTML 片段，确认 script、指定事件属性或 javascript URL 中存在完整的调用/赋值/new 表达式；须同时有同一参数的 CRS 941 命中 |
+| 元数据 URL | Go 标准库 net/url、net/netip | 仅在 url/uri/endpoint/target 参数中确认字面地址 169.254.169.254 的 /latest/meta-data 或 /metadata/instance 资源及子路径；须同时有同一参数的 CRS 931/934 命中 |
+
+判定约束：
+
+- CRS 只提供真实带 attack- 标签的 ARGS/ARGS_GET 命中，必须与结构解析的参数、攻击类别一致。其他参数、请求头、参数名命中和不同攻击类别不能交叉拼凑证据。
+- 查询参数只按 URL 规则解码一次；重复参数、非法查询串、解析失败和多重编码不通过二次确认，继续保留模型复核。每条路径仍受 2048 字节限制，同一参数/类别的失败解析结果在本次事务内复用。
+- Shell 只导入语法解析器，不导入 interp 或执行命令；JavaScript 只生成 AST，不创建运行时；URL 只做文本与字面地址解析，不访问目标、不查询 DNS。
+- HTML 普通文本、带前后解释的代码示例、嵌在 pre 等节点中的脚本示例、不执行的 script type、仅注释和无调用/赋值的内容，不通过本层确认。普通内网/回环 URL 不因地址范围而直接判恶意。
+- 有对应证据时本地排除；解析器未识别、类别不一致或无法确认时继续交给模型，绝不把多库“均未命中”当成安全证明。零分且无命中的输入按上面的新策略直接保留，不再检查业务参数类型。
+- Coraza 已经通过 libinjection 实现 detectSQLi/detectXSS，不重复调用它作为独立第二票。CRS 与结构解析仍可能共同误报，完整代码片段也可能是合法业务数据；这些条件识别疑似攻击结构，不证明漏洞可利用或保证零误报。
+
+2026-11-17 历史多层判定样本验证（尚未取消类型限制）：同一份 1000 条原始输入，本地保留仍为 420 条，本地排除由 160 增至 170 条，模型复核由 420 降至 410 条（42.0% → 41.0%，复核条数减少约 2.4%）。新增 10 条均为 CRS 与 Shell 结构的共同证据；本样本 HTML/JavaScript 与元数据 URL 层没有新增排除。仍有 262 条类型/表示歧义和 148 条未被二次确认的 CRS 命中需要复核。此结果是分流数量，不是人工标注准确率，也不表示总耗时下降相同比例。
+
+历史真实上游复测（尚未取消类型限制）：将同样的 1000 条样本扩展为 10000 条，完整处理及结果校验耗时 24.582 秒；本地保留 4200、本地排除 1700、模型复核 4100，14 个逻辑批次、19 次实际请求、上游并发峰值 5，最终保留 6890、排除 3110。上轮对应耗时为 22.982 秒、15 次请求；虽然本轮少复核 100 条，但批次数未减少且实际调用次数增加，因此尚未证明总耗时改善。本轮未重复 10 万条真实上游测试；定向竞态测试覆盖分类、顺序、取消、有界调度与 10 万条模拟处理。后端需重新构建并重启后生效，上传及轮询脚本保持原用法。
+
+此前的参数类型/枚举清单已从当前分流逻辑删除，不再按参数名或值是否落在该清单决定送模。输入文本仍按原样处理，不删除 request_id、业务 ID 或其他参数，也不按路径模板合并不同请求的判定。
+
+### 模型判定持久化缓存（hybrid / batch）
+
+服务启动后自动启用，无需新增请求参数。默认缓存文件为 `<RootDir>/data/attack-path-cache/model-decisions.sqlite`，其中 `RootDir` 是服务配置中的项目根目录。使用带索引的 SQLite 文件，按当前批次查询；不会每次扫描整个历史文件，也不会将全部历史缓存读入内存。服务重启后继续复用，首次部署从空缓存开始，不自动导入旧测试报告。使用现有 SQLite 驱动，构建和运行需支持 CGO。
+
+处理顺序：
+
+1. **hybrid**：仍先执行当前本地规则；本地已明确保留或剔除的路径不调用模型。不确定的路径进入模型缓存查询，命中后直接复用；未命中才发送模型。
+2. **batch**：所有路径先查询模型缓存；命中直接复用，未命中调用模型。
+3. 只有模型完整返回且通过处理数量、索引、协议等校验的批次，才将每条路径的“保留 / 剔除”结论事务性写入缓存。明确保留也会缓存，不会因 `false` 被误当成未命中。
+4. 同一批中的重复路径只发送一次，结论映射回各原始位置；同一服务实例的并发批次共享正在分析的相同路径。不同路径仍保留配置的模型并发能力。最终输出顺序、原文和进度含义保持一致。
+
+**匹配边界**：使用完整路径原文计算 SHA-256 摘要，包括查询参数、编码形式、大小写；不会把 `/api/a?id=1` 和 `/api/a?id=2` 混为同一条，也不自动 URL 解码或按模板合并。缓存命中不发起模型请求，因此该路径不产生新的模型 Token 费用。数据库只保存摘要、判定和创建时间，不保存路径原文、参数明文、提示词或 API Key；摘要不是加密，不应当公开缓存文件。
+
+**失效边界**：缓存键包含模型服务地址、模型名称、实际系统提示词快照、批量协议正文、CRS 指令及显式策略版本。上述内容变化会进入新的缓存命名空间，原记录不再命中。当前策略版本绑定 Coraza 3.8.1、CRS 4.25.0 和本地证据策略；维护者升级检测依赖或修改判定语义时须同步提升 `attackPathModelCachePolicy`。如果在系统提示词中使用 `{{total}}` 等动态占位符，渲染结果变化同样会使缓存失效。服务商在相同模型名称下静默更新模型无法自动检测，需手动清缓存。缓存没有自动 TTL 或数量淘汰，同一命名空间保留第一次成功存储的结论；模型误判也会被复用，不能将命中视为独立复验。
+
+**失败处理**：模型超时、取消、失败、空缺/非法结果不写入缓存；已成功提交的其他批次可继续复用。等待同路径的请求取消不会取消其正在共享的模型调用；若原调用自身失败或取消，本次等待者也得到失败，后续任务可重试。缓存读取或写入失败会使当前任务失败，绝不按“正常路径”放行；文件损坏或不可写会导致缓存初始化失败、阻止服务启动。任务接口仍返回现有失败状态和错误提示，未增加响应字段或错误码。
+
+**维护**：目录权限 `0700`、数据库文件 `0600`；SQLite 运行时可能存在 `-wal`、`-shm` 辅助文件，均位于该私有目录。需要清理旧记录、强制重新判断或处理损坏时，先停止服务，将整个 `data/attack-path-cache` 目录移走备份，再启动服务自动创建空缓存。不要运行中只删除数据库主文件。不同服务进程之间不协调正在进行的模型请求，因此不要把共享数据库当作分布式去重锁；多实例可能对同时出现的首次路径重复调用模型。
+
+此缓存不改变 `cli` 模式；只在服务启动组装的 hybrid / batch 处理器中启用，直接构造原始分类器的底层集成测试不会自动启用缓存。部署需重新构建并重启服务，上传及轮询命令继续使用原接口。
+
+### batch 模式：全部路径使用模型判定
+
+1. 上传、去重、任务归属、落盘、下载和取消接口保持一致。每条路径使用模型判定结果：优先复用同一判定版本的历史模型缓存，仅未命中的路径实际调用模型；不采用规则放行或仅抽样判断。
+2. 服务端流式读取输入，每批最多 `attack_path_batch_size` 条，且带有明确 index 编号的路径数组 JSON 编码后最多 48 KiB；长路径或转义较多时会自动减小实际批量。每个请求只包含固定分类提示词和当前批数据，不携带其他批次历史，也不让模型调用文件读写工具。
+3. 每次最多并发 `attack_path_concurrency` 个批次；收到一个完成结果后即在窗口允许时补入新批次，不再等待整组请求全部完成。未按序提交的批次数（运行中与已完成等待的合计）最多为并发数的两倍，慢批次占满窗口时施加背压，不无限预读输入。模型必须返回完整处理数量和本批恶意索引；缺少字段、越界/重复索引、截断或非预期工具响应不会提交结果，同一请求批次最多容许三次格式失败（包含在五次调用上限内）。格式失败或单次请求超时且批量超过 64 条时自动二分重新判定，最多拆分三层；子批仍失败则任务失败。每个子批重新编号并映射回原位置，绝不丢弃非法索引后继续，也不按全部正常放行；鉴权、其他 HTTP 错误和父任务取消不会触发拆批。
+4. 完成分类的批次按输入顺序写入正常路径，再更新 `processed` 与 `kept`。若前面的批次尚未返回，后面的已完成批次等待按序提交，因此进度可能短暂停留后一次增长多个批次；不代表串行调用模型。
+5. hybrid / batch 模式使用第三方 API Key 的 `rate_limit_per_minute`，复用进程内共享限流器；0 表示不施加该本地请求频率限制，上游自身额度仍生效。HTTP 429、业务码 110602、5xx 和可重试网络错误最多调用五次，等待使用指数退避并参考 `Retry-After`（最长等待 5 分钟），取消能中断等待。每次调用最长 45 秒，整个任务最长 24 小时。
+6. 所有结果仍按原顺序、原文本写出，失败或取消不会提供半成品下载。模型判断标准读取 `attack_path_filter.system`；其他四个提示词仍校验以兼容 cli 模式，但 batch 模式的文件调度与响应结构由后端执行，不由提示词覆盖。
+
+吞吐由实际批量、并发额度、模型延迟、路径复杂度和 API Key 限流共同决定。hybrid 的提速还取决于疑难路径比例；大量复杂数据可能仍然很慢。分钟级是优化目标，不能用本地模拟测试耗时当作真实模型的 10 万条耗时。应先用真实样本验证分类质量和请求延迟，再按并发轮次数估算大任务时间。
+
+真实模型定向验证（读取私有配置，调用当前已配置的上游）：
+
+    MANSCAN_TEST_AI_FORCE=1 MANSCAN_TEST_ATTACK_PATH_INPUT=/absolute/path/sample.txt go test ./server/internal/service -run '^TestHybridAttackPathProcessorAIForce$' -v -count=1 -timeout=10m
+
+可额外设置 MANSCAN_TEST_ATTACK_PATH_REPEAT=100 将同一小样本扩展为不同 benchmark_id 参数的最多 10 万条，用于同分布吞吐检查；这种扩展不代表真实生产数据的多样性或准确率。未启用 MANSCAN_TEST_AI_FORCE 时测试自动跳过，不会调用模型。
+
+2026-11-17 上一轮类型检查优化（尚未增加第二层）：同一份原始 1000 条样本，优化前本地保留 252、排除 160、复核 588；优化后本地保留 420、排除 160、复核 420。复核比例从 58.8% 降至 42.0%，模型输入条数减少 28.6%。减少的 168 条均来自 CRS 零分且无检测命中的未知类型输入；158 条 CRS 弱命中复核数量保持不变，剩余 262 条类型/表示歧义仍复核。这是样本的分流数量变化，不能代替独立人工标注的准确率验证，也不能单凭条数比例推断总耗时。
+
+上一轮类型检查优化的真实上游验证结果（均包含本地扫描、模型处理和结果校验，不含上传、排队、数据库进度写入及启动编译）：
+
+| 样本 | 结果 | 模型复核 | 实际上游请求 | 耗时 |
+| --- | --- | --- | --- | --- |
+| 原始 1000 条 | 完成，保留 708、排除 292 | 420 条 | 3 次 | 11.822 秒 |
+| 同样本扩展 10000 条 | 完成，保留 6905、排除 3095 | 4200 条，14 个逻辑批次 | 15 次，并发峰值 5 | 22.982 秒 |
+| 同样本扩展 100000 条 | 未完成；达到集成测试 8 分钟 context 上限 | 未获得完整结束统计 | 未获得完整结束统计 | 480 秒后取消 |
+
+10000 条诊断中各已完成批次记录的共享并发闸门上限均为 5。100000 条复测出现多个 50–79 秒的逻辑批次，可能包含请求等待、重试及拆分；该轮尚未记录闸门值，不能据此确认具体延迟来源。集成测试的 8 分钟超时不改变后端任务的 24 小时上限。该轮证据确认复核输入减少 28.6%，但未证明 10 万条完整耗时优于上一版；不可按 1 万条结果线性推算或承诺分钟数。保留/排除数量是模型运行结果，未做独立人工标注的准确率验证。
+
+可只运行本地诊断，不调用模型、不输出原始路径或参数值：
+
+    MANSCAN_TEST_ATTACK_PATH_INPUT=/absolute/path/sample.txt go test ./server/internal/service -run '^TestAttackPathRulesProfile$' -v -count=1 -timeout=90s
+
+2026-11-17 上一版 CRS 保守策略基线（尚未扩展类型及启用补位调度）：将 1000 条原始上传样本增加不同 benchmark_id 参数扩展为 100000 条，使用 Coraza 3.8.1 / CRS 4.25.0、上述保守分流策略及模型 5 并发，完整处理和结果校验耗时 385.896 秒（6 分 25.9 秒）。本地保留 25200 条、本地排除 16000 条、模型复核 58800 条；194 个逻辑批次实际发出 216 次上游请求（包含重试及拆分），实测上游并发峰值 5；一次请求超时后通过拆分恢复。最终保留 69779 条、排除 30221 条，完成数量、输出原文、顺序及最终进度校验通过。计时包含本地规则扫描和模型处理，不包含上传、排队、数据库进度写入或服务启动时规则编译。相同源样本扩展不能替代真实生产数据的多样性与人工标注准确率评估。
+
+该基线策略比旧手写规则更保守，复核比例由旧样本的 6.1% 增加到当时扩展样本的 58.8%，所以即使并发提高，总耗时仍高于旧基线；不能把旧的 90.525 秒作为当前版本承诺。分类数量仅为本次模型运行结果，模型仍可能误判，重复执行可能有差异。
+
+历史基线（旧手写规则，已替换，不适用于当前 CRS）：2026-11-16 实测：将一份 1000 条上传样本按上述方式扩展为 100000 条，使用真实 AI Force、hybrid、单并发和默认批量配置，处理与结果校验耗时 90.525 秒。64400 条由规则保留、29500 条由规则排除，6100 条疑难路径分成 24 批交给模型；最终保留 70000 条、排除 30000 条，原顺序、原文本和最终进度校验通过。此计时不包含上传、任务排队和数据库进度提交，不能代表任意 10 万条生产数据的端到端耗时。
+
+上述旧规则基线中，同一原始样本的新旧结果有 33 条分类差异：规则新增保留 16 条简单 API 路径，新增排除 17 条命中攻击特征或敏感文件规则的路径。旧模型输出并非人工标注答案，保留数量接近也不表示分类完全一致；该吞吐测试不构成准确率评估。
+
+### cli 模式：文件处理与工具编排
+
+1. 上传 UTF-8 TXT，每行一条路径，允许空行和 UTF-8 BOM；上限 1 GiB，去重后最多 500000 条，每条最多 2048 字节。上传流直接去重并写入 `data/attack-path-tasks/<任务ID>/input.txt`，保留首次出现顺序，不生成 multipart 临时副本。
+2. 后台每次任务执行只启动一个 Claude CLI 进程。CLI 通过专用 MCP 文件工具自行编排整份文件的读取、恶意路径判断、结果写入和完成确认；不再由服务端按固定 500 条反复启动 CLI。
+3. 工具 `read_paths` 从当前任务文件读取待处理路径；Claude 可选择每次读取数量（默认 1000，最大 2000），但实际返回量还受 16000 字节预算限制，预算包含路径的 JSON 引号、转义与分隔符，并为进度元数据预留空间。这可避免大段工具结果被 CLI 转存到当前会话无法读取的临时文件，导致反复读取而不提交。未提交时重读返回相同片段，供重试或上下文压缩后继续处理。
+4. 工具 `write_filtered_paths` 接收片段 ID 与恶意路径编号，直接将原始正常路径按顺序写入本地结果 TXT，并更新数据库中的 `processed`、`kept`。重复提交相同片段与判断不会重复写入。前端继续轮询现有状态接口。
+5. 工具 `finish` 校验所有路径均已提交、无未处理片段，完成文件同步。CLI 成功退出且文件工具确认完成后，任务才标记 `completed`；仅返回“处理完成”等自然语言不能让任务成功。
+6. 下载接口直接流式读取 `data/attack-path-tasks/<任务ID>/output.<执行租约>.txt`。数据库不保存 TXT 正文，只在 `output_file_name` 列保存受校验的结果文件名。输入和结果均必须存在对应的本地文件，不再回退读取数据库正文。
+
+模型请求链路：`Claude CLI → 服务端本地 Messages 适配器 → https://ai-force.duxiaoman-int.com/agent-api/openai/v1/chat/completions`。适配器读取并解密数据库密钥，附加 Authorization、UUAP-ID 和随机 REQUEST-ID，并转换工具定义、tool_use/tool_result、tool_calls 及结束原因。上游完整返回后会转为 CLI 所需的 Messages JSON/SSE；此处不是上游逐 token 实时转发。
+
+文件工具链路：`Claude CLI → 仅回环监听、随机凭据鉴权的任务 MCP 服务 → 当前任务已打开的输入/结果文件`。CLI 只允许上述三个 MCP 工具，使用独立临时配置、严格 MCP 配置和非交互权限模式；内置通用 Shell/任意文件工具不开放。文件工具不接收任意路径、命令或替换文本，无法通过路径参数访问其他任务或服务器配置。上传路径仅作为模型判断数据，不会对这些路径发起 HTTP 请求。
+
+cli 模式单次任务执行最长 24 小时；每次 AI Force 请求最长 5 分钟，取消和租约失效会终止执行。失败或取消的任务不提供半成品下载。结果目录应挂载持久化磁盘；多实例必须共享文件系统。反向代理需允许 1 GiB 文件及 multipart 开销，并设置合适的上传超时。模型分类仍可能误判，工具编排和大文件读取不会保证模型速度或准确率。
+
+所有接口要求 JWT 登录，提交者只能查询、取消、下载自己的任务。接口调用方式如下。
+
+### POST /api/v1/attack-path-filter-tasks
+
+- 请求参数：`multipart/form-data`，必填文件字段 `file`，文件名后缀 `.txt`。不支持 JSON、单路径或普通文本提交。
+- 响应格式：HTTP 202，统一 JSON 响应。`data` 包含 `id`（随机任务 ID）、`status`（初始为 `queued`）、`total`（去重后路径数）、`processed`、`kept`、`created_at`；完成后还可包含 `finished_at` 和失败时的 `error_message`。
+- 错误码：40001（文件缺失、超过 1 GiB 或内容不合法）、40101（未登录）、50301（AI Force 配置未设置）、50001（输入落盘或任务持久化失败）。
+- 示例：`curl -H 'Authorization: Bearer <token>' -F 'file=@paths.txt;type=text/plain' https://<server>/api/v1/attack-path-filter-tasks`
+
+### GET /api/v1/attack-path-filter-tasks/:id
+
+- 请求参数：路径参数 `id`，提交接口返回的任务 ID。
+- 响应格式：统一 JSON 响应，`data` 为任务状态和进度；`status` 取值 `queued`、`running`、`completed`、`failed`、`cancelled`。前端可定期轮询，直到状态不再是 `queued` 或 `running`。
+- 错误码：40101（未登录）、40401（任务不存在或不属于当前用户）、50001（查询失败）。
+- 示例：`curl -H 'Authorization: Bearer <token>' https://<server>/api/v1/attack-path-filter-tasks/<id>`
+
+### GET /api/v1/attack-path-filter-tasks/:id/download
+
+- 请求参数：路径参数 `id`。
+- 响应格式：任务 `completed` 时流式返回 `text/plain; charset=utf-8` 附件 `normal-api-paths.txt`，仅包含去重且删除恶意路径后的正常 API 路径，每行一条；没有正常路径时返回空文件。文件下载不使用 JSON 封装。
+- 错误码：40101（未登录）、40401（任务不存在或不属于当前用户）、50301（任务未完成或失败）、50001（结果文件名为空或不合法、结果文件缺失或读取失败）。错误响应使用统一 JSON 封装。
+- 示例：`curl -H 'Authorization: Bearer <token>' -OJ https://<server>/api/v1/attack-path-filter-tasks/<id>/download`
+
+### POST /api/v1/attack-path-filter-tasks/:id/cancel
+
+- 请求参数：路径参数 `id`。
+- 响应格式：统一 JSON 响应，`data` 为取消后的任务状态；已结束的任务保持原状态。
+- 错误码：40101（未登录）、40401（任务不存在或不属于当前用户）、50001（取消失败）。
+- 示例：`curl -X POST -H 'Authorization: Bearer <token>' https://<server>/api/v1/attack-path-filter-tasks/<id>/cancel`
+
+## 飞书群通知
+
+通知配置保存到数据库表 `manscan_notifications`。服务启动时仅自动迁移通知表结构，显式采用 utf8mb4（旧通知表如为其他字符集会转换），不修改其他业务表；数据库账号需要该表的建表/变更权限。Webhook 以明文保存到 `webhook` 列，新增、修改和发送均直接使用明文地址。接口仍只返回遮蔽后的地址，更新时省略或传 null 的 `webhook` 可保留已有地址。
+
+通知功能不依赖加密器，不执行历史密文转换，也不兼容密文发送。已有表如仍使用 `encrypted_webhook` 列，需在启动新版服务前执行 `docs/SQL/alter_manscan_notifications_plaintext_webhook.sql`，将列名改为 `webhook`；该脚本仅重命名字段，保留原值。旧记录如果仍为密文，需要通过通知修改接口重新填写完整的明文地址后才能发送。新建表使用 `docs/SQL/create_manscan_notifications.sql`。第三方 API Key 的加密配置与行为不变。
+
+所有通知接口均需要 Bearer Token 和 `admin` 角色。普通用户不能读取、创建、修改、删除或测试全局群通知。多个启用的配置可订阅同一事件并分别发送到各自的群。
+
+通知策略的 `description` 为可选的通知描述，最多 500 字符，保存时去除首尾空白；用于管理策略，不作为飞书卡片中的扫描简介或通知标题。创建时省略或传 null 默认为空字符串；修改时省略或传 null 保留原描述，传空字符串可清空。创建、修改、详情和列表响应均包含该字段。新版服务启动时会自动补齐该列，已有记录默认为空字符串；手动升级已存在且缺少该列的表可执行 `docs/SQL/alter_manscan_notifications_add_description.sql`，新建表使用 `docs/SQL/create_manscan_notifications.sql`。
+
+### 通知事件和卡片字段
+
+当前事件为 `scan_started`：扫描任务已成功入库并完成运行态初始化，即将启动扫描时触发。包含 `POST /api/v1/scans` 和 `POST /api/v1/scans/:id/rescan`；恢复暂停任务不会重复发送。创建失败和参数校验失败不会发送。此处“发起”不表示主扫描子进程已经加载完模版。
+
+| 卡片字段 | 取值口径 |
+| --- | --- |
+| 扫描任务名称 | 本次任务规范化后的名称 |
+| 发起人 | 当前请求的已认证用户名；重扫显示本次点击重扫的用户。内部调用没有认证上下文时回退任务创建人，不改变既有 `created_by` 存储/响应语义 |
+| 目标数量 | `targets` 与 `inline_targets_list` 合并规范化去重后的提交目标数；尚未扣除禁扫目标，也不等于存活数量 |
+| 模版数量 | 普通扫描为按标签、严重级别、协议和 ID 条件筛选的配置候选数，并明确标注“以引擎实际加载为准”；自动映射或新模版模式在发起时尚未确定，显示“运行时确定”。能力开关、禁扫及前置指纹过滤可能继续减少实际模版数。纯截图任务显示“1（截图采集）” |
+| 扫描简介 | 任务 description，空值显示“未填写”；超长内容截断展示 |
+| 扫描 UA | custom_headers 中最后一个合法的 User-Agent；未指定时显示“引擎默认随机 UA（未指定固定 User-Agent）” |
+| 当前系统 IP | 服务进程所在机器/容器启用的非回环网卡 IPv4/IPv6 地址，去重排序；不是客户端 IP，也不通过外部网站探测公网出口 IP |
+
+卡片样式只控制标题栏颜色，不包含标题文案或独立主题。支持蓝、橙、紫、红、绿、黄、灰七种配色；标题由具体触发节点通过事件的 Title 字段传入，卡片渲染器不根据样式决定或硬编码业务标题。创建扫描任务节点（含重新扫描）传入“扫描任务已发起”，测试通知节点传入“通知测试”，正文保留小猫颜文字、猫咪图标和原有布局。历史样式 cat_blue、cat_orange、cat_purple 仍可提交和读取，分别映射为 blue、orange、purple；写入及接口响应统一返回颜色标识，无须修改现有数据库记录。动态内容采用 plain_text，输入中的 Markdown、HTML 和 @所有人语法不会作为卡片指令解析。不会发送目标明细、其他自定义 Header、代理凭证或 Interactsh Token。
+
+自动通知通过容量 128 的进程内队列异步发送，单次请求超时 10 秒，数据库查询超时 5 秒。发送前重新检查开关；通知失败或队列满不影响扫描，日志仅记录任务 ID、通知 ID 和固定原因，不记录 webhook。当前为尽力发送：队列不持久化，进程退出会丢失待发事件，不自动重试，避免重复群消息。已开始的发送不能被之后的关闭操作撤回。
+
+仅支持 `https://open.feishu.cn/open-apis/bot/v2/hook/<UUID>`；不允许自定义主机、端口、查询参数、凭据或重定向。发送器直接连接飞书，拒绝解析到回环/私网/链路本地等地址，不使用环境 HTTP 代理。不支持机器人签名密钥；若机器人启用了签名校验，需要先调整机器人安全配置。可使用飞书侧 IP 白名单，关键词应与卡片中的固定文本（例如 ManScan）一致。
+
+### 创建通知
+
+- 方法和路径：`POST /api/v1/notifications`
+- 请求参数（JSON）：
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| name | string | 是 | 1–100 字符，去除首尾空白后不能为空 |
+| description | string | 否 | 通知策略描述，最多 500 字符，去除首尾空白；省略或 null 默认为空字符串 |
+| enabled | boolean | 是 | true 开启自动通知，false 关闭；不能省略 |
+| webhook | string | 是 | 飞书自定义机器人完整 webhook，最大 512 字符；不会明文返回 |
+| event | string | 否 | 当前仅 scan_started，默认 scan_started |
+| style | string | 否 | blue、orange、purple、red、green、yellow、grey，仅控制标题栏颜色，默认 blue |
+
+- 响应格式：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 1,
+    "name": "扫描发起通知",
+    "description": "扫描任务发起时通知安全巡检群",
+    "enabled": true,
+    "event": "scan_started",
+    "webhook": "https://open.feishu.cn/open-apis/bot/v2/hook/********",
+    "style": "orange",
+    "created_at": "2026-11-25T10:00:00+08:00",
+    "updated_at": "2026-11-25T10:00:00+08:00"
+  }
+}
+```
+
+- 错误码：40001 参数或 webhook 不合法；40101 未登录；40301 非管理员；50001 保存失败。
+- 使用示例（真实地址放在环境变量中，不要提交到版本库）：
+
+```bash
+# FEISHU_WEBHOOK 和 TOKEN 由操作者在当前会话中设置。
+jq -n --arg webhook "$FEISHU_WEBHOOK" \
+  '{name:"扫描发起通知",description:"扫描任务发起时通知安全巡检群",enabled:true,event:"scan_started",webhook:$webhook,style:"orange"}' |
+  curl -X POST 'http://127.0.0.1:8686/api/v1/notifications' \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data-binary @-
+```
+
+### 分页查询通知
+
+- 方法和路径：`GET /api/v1/notifications`
+- 请求参数：page（integer，可选，默认 1，范围 1–2147483647）；page_size（integer，可选，默认 20，范围 1–100）。
+- 响应格式：`{"code":0,"message":"success","data":{"page":1,"page_size":20,"total":1,"total_pages":1,"items":[<通知对象>]}}`。通知对象同创建响应，按 ID 倒序排列。
+- 错误码：40001 分页参数非法；40101 未登录；40301 非管理员；50001 查询失败。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8686/api/v1/notifications?page=1&page_size=20'
+```
+
+### 获取通知详情
+
+- 方法和路径：`GET /api/v1/notifications/:id`
+- 请求参数：id（int64，路径参数，必填，正整数）。
+- 响应格式：与创建通知相同；webhook 始终遮蔽，不提供明文读取接口。
+- 错误码：40001 ID 非法；40101 未登录；40301 非管理员；40401 配置不存在；50001 查询失败。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8686/api/v1/notifications/1'
+```
+
+### 修改通知与切换开关
+
+- 方法和路径：`PUT /api/v1/notifications/:id`
+- 请求参数：id（int64，路径参数，必填，正整数）；JSON 中 name、enabled 必填，规则同创建；event、style 可选，省略时分别使用 scan_started 和 blue；webhook 可选，省略或 null 保留原地址，提供时必须为新的合法完整地址，不能回传遮蔽地址或空字符串。
+- description（string，可选）：最多 500 字符，去除首尾空白；省略或 null 保留原描述，传空字符串或全空白字符串清空。
+- 响应格式：与创建通知相同，返回修改后的通知对象。
+- 错误码：40001 参数非法；40101 未登录；40301 非管理员；40401 配置不存在；50001 保存失败。
+- 使用示例（关闭通知并保留原 webhook）：
+
+```bash
+curl -X PUT 'http://127.0.0.1:8686/api/v1/notifications/1' \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"扫描发起通知","description":"扫描任务发起时通知安全巡检群","enabled":false,"event":"scan_started","style":"orange"}'
+```
+
+### 删除通知
+
+- 方法和路径：`DELETE /api/v1/notifications/:id`
+- 请求参数：id（int64，路径参数，必填，正整数）。
+- 响应格式：`{"code":0,"message":"success","data":{"id":1,"deleted_count":1}}`。
+- 错误码：40001 ID 非法；40101 未登录；40301 非管理员；40401 配置不存在；50001 删除失败。
+- 使用示例：
+
+```bash
+curl -X DELETE -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8686/api/v1/notifications/1'
+```
+
+### 获取卡片样式
+
+- 方法和路径：`GET /api/v1/notifications/styles`
+- 请求参数：无。
+- 响应格式：`{"code":0,"message":"success","data":{"items":[{"id":"blue","name":"蓝色"},{"id":"orange","name":"橙色"},{"id":"purple","name":"紫色"},{"id":"red","name":"红色"},{"id":"green","name":"绿色"},{"id":"yellow","name":"黄色"},{"id":"grey","name":"灰色"}]}}`。
+- 错误码：40101 未登录；40301 非管理员。
+- 使用示例：
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8686/api/v1/notifications/styles'
+```
+
+### 测试群通知
+
+- 方法和路径：`POST /api/v1/notifications/:id/test`
+- 请求参数：id（int64，路径参数，必填，正整数）；无请求体。
+- 行为：使用已保存的样式和 webhook 发送一张标题为“通知测试”的测试卡片，显示当前管理员、当前系统 IP 及测试说明，目标/模版数量为 0，不发起扫描。显式测试不受 enabled 开关影响。
+- 响应格式：`{"code":0,"message":"success","data":{"id":1,"sent":true}}`，只有飞书 HTTP 成功且业务状态码为 0 才返回 sent=true。
+- 错误码：40001 ID 非法；40101 未登录；40301 非管理员；40401 配置不存在；50001 查询失败；50301 地址解密、网络请求或飞书业务响应失败。不会向客户端返回飞书原始报错中的地址或凭证。
+- 使用示例：
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8686/api/v1/notifications/1/test'
+```
+
+### 命令行初始化通知
+
+管理员也可在项目根目录执行以下命令，用现有 config.yaml 中的数据库配置创建明文通知地址，无须启动扫描服务。配置加载仍遵循服务端统一校验。环境变量 MANSCAN_FEISHU_WEBHOOK 只用于本次配置写入，不会硬编码到程序；命令不会发送消息。同名配置已存在时拒绝重复创建，后续编辑使用通知 API。
+
+    MANSCAN_FEISHU_WEBHOOK='<机器人完整地址>' go run ./server/cmd/notification -name '扫描发起通知' -style orange -enabled=true
+
+参数：name（通知名称，默认“扫描发起通知”）；style（标题栏颜色，默认 orange）；enabled（默认 true）。也可用 MANSCAN_CONFIG_FILE 指向其他服务配置。预建表脚本位于 docs/SQL/create_manscan_notifications.sql。
+
+真实飞书联调测试默认跳过，只有显式设置 MANSCAN_TEST_FEISHU_WEBHOOK 时发送一条卡片，不发起扫描：
+
+    MANSCAN_TEST_FEISHU_WEBHOOK='<测试机器人完整地址>' go test ./server/internal/service -run '^TestNotificationFeishuLive$' -count=1 -v

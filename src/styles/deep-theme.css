@@ -1105,6 +1105,18 @@ html[data-theme='deep'] :is(.settings-theme-card, .settings-toggle-row) {
   border-radius: var(--radius-md);
 }
 
+html[data-theme='deep'] .settings-notification-empty {
+  border-width: 1px;
+  border-color: var(--line-soft);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  box-shadow: none;
+}
+
+html[data-theme='deep'] .settings-notification-empty strong {
+  color: var(--ink);
+}
+
 html[data-theme='deep'] :is(.settings-theme-card:hover, .settings-theme-card.active) {
   border-color: var(--deep-accent);
   background: var(--deep-accent-soft);

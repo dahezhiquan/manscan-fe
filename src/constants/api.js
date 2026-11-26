@@ -15,6 +15,7 @@ export const AUTH_LOGOUT_API = `${API_PREFIX}/auth/logout`
 export const USERS_API = `${API_PREFIX}/users`
 export const THIRD_PARTY_API_KEYS_API = `${API_PREFIX}/third-party-api-keys`
 export const SETTINGS_THEME_API = `${API_PREFIX}/settings/theme`
+export const NOTIFICATIONS_API = `${API_PREFIX}/notifications`
 export const TEMPLATE_STATS_API = `${API_PREFIX}/templates/stats`
 export const TEMPLATE_LIST_API = `${API_PREFIX}/templates`
 export const TEMPLATE_DETAIL_API = `${API_PREFIX}/templates`

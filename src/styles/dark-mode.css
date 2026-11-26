@@ -2198,6 +2198,16 @@ html[data-color-mode='dark'] :where(
   border-color: var(--dark-border-strong) !important;
 }
 
+html[data-color-mode='dark'] .settings-notification-empty {
+  background: var(--dark-surface-2) !important;
+  border-color: var(--dark-border) !important;
+  color: var(--dark-text-muted) !important;
+}
+
+html[data-color-mode='dark'] .settings-notification-empty strong {
+  color: var(--dark-text-strong) !important;
+}
+
 html[data-color-mode='dark'] :where(
   .settings-switch::after,
   .scan-create-switch-thumb
