@@ -89,6 +89,7 @@ const DEFAULT_CUSTOM_HEADERS = [
 const RESPONSE_SIZE_FIELDS = new Set(['response_read_size', 'response_save_size'])
 const TEMPLATE_SELECTION_FIELDS = new Set(['include_ids', 'tags', 'severities', 'protocols'])
 const ALWAYS_SUBMITTED_BOOLEAN_FIELDS = new Set([
+  'notify_on_start',
   'preflight_fingerprint',
   'screenshot_capture'
 ])
@@ -99,7 +100,8 @@ const TEMPLATE_PAGE_FETCH_CONCURRENCY = 8
 const stepFields = {
   basic: [
     { key: 'name', label: '任务名称', type: 'string', placeholder: '例如：外网域名漏扫' },
-    { key: 'description', label: '任务描述', type: 'string', placeholder: '描述本次扫描目标、背景或关注点' }
+    { key: 'description', label: '任务描述', type: 'string', placeholder: '描述本次扫描目标、背景或关注点' },
+    { key: 'notify_on_start', label: '扫描发起通知', type: 'boolean' }
   ],
   targets: [
     {
@@ -639,6 +641,7 @@ function createInitialForm() {
   return {
     name: '',
     description: '',
+    notify_on_start: false,
     created_by: '',
     targets: [],
     exclude_targets: [],

@@ -18,6 +18,7 @@ const CONFIG_SOURCE_KEYS = [
 const FORM_FIELD_KEYS = [
   'name',
   'description',
+  'notify_on_start',
   'created_by',
   'targets',
   'exclude_targets',
@@ -118,6 +119,7 @@ const NUMBER_FIELD_KEYS = new Set([
 ])
 
 const BOOLEAN_FIELD_KEYS = new Set([
+  'notify_on_start',
   'scan_all_ips',
   'store_response',
   'timestamp',

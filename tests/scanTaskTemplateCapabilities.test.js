@@ -81,3 +81,19 @@ test('recreate draft preserves screenshot capability and drops the removed headl
     screenshot_capture: true
   })
 })
+
+test('recreate draft preserves the scan start notification setting when enabled or disabled', () => {
+  saveScanTaskRecreateDraft({
+    targets: ['https://example.com'],
+    notify_on_start: false
+  })
+
+  assert.equal(consumeScanTaskRecreateDraft()?.form.notify_on_start, false)
+
+  saveScanTaskRecreateDraft({
+    targets: ['https://example.com'],
+    notify_on_start: true
+  })
+
+  assert.equal(consumeScanTaskRecreateDraft()?.form.notify_on_start, true)
+})

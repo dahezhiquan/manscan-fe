@@ -510,6 +510,7 @@
   - `created_by` 固定使用当前登录用户，由前端在提交前写入；创建页不提供手动编辑入口
   - 至少提交 `targets` 或 `inline_targets_list` 语义对应的目标数据；当前前端主要提交 `targets`
   - `attack_type`: `string`，攻击类型；新建任务默认选择全组合模式并提交 `clusterbomb`，重新创建任务时优先使用原任务配置
+  - `notify_on_start`: `boolean`，扫描任务发起时是否发送通知，默认关闭；创建请求始终显式提交 `true` 或 `false`
   - `preflight_fingerprint`: `boolean`，创建页“运行参数”中的“前置主动指纹探测”开关，默认 `true`；开启和关闭均显式提交布尔值，关闭时提交 `false`
   - 高级能力字段：
     - `dast`: `boolean`，启用 DAST/fuzzable 模板
@@ -576,6 +577,7 @@
   - 模板筛选与选中状态一起回填：非自动映射任务未指定 `include_ids`、但指定了 `tags` / `severities` / `protocols` 时，匹配模板恢复为全部选中；指定 `include_ids` 时仅恢复对应模板选中。回填后调整筛选或模板选择，提交以当前选择为准
   - 前端会按创建页字段类型做兼容归一化，例如 JSON 字符串数组、多行字符串数组、布尔值、数字值和响应大小 MB 展示值
   - `preflight_fingerprint=false` 会回填为关闭，`true` 回填为开启；字段缺失或为 `null` 时沿用创建页默认开启，并在再次提交时保留用户选择
+  - `notify_on_start` 会按原任务配置回填；重新创建时仍显式提交当前开关状态
   - `screenshot_capture` 需随任务持久化并原样返回
   - `interactsh_token` 会按接口返回值回填到创建页密码输入框
 

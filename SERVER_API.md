@@ -1024,6 +1024,7 @@ curl "http://127.0.0.1:8686/api/v1/scans?page=1&page_size=10&keyword=demo&status
 | `severities`          | `string[]` | 否  | 严重级别过滤             |
 | `protocols`           | `string[]` | 否  | 协议类型过滤，口径与模板协议选项一致 |
 | `automatic_scan`      | `bool`     | 否  | 自动模版映射，默认关闭，对应 `-as` |
+| `notify_on_start`     | `bool`     | 否  | 是否发送扫描任务发起通知，默认 `false`；仅为 `true` 时入队发送通知 |
 | `preflight_fingerprint` | `bool`   | 否  | 是否前置指纹探测，默认 `true`；设置为 `false` 仅跳过扫描前主动指纹模板阶段，保留存活探测、Wappalyzer 被动识别和自动模版映射 |
 | `screenshot_capture` | `bool` | 否 | 是否在扫描前 HTTP 存活探测后独立采集页面截图，默认 `false` |
 | `dast`                | `bool`     | 否  | 启用 DAST/fuzzable 模板，对应 `-dast` |
@@ -1047,6 +1048,8 @@ curl "http://127.0.0.1:8686/api/v1/scans?page=1&page_size=10&keyword=demo&status
 `screenshot_capture=true` 时，服务端在存活探测与原有前置主动指纹阶段完成后，仅对 HTTP 存活目标启动独立的 `screenshot` Headless 子阶段；通常随后继续原有主扫描。如果同时满足 `automatic_scan=false` 且没有其他模板选择条件，任务会在截图后跳过主扫描，并将 `plugin_count` 按 `screenshot` 计为 1；是否开启 `preflight_fingerprint` 只决定截图前是否执行主动指纹探测，不影响主扫描跳过判断。截图阶段不继承主扫描的自动映射、模板 ID、标签、严重级别和协议筛选。截图失败会记录 warning 并继续原有扫描，取消或暂停任务会终止截图子进程。该字段不能与 `offline_http=true` 或 `disable_http_probe=true` 同时使用。为兼容历史调用方，`include_ids` 中的 `screenshot` 会迁移为 `screenshot_capture=true` 并从持久化模板 ID 中移除。
 
 已有数据库部署需先执行 `docs/SQL/alter_manscan_scan_tasks_preflight_fingerprint.sql`，历史任务默认开启；新建数据库使用更新后的建表脚本。
+
+已有数据库部署需执行 `docs/SQL/alter_manscan_scan_tasks_add_notify_on_start.sql`，历史任务默认关闭发起通知；新建数据库使用更新后的建表脚本。
 
 独立截图功能部署还需执行 `docs/SQL/alter_manscan_scan_tasks_add_preflight_screenshot.sql`；历史任务默认不截图。
 
@@ -1086,6 +1089,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans" \
   -d '{
     "name": "demo-scan",
     "targets": ["https://example.com"],
+    "notify_on_start": true,
     "preflight_fingerprint": false,
     "tags": ["cve"],
     "severities": ["high"],
@@ -1189,6 +1193,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans/1/rescan"
       "severities": ["high"],
       "protocols": ["http"],
       "automatic_scan": false,
+      "notify_on_start": true,
       "preflight_fingerprint": true,
       "screenshot_capture": true,
       "dast": false,
@@ -1208,7 +1213,7 @@ curl -X POST "http://127.0.0.1:8686/api/v1/scans/1/rescan"
 ```
 
 - 说明：
-  - 该接口会读取原任务在 `manscan_scan_tasks` 中保存的目标、模板筛选、协议筛选、并发、限速、代理、截图采集、headless、DAST、Code/File 模板开关等扫描配置，用于前端回填“重新创建扫描任务”表单。
+  - 该接口会读取原任务在 `manscan_scan_tasks` 中保存的目标、模板筛选、协议筛选、并发、限速、代理、通知开关、截图采集、headless、DAST、Code/File 模板开关等扫描配置，用于前端回填“重新创建扫描任务”表单。
   - `config` 字段使用创建扫描任务接口的请求结构，前端可在用户确认或调整后提交给 `POST /api/v1/scans`。
   - 该接口只读取配置，不创建新任务，不恢复任务，也不会继承原任务的运行日志、进度快照或结果统计。
 
@@ -1494,6 +1499,8 @@ curl "http://127.0.0.1:8686/api/v1/scans/1"
   - `direction=forward` 用于按序向后读取增量日志，返回 `seq > offset` 的事件；`next_offset` 表示本次已处理的最大 `seq`，下一次请求可直接作为 `offset` 传回。
   - `direction=before` 用于向前翻旧日志，返回 `seq < offset` 的最近一页可见事件；当 `offset=0` 时返回当前尾部最近一页；`next_offset` 表示本页最早可见事件的 `seq`，下一次请求可直接作为 `offset` 继续翻更早日志。
   - 运行中任务也支持 `direction=before`，可用于浏览器刷新后从尾部向前回补历史日志。
+  - 扫描执行失败时，原始日志中的 `level=error`、`type=task_failed` 事件包含失败阶段和返回的原因，例如 `扫描任务执行失败: 扫描子进程退出异常: exit status 7`；结束时的 `progress.last_message` 保留该失败摘要。日志查询接口过滤 `warn/error` 事件，扫描器错误详情也不会覆盖运行中的 `progress.last_message`。
+  - 扫描器错误会同时写入任务原始日志和服务端结构化日志，后者的 `msg` 为 `scan task scanner error`，通过 `task_id` 关联任务，`event_type` 标识来源，`diagnostic` 保存具体报错。支持 stdout/stderr 中的错误级别消息、无标准前缀的 stderr（例如编译错误、panic 堆栈）和 `error.log` 中的扫描请求错误。原始日志可通过下载接口获取；历史任务不会补写服务端诊断日志。
   - `result` 类型事件可能包含 `tags`、`result_key`、`template_id`、`severity` 字段：`tags` 用于记录该命中结果的模板标签；`result_key` 为后端生成的不透明结构化去重键，前端只应作为稳定标识使用，不应解析其内部格式；`template_id` 和 `severity` 分别表示命中模板 ID 与严重级别。
   - 目标命中 `exclude_targets` 禁扫规则时，会在任何前置探测前产生 `level=info`、`type=target_excluded` 的事件，`message` 包含被跳过的目标和首次命中的规则。被排除目标不参与扫描前 HTTP/Wappalyzer 探测、截图采集或主扫描；全部目标被排除时跳过执行并将实际插件数量设为 `0`。
   - 当任务开启 `matcher_status` 时，模板匹配失败会以 `level=info`、`type=match_failure` 输出为调试日志；这类事件不计入 `progress.matched`，不写入漏洞结果。
@@ -1531,6 +1538,7 @@ curl "http://127.0.0.1:8686/api/v1/scans/1/logs?direction=before&offset=0&limit=
   - `result` 类型事件中的 `event.result_key` 为后端生成的不透明结构化去重键，历史统计恢复、实时日志去重和续传补发均以该字段为准；`event.template_id` 与 `event.severity` 用于结构化统计分类。
   - 开启 `matcher_status` 后产生的 `match_failure` 事件只用于展示匹配失败调试信息，不会触发漏洞命中统计刷新
   - 任务结束后发送 `complete`
+  - SSE 过滤 `warn/error` 事件，包括 `task_failed`，不推送扫描器具体报错；`complete` 消息不包含诊断详情。扫描执行失败后，可通过任务详情或日志查询接口的 `progress.last_message` 获取失败阶段及退出原因摘要；扫描器诊断详情只记录在服务端日志与任务原始日志中。
 
 - `snapshot` 示例：
 
@@ -2870,7 +2878,7 @@ curl -G "http://127.0.0.1:8686/api/v1/domain-assets/screenshots" \
 ### 新增定时任务
 
 - 请求方法和路径：`POST /api/v1/scheduled-jobs`
-- 请求参数：JSON body。必填 `name`、`job_type`、`cron_expr`、`config_json`；可选 `description`、`output_description`（任务产出内容描述，最长 512 字符，默认空字符串）、`timezone`（默认 `Asia/Shanghai`）、`enabled`（默认 true）、`api_key_id`、`concurrency_policy`（`forbid`/`allow`，默认 `forbid`）、`timeout_seconds`（整数，0-2592000 秒，最多 30 天，默认 0，0 表示不限制单次任务执行时长）。`config_json` 必须是合法 JSON，最大 1 MiB。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
+- 请求参数：JSON body。必填 `name`、`job_type`、`cron_expr`、`config_json`；可选 `description`、`output_description`（任务产出内容描述，最长 512 字符，默认空字符串）、`timezone`（默认 `Asia/Shanghai`）、`enabled`（默认 true）、`api_key_id`、`concurrency_policy`（兼容保留 `forbid`/`allow`，默认 `forbid`；所有任务统一防止重复执行，`allow` 不再放开同一任务的并行执行）、`timeout_seconds`（整数，0-2592000 秒，最多 30 天，默认 0，0 表示不限制单次任务执行时长）。`config_json` 必须是合法 JSON，最大 1 MiB。Cron 使用 5 段格式（分钟、小时、日、月、星期）。
 - 响应格式：HTTP 200，`data` 为新任务对象。
 - 错误码：`40001` 参数、Cron、时区、并发策略或任务配置不合法；`40101` 未登录；`40301` 非管理员；`50001` 保存或注册失败。
 - 使用示例：
@@ -2903,16 +2911,16 @@ curl -X POST -H 'Authorization: Bearer <access_token>' -H 'Content-Type: applica
 ### 立即触发定时任务
 
 - 请求方法和路径：`POST /api/v1/scheduled-jobs/:id/trigger`
-- 请求参数：无；仅管理员可调用。接口只创建执行记录并异步执行，不等待任务完成。
-- 响应格式：HTTP 202，`data.run` 为执行记录，初始状态通常为 `queued`；若 `forbid` 且已有执行，则记录为 `skipped`。
-- 错误码：`40001` ID 不合法；`40101` 未登录；`40301` 非管理员；`40401` 任务不存在；`50001` 创建执行记录失败。
+- 请求参数：无；仅管理员可调用。接口创建或复用执行记录；仅新创建的记录异步执行，不等待任务完成。
+- 响应格式：HTTP 202，`data.run` 为新建或复用的执行记录。新建记录初始状态通常为 `queued`；所有任务无论配置 `forbid` 还是 `allow`，同一任务 ID 已有 `queued`/`running` 时直接返回该执行记录及其当前状态，不新增记录、不再次执行；结束后可手动触发重试。重复请求成功返回表示已复用当前执行，不表示启动了第二次执行。
+- 错误码：`40001` ID 不合法；`40101` 未登录；`40301` 非管理员；`40401` 任务不存在；`50001` 读取、锁定或创建执行记录失败。
 - 使用示例：`curl -X POST -H 'Authorization: Bearer <access_token>' 'http://127.0.0.1:8686/api/v1/scheduled-jobs/1/trigger'`
 
 ### 查询任务执行记录和进度
 
 - 请求方法和路径：`GET /api/v1/scheduled-jobs/:id/runs`、`GET /api/v1/scheduled-job-runs/:run_id`。
 - 请求参数：列表接口支持 `page`、`page_size`；详情接口使用正整数 `run_id`。
-- 响应格式：执行记录包含 `status`（`queued`、`running`、`success`、`failed`、`timeout`、`skipped`、`cancelled`）、`progress_current`、`progress_total`、`progress_percent`、`progress_phase`、`progress_message`、`output_path`、时间字段、错误信息及预留的结果引用字段。`progress_total=0` 时百分比为空，表示任务尚未提供可计算总量。`output_path` 是相对于服务根目录的产出文件路径，没有产出时为空。
+- 响应格式：执行记录包含 `status`（`queued`、`running`、`success`、`failed`、`timeout`、`skipped`、`cancelled`；`skipped` 兼容历史记录，重复触发不再生成该状态）、`progress_current`、`progress_total`、`progress_percent`、`progress_phase`、`progress_message`、`output_path`、时间字段、错误信息及预留的结果引用字段。`progress_total=0` 时百分比为空，表示任务尚未提供可计算总量。`output_path` 是相对于服务根目录的产出文件路径，没有产出时为空。
 - 错误码：`40001` 参数不合法；`40101` 未登录；`40401` 任务或执行记录不存在；`50001` 查询失败。
 - 使用示例：`curl -H 'Authorization: Bearer <access_token>' 'http://127.0.0.1:8686/api/v1/scheduled-jobs/1/runs?page=1&page_size=10'`
 - 数据库升级：已有数据库需执行 `docs/SQL/alter_manscan_scheduled_job_runs_add_output_path.sql`；新建数据库使用更新后的 `docs/SQL/create_manscan_scheduled_job_runs.sql`。
@@ -2933,6 +2941,8 @@ curl -L -OJ \
 
 ### 任务处理器扩展约定
 
+所有内置和自定义任务统一防止重复执行：以任务 ID 为范围，排队或运行期间的定时及手动触发均复用已有记录，不新增 `skipped`。同一计划触发时间使用固定 `fire_key`，该轮已有记录时不再次执行，包括已成功、失败、超时或取消的情况；下一轮计划及任务结束后的手动重试仍正常执行。不同任务 ID 互不影响。数据库事务锁定任务行后检查并创建记录，覆盖连接同一 MySQL 数据库的多个服务实例。`concurrency_policy` 为兼容现有客户端保留接收和返回，但 `allow` 不再允许同一任务并行执行。无需新增字段或数据库升级；所有服务实例需更新至此版本。原增量任务的计划标识保持兼容，其他任务旧版本生成的随机 `fire_key` 不追溯改写，历史重复记录不清理。
+
 服务启动时从数据库加载 `enabled=1` 的任务。业务代码通过 `JobHandlerRegistry.Register` 注册具体处理器；处理器实现 `Type`、`Validate` 和 `Execute`，在 `Execute` 中通过 `ProgressReporter.Report` 写入阶段、当前值、总量和说明。API Key 仅保存关联 ID，具体处理器按需通过现有 API Key 服务读取并解密，不在定时任务表中保存明文密钥。
 
 需要发出外部请求的处理器必须复用服务启动时创建并注入的 `service.APIKeyRateLimiter`：配置 `api_key_id` 时，在每一次实际请求前调用 `Wait(ctx, apiKeyID)`，包括额外遍历、回退和重试请求。不得为单个任务或执行实例独立创建限流器，否则无法共享额度。限流配置读取失败时返回错误，不绕过限流发送请求。
@@ -2944,7 +2954,7 @@ curl -L -OJ \
 - `config_json`：可选 `{"ref":"main"}`，用于指定 GitHub 分支、标签或提交 SHA；为空时使用 `main`。
 - 输出：成功获取完整列表后，使用临时文件原子替换 `data/tmp/cve_data/cves.txt`，失败时保留上一次成功文件。
 - 获取方式：先读取仓库根目录定位 `cves` 的 SHA，再以 `recursive=1` 请求完整子树。仅当 GitHub 成功响应明确标记 `truncated=true` 时，丢弃该部分结果，读取当前目录的直接列表，将未处理子目录加入队列，再逐个尝试获取完整子树。成功且未截断的子树不会再请求其内部子目录；目录按 SHA 去重，CVE 编号去重排序。直接目录列表仍被截断时任务失败，保留旧文件。
-- 请求恢复：GitHub Tree 单次请求超时为 200 秒（包含响应体读取）。网络超时、临时网络错误或响应体提前结束时，同一请求最多尝试 3 次，重试前分别等待 1 秒、2 秒；每次尝试均参与 API Key 共享限流。重试耗尽后停止任务，不因网络失败拆分子目录。鉴权、HTTP 限流、其他 HTTP 错误、非截断类 JSON 格式错误和本地限流配置错误均停止任务。任务取消或总超时立即中止请求及退避等待。独立 VulnX 与综合增量任务获取 GitHub CVE 列表时复用此策略。
+- 请求恢复：GitHub Tree 单次请求超时为 200 秒（包含响应体读取）。网络超时、临时网络错误、响应体提前结束，或 HTTP/2 数据流被重置为 `CANCEL`、`REFUSED_STREAM`、`INTERNAL_ERROR` 时，同一请求最多尝试 3 次（含首次），重试前分别等待 1 秒、2 秒；每次尝试均参与 API Key 共享限流。HTTP/2 重试覆盖请求阶段及响应体读取阶段，进度消息显示具体流错误码；失败响应中的部分数据不用于更新 CVE 列表。其他 HTTP/2 错误码（如协议错误或 `ENHANCE_YOUR_CALM`）不触发此重试。重试耗尽后停止任务，不因网络失败拆分子目录。鉴权、HTTP 限流、其他 HTTP 错误、非截断类 JSON 格式错误和本地限流配置错误均停止任务。任务取消或总超时立即中止请求及退避等待。独立 VulnX 与综合增量任务获取 GitHub CVE 列表时复用此策略。
 - 详细进度：复用执行记录的 `progress_phase`、`progress_message` 和 `progress_updated_at`。GitHub 阶段为 `github_waiting`（等待 API Key 额度）、`github_requesting`（请求及读取响应）、`github_retrying`（重试退避）、`github_listing`（已定位 CVE 目录）、`github_fallback`（GitHub 截断，改为直接目录列表）、`github_traversing`（当前目录单元已处理）和 `github_finished`（全部 CVE 列表获取完成，准备写文件）。说明明确区分“仅完成直接列表读取，子目录尚待处理”与“当前子树完整读取，无需再请求子目录”。包含当前位置、已处理目录单元数、排队目录数（不含当前目录）、已去重 CVE 数及实际请求次数；目录单元包含仓库根目录，重试及截断回退不会重复计数。
 - 接收量及刷新：长请求和额度等待每 5 秒更新状态，请求说明包含尝试次数、耗时、本次已接收 KiB 及本次任务累计接收 KiB。接收量按解压后的响应体统计，累计量包括截断结果、失败请求已读部分和重试，不代表有效 CVE 数据量；本次接收量在每次请求开始时归零。重试说明包含原因和下次等待秒数。
 - 进度口径：GitHub 获取期间 `progress_current` 为已处理目录单元数，`progress_total=0`，未知总量时不预估百分比；只从成功且未截断的响应收集 CVE。写文件阶段为 `writing`，当前值和总量切换为已写入/全部 CVE 数，并在说明中展示。最终任务完成阶段仍为 `finished`。独立 VulnX 任务沿用上述 GitHub 阶段；综合增量任务在阶段及说明前添加 `VulnX` 来源标识，当前值和总量保持原有三渠道加权口径，GitHub 获取时整体百分比不递增，读取状态持续刷新。进度上报失败会停止本次处理，不当作 GitHub 网络错误重试。
@@ -2968,7 +2978,8 @@ curl -L -OJ \
   - `manscan_vulnerability_intelligence_articles`：`citations[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_pocs`：`pocs[]` 的添加时间、来源和 URL。
   - `manscan_vulnerability_intelligence_shodan_exposures`：`exposure.values[]` 的产品 ID、暴露主机数和 Shodan 查询语句。
-- 失败策略：单个 CVE 查询、解析或写库失败后最多尝试 3 次（首次请求 + 2 次重试），然后继续处理剩余 CVE；最终仍失败的 CVE 的编号写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，具体错误写入 `data/tmp/cve_data/vulnXerrorDetail.log`，两个文件每次运行开始时清空。首轮全部处理后，再对失败清单中的 CVE 各补偿重试最多 3 次；成功写入数据库的编号会从失败清单和详情日志移除，仍失败的编号及原错误详情保持不变。最终清单打包为 `data/tmp/cve_data/vulnXerror.zip`，可通过执行记录的产出下载接口下载。任务进度按处理与补偿重试阶段推进；独立任务在补偿重试后仍有失败项时标记 `failed`，错误信息包含首个失败 CVE。取消或超时会立即停止后续请求。
+- 结果分类与计数：VulnX 详情 API 明确返回 HTTP `404` 时，计为“VulnX 未收录”，当前运行不再重试、不写库，也不写入失败产物；下次运行仍按数据库缺失编号重新查询。其他非成功 HTTP 状态（包括 `401`、`403`、`429`、`5xx`）、网络错误、无效 JSON、成功响应缺少漏洞编号或写库失败均计入可重试错误，不能视为未收录。完成提示使用 `请求失败 N 次，VulnX 未收录 M 次`，两个计数均按去重 CVE 的最终结果计数，每个 CVE 至多计一次；“请求失败”包含查询、解析和写库失败，不累加中间重试次数，重试成功不计失败。
+- 失败策略：单个 CVE 查询、解析或写库失败后最多尝试 3 次（首次请求 + 2 次重试），然后继续处理剩余 CVE；仍失败的 CVE 的编号写入服务根目录下 `data/tmp/cve_data/vulnXerror.txt`，具体错误写入 `data/tmp/cve_data/vulnXerrorDetail.log`，两个文件每次运行开始时清空。首轮全部处理后，再对失败清单中的 CVE 各补偿重试最多 3 次；成功写入数据库或明确返回 `404` 的编号会从失败清单和详情日志移除，其中 `404` 改计为未收录；仍失败的编号及最后一次错误详情保留。最终清单打包为 `data/tmp/cve_data/vulnXerror.zip`，只包含最终请求失败项，可通过执行记录的产出下载接口下载。任务进度按处理与补偿重试阶段推进；独立任务在补偿重试后仍有失败项时标记 `failed`，错误信息包含首个失败 CVE，仅存在未收录项时仍成功。取消或超时会立即停止后续请求。
 
 ### 内置任务：长亭漏洞情报全量同步
 
@@ -2997,15 +3008,18 @@ curl -L -OJ \
 
 ### 内置任务：漏洞情报增量更新（三渠道）
 
+- 重复触发限制：遵守所有定时任务统一的重复执行保护，详见上文“任务处理器扩展约定”中的规则。
+
 - `job_type`：`vulnerability_intelligence.incremental`
 - 初始化 SQL：`docs/SQL/insert_manscan_scheduled_job_vulnerability_incremental.sql`，默认每天 02:00 执行，按 `job_type` 判断后可重复执行。默认超时 21600 秒；任务顺序执行三个渠道。
 - 渠道失败隔离：长亭、阿里云、VulnX 顺序执行，某个渠道失败后记录 `<来源>.failed` 进度并继续下一个渠道；最后统一汇总渠道、产物和预警补偿推送的错误，存在整体错误时执行记录为 `failed`，进度阶段为 `finished_with_errors`，说明列出各渠道结果并保留已成功推送数量。进度 100% 表示渠道已尝试结束，不代表全部成功。已成功入库及推送的数据不回滚。任务取消、总超时、共享预警配置初始化失败或进度持久化不可用仍会提前结束。
-- 执行顺序：长亭全部漏洞列表、阿里云高危列表全部漏洞及详情、VulnX 最新完整 CVE 列表及缺失项详情。综合任务中，长亭和阿里云逐页检查当前页编号是否全部已存在，而非仅检查第一页。长亭在每页入库前按 `source=chaitin + ct_id` 判断；若全部已存在，更新完当前页后停止请求后续列表页，此判断不受 `cve_id` 影响。阿里云在每页详情请求前按 `source=avd + AVD 编号` 判断，不限制 CVE；全部已存在时跳过当前页全部详情请求并停止后续列表页。当前页仍有新编号则继续分页；空列表按数据源结束条件停止，编号缺失不作为“整页已存在”的依据。例：第 1 页有新编号、第 2 页全部已存在，则第 2 页停止，不再读取第 3 页。进度说明显示实际停止页码。该提前停止逻辑仅用于综合任务，不影响独立的长亭、阿里云全量同步任务。各来源任务分别报告阶段、当前值、总量和说明，综合任务进度按渠道阶段推进；每个数据源无论成功或失败都继续下一个，并保留失败渠道及原因。
+- 执行顺序：长亭全部漏洞列表、阿里云高危列表全部漏洞及详情、VulnX 前一小时的 UTC CVE Release 增量及缺失项详情；若本次是该综合任务配置时区下的 00:00 定时执行，则 VulnX 改为获取完整 CVE 列表。综合任务中，长亭和阿里云逐页检查当前页编号是否全部已存在，而非仅检查第一页。长亭在每页入库前按 `source=chaitin + ct_id` 判断；若全部已存在，更新完当前页后停止请求后续列表页，此判断不受 `cve_id` 影响。阿里云在每页详情请求前按 `source=avd + AVD 编号` 判断，不限制 CVE；全部已存在时跳过当前页全部详情请求并停止后续列表页。当前页仍有新编号则继续分页；空列表按数据源结束条件停止，编号缺失不作为“整页已存在”的依据。例：第 1 页有新编号、第 2 页全部已存在，则第 2 页停止，不再读取第 3 页。进度说明显示实际停止页码。该提前停止逻辑仅用于综合任务，不影响独立的长亭、阿里云全量同步任务。各来源任务分别报告阶段、当前值、总量和说明，综合任务进度按渠道阶段推进；每个数据源无论成功或失败都继续下一个，并保留失败渠道及原因。
 - 长亭与阿里云：按各自来源和漏洞编号匹配现有记录；新编号插入，字段有变化时更新映射字段，参考链接按来源同步差异。其他来源和关联表不受影响。
-- VulnX：先获取最新完整 CVE 列表，再按 1000 个编号一批检查 `source=vulnx`。只对不存在的编号请求详情并新增完整情报快照，已有 CVE 不进行重复 API 请求。
+- VulnX：综合增量任务根据计划触发时间和任务时区，换算到 UTC 后读取前一小时对应的 `cve_YYYY-MM-DD_HH00Z` Release 小时增量 ZIP，从 `deltaCves/` 文件名提取 CVE 编号。增量 ZIP 优先通过对应附件的 GitHub 官方资产 API 下载（`Accept: application/octet-stream`）；API 下载或 ZIP 解析失败后，回退到该附件的 `browser_download_url`。两条路径分别沿用临时网络错误最多尝试 3 次的策略；任务取消、任务上下文超时或进度上报失败时直接停止。两条路径均失败时保留各自错误原因；任务进度显示当前下载方式和回退提示。小时 ZIP 是相对当日 UTC baseline 的累计增量。比如 `Asia/Shanghai` 任务在 2026-11-26 15:00 执行时，读取 `cve_2026-11-26_0600Z` Release；本地日期与 UTC 日期不同时，Release 日期按换算后的 UTC 时间确定。每天本地 00:00 的计划执行仍读取 GitHub 完整 CVE 列表，重新建立全量编号基准。Release 不存在、ZIP 下载失败或解析失败时，本次 VulnX 渠道失败并保留上一次成功的 `cves.txt`。独立 VulnX 任务仍读取完整 CVE 列表。获取编号后，按 1000 个编号一批检查 `source=vulnx`；只对数据库中不存在的编号请求详情并新增完整情报快照，已有 CVE 不进行重复 API 请求。
 - API Key：综合任务和独立 VulnX 任务均从数据库读取 `cve_file_names.sync`（“全量 CVE 列表获取”）的 `api_key_id` 用于 GitHub 列表请求，从 `vulnx_vulnerability.sync`（“全量 VulnX 漏洞更新（长耗时）”）读取 `api_key_id` 用于 VulnX 详情请求。两种请求分别使用对应 Key 的共享限流；综合任务自身的 `api_key_id` 不参与这两种请求。综合任务进入 VulnX 阶段时才读取这两项配置；缺失或读取失败记为 VulnX 渠道失败，不影响长亭和阿里云执行。独立 VulnX 任务仍直接失败。列表任务未绑定 Key 时 GitHub 请求回退到 `GITHUB_TOKEN`，VulnX 任务未绑定 Key 时详情请求回退到 `PDCP_API_KEY`。
-- 下载产出：本次阿里云和 VulnX 渠道均完成后（允许 VulnX 单个 CVE 部分失败），将阿里云 `no_cve_vulnerabilities.json` 与 VulnX 的 `vulnXerror.zip` 放入按执行记录 ID 命名的 `data/tmp/vulnerability_intelligence/incremental_outputs_<run_id>.zip`，并登记为本次执行的 `output_path`。在执行记录的“下载产出”按钮或 `GET /api/v1/scheduled-job-runs/:run_id/output` 下载。VulnX 压缩包包含 `vulnXerror.txt` 和 `vulnXerrorDetail.log`，无失败时两个文件为空。长亭和 VulnX 正常同步结果写入数据库。阿里云或 VulnX 渠道整体失败时不生成本次汇总 ZIP，避免打包固定路径上残留的历史文件；仅长亭失败而另外两个渠道完成时仍生成产出，可通过原下载接口获取。旧执行记录不会补生成汇总 ZIP。
-- 部分失败状态：综合任务中单个 CVE 经重试后仍查询、解析或写库失败时，将编号和错误写入 VulnX 失败清单并继续处理其他 CVE；只要三个渠道整体流程及汇总产物生成成功，综合任务仍标记成功，进度消息会显示失败数量，可下载汇总 ZIP 查看详情。来源列表获取、数据库查询和渠道处理器缺失等错误只结束当前渠道，后续渠道继续执行。三渠道结束后仍尝试预警补偿推送，产物生成失败也不跳过补偿；最终存在整体错误时任务标记失败并汇总所有错误。任务取消或总超时立即停止后续渠道。独立 `vulnx_vulnerability.sync` 任务保持“存在单个失败 CVE 即标记失败”的行为。
+- 下载产出：本次阿里云和 VulnX 渠道均完成后（允许 VulnX 单个 CVE 部分失败），将阿里云 `no_cve_vulnerabilities.json` 与 VulnX 的 `vulnXerror.zip` 放入按执行记录 ID 命名的 `data/tmp/vulnerability_intelligence/incremental_outputs_<run_id>.zip`，并登记为本次执行的 `output_path`。在执行记录的“下载产出”按钮或 `GET /api/v1/scheduled-job-runs/:run_id/output` 下载。VulnX 压缩包包含 `vulnXerror.txt` 和 `vulnXerrorDetail.log`，仅保留最终请求失败的 CVE 编号及最后一次错误，不包含未收录的 CVE 或未收录次数；无请求失败时两个文件为空。长亭和 VulnX 正常同步结果写入数据库。阿里云或 VulnX 渠道整体失败时不生成本次汇总 ZIP，避免打包固定路径上残留的历史文件；仅长亭失败而另外两个渠道完成时仍生成产出，可通过原下载接口获取。旧执行记录不会补生成汇总 ZIP。
+- 入库数量：综合任务的 `progress_message` 追加 `本次新增入库情报 N 条`，汇总长亭、阿里云和 VulnX 在本次运行中新建且事务提交成功的情报主记录，按 `source + vulnerability_id` 去重；同一编号来自不同来源分别计数，不累计关联表行数。已有记录更新、重复重试、获取失败、VulnX 未收录和事务失败不计入；不满足预警条件或推送失败但已入库的新增记录仍计入。成功及部分渠道失败的完成提示均保留数量，每次运行从 0 开始，历史执行记录不补算。示例：`三个渠道漏洞情报增量更新完成，请求失败 0 次，VulnX 未收录 0 次；本次新增入库情报 3 条；本次已成功推送到处理接口 0 条`。
+- 部分失败状态：综合任务中单个 CVE 经重试后仍查询、解析或写库失败时，将编号和错误写入 VulnX 失败清单并继续处理其他 CVE；VulnX 明确返回 `404` 只计为未收录，不计请求失败，不继续重试。只要三个渠道整体流程及汇总产物生成成功，综合任务仍标记成功，进度消息分别展示 `请求失败 N 次，VulnX 未收录 M 次`（按去重 CVE 最终结果计数，不累加重试次数），有请求失败时追加产出文件提示。例如：`三个渠道漏洞情报增量更新完成，请求失败 2 次，VulnX 未收录 45 次，请求失败详情见产出文件；本次新增入库情报 3 条；本次已成功推送到处理接口 0 条`。来源列表获取、数据库查询和渠道处理器缺失等错误只结束当前渠道，后续渠道继续执行。三渠道结束后仍尝试预警补偿推送，产物生成失败也不跳过补偿；最终存在整体错误时任务标记失败并汇总所有错误，VulnX 已完成时仍保留两项计数。任务取消或总超时立即停止后续渠道。独立 `vulnx_vulnerability.sync` 任务保持“存在单个请求失败 CVE 即标记失败”的行为，仅存在未收录项时成功。旧执行记录与已生成产物不回写。
 
 综合增量任务还会自动推送新增漏洞预警（独立全量同步任务不触发推送）：
 
