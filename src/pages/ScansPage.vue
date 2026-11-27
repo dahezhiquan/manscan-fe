@@ -968,7 +968,7 @@ onBeforeUnmount(() => {
               <article
                 v-for="row in tableRows"
                 :key="row.id"
-                v-memo="[row.memoKey, isScanTaskSelected(row.id)]"
+                v-memo="[row.memoKey, isScanTaskSelected(row.id), isBatchOperationSubmitting]"
                 class="scans-table-row"
                 :class="{ selected: isScanTaskSelected(row.id) }"
                 tabindex="0"
@@ -997,6 +997,7 @@ onBeforeUnmount(() => {
                         : '仅成功、失败、已取消、已暂停的任务可删除'
                     "
                     @click.stop="toggleScanTaskSelection(row.id)"
+                    @keydown.stop
                   >
                     <span aria-hidden="true"></span>
                   </button>
